@@ -485,17 +485,96 @@ function showResults(opps,country,niche,info){
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${hi}</div><div class="stat-l">Prioridad alta</div></div>`;
   document.getElementById('sr-list').innerHTML=opps.map((o,i)=>{
     const s=o.scoreMonetizacion||o.monetizationScore||0; const sc=s>=80?'sh':s>=60?'sm':'sl'; const _p=o.prioridad||o.priorityLevel; const bc=_p==='ALTA'?'bg2':_p==='MEDIA'?'bgold':'bred';
+    const dd=o.datosDetallados||{};
     return `<div class="opp-card" onclick="selOpp(${i})" id="oc${i}">
-      <div class="opp-top"><div class="opp-prob">${o.problema||o.problem}</div><div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div></div>
-      <div class="pills"><span class="pill">📍 ${o.country}</span><span class="pill">👤 ${o.rangoEdad||o.ageRange}</span><span class="pill">⚧ ${o.genero||o.gender}</span><span class="pill">📊 ${o.volumenBusqueda||o.searchVolume}</span><span class="pill">💰 ${o.intencionCompra||o.purchaseIntent}</span><span class="pill">🏷 ${o.precioHotmart||o.hotmartPrice}</span><span class="badge ${bc}" style="font-size:9px;padding:2px 7px;">${o.prioridad||o.priorityLevel}</span></div>
+      <div class="opp-top">
+        <div>
+          <div class="opp-prob">${o.problema||o.problem}</div>
+          ${o.problemaEnIdioma?`<div style="font-size:11px;color:var(--teal);margin-top:3px;font-style:italic;">🌍 ${o.problemaEnIdioma}</div>`:''}
+        </div>
+        <div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div>
+      </div>
+      <div class="pills">
+        <span class="pill">📍 ${o.pais||o.country}</span>
+        <span class="pill">👤 ${o.rangoEdad||o.ageRange}</span>
+        <span class="pill">⚧ ${o.genero||o.gender}</span>
+        <span class="pill">📊 ${o.volumenEstimado||o.volumenBusqueda||o.searchVolume}</span>
+        <span class="pill">💰 ${o.intencionCompra||o.purchaseIntent}</span>
+        <span class="pill">🏷 ${o.precioHotmart||o.hotmartPrice}</span>
+        <span class="badge ${bc}" style="font-size:9px;padding:2px 7px;">${_p}</span>
+      </div>
       ${o.porQueEstaOportunidad||o.whyThisOpportunity?`<div class="opp-why">🔍 ${o.porQueEstaOportunidad||o.whyThisOpportunity}</div>`:''}
       <div class="opp-hint">💡 ${o.tituloEbook||o.ebookTitle}</div>
+      <div id="detail-${i}" style="display:none;margin-top:10px;border-top:1px solid rgba(100,140,255,0.15);padding-top:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div class="fc"><div class="fc-label">Búsqueda exacta (${o.idioma||'local'})</div><div class="fc-val" style="color:var(--teal);">${o.busquedaExacta||o.keyword||''}</div></div>
+          <div class="fc"><div class="fc-label">Keyword en español</div><div class="fc-val">${o.keywordES||''}</div></div>
+          <div class="fc"><div class="fc-label">Distribución género</div><div class="fc-val">${o.distribucionGenero||dd.busquedasPorGenero||''}</div></div>
+          <div class="fc"><div class="fc-label">Distribución edad</div><div class="fc-val">${dd.busquedasPorEdad||o.rangoEdad||o.ageRange||''}</div></div>
+          <div class="fc"><div class="fc-label">Clase social</div><div class="fc-val">${o.claseSocial||dd.busquedasPorClase||''}</div></div>
+          <div class="fc"><div class="fc-label">Precio promedio mercado</div><div class="fc-val">${dd.precioPromedioMercado||''}</div></div>
+        </div>
+        ${dd.keywordsEncontradas&&dd.keywordsEncontradas.length?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">Keywords encontradas en ${o.idioma||'idioma local'}</div><div class="fc-val">${dd.keywordsEncontradas.join(' · ')}</div></div>`:''}
+        ${dd.plataformasDetectadas&&dd.plataformasDetectadas.length?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">Plataformas donde se detectó</div><div class="fc-val">${dd.plataformasDetectadas.join(' · ')}</div></div>`:''}
+        ${dd.competidoresDetectados&&dd.competidoresDetectados.length?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">Competidores detectados</div><div class="fc-val">${dd.competidoresDetectados.join(' · ')}</div></div>`:''}
+        <div class="fc"><div class="fc-label">Dolor emocional profundo</div><div class="fc-val" style="color:var(--gold);">${o.dolorEmocional||o.emotionalPain||''}</div></div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-gold" onclick="event.stopPropagation();dlSingleExcel(${i})">⬇ Excel de esta oportunidad</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
   addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${S.niche}. Score máximo: ${Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
 }
 
-function selOpp(i){ document.querySelectorAll('.opp-card').forEach(c=>c.classList.remove('sel')); document.getElementById('oc'+i).classList.add('sel'); S.selOpp=S.results[i]; document.getElementById('btn-draft').disabled=false; addMsg('chat-search',`Seleccionaste: "${S.selOpp.problem}" — Score ${S.selOpp.monetizationScore}/100. Ebook: "${S.selOpp.ebookTitle}". Precio: ${S.selOpp.hotmartPrice}. ¿Generamos el borrador ahora?`,'ferni'); }
+function selOpp(i){
+  document.querySelectorAll('.opp-card').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('oc'+i).classList.add('sel');
+  S.selOpp=S.results[i];
+  document.getElementById('btn-draft').disabled=false;
+  // Toggle detail panel
+  const det=document.getElementById('detail-'+i);
+  if(det){det.style.display=det.style.display==='none'?'block':'none';}
+  const o=S.selOpp;
+  addMsg('chat-search','Seleccionaste: "'+((o.problema||o.problem)||'')+'" — Score '+((o.scoreMonetizacion||o.monetizationScore)||0)+'/100. En '+((o.idioma||o.language)||'')+': "'+((o.problemaEnIdioma||o.busquedaExacta)||'')+'" — Ebook: "'+((o.tituloEbook||o.ebookTitle)||'')+'" — Precio: '+((o.precioHotmart||o.hotmartPrice)||'')+'. Haz clic en el panel de detalle para ver el análisis completo. ¿Generamos el borrador?','ferni');
+}
+
+function dlSingleExcel(i){
+  const o=S.results[i]; if(!o) return;
+  const dd=o.datosDetallados||{};
+  const h=['Campo','Valor ES','Valor en idioma local'];
+  const rows=[
+    ['Problema',o.problema||o.problem||'',o.problemaEnIdioma||''],
+    ['Busqueda exacta',o.keywordES||'',o.busquedaExacta||o.keyword||''],
+    ['Necesidad',o.necesidad||o.need||'',''],
+    ['Emocion',o.emocion||o.emotion||'',''],
+    ['Dolor emocional',o.dolorEmocional||o.emotionalPain||'',''],
+    ['Edad',o.rangoEdad||o.ageRange||'',dd.busquedasPorEdad||''],
+    ['Genero',o.genero||o.gender||'',o.distribucionGenero||dd.busquedasPorGenero||''],
+    ['Clase social',o.claseSocial||'',dd.busquedasPorClase||''],
+    ['Volumen estimado',o.volumenEstimado||o.volumenBusqueda||'',''],
+    ['Tendencia',o.tendencia||o.trend||'',''],
+    ['Competencia',o.competencia||o.competition||'',o.nivelCompetenciaDetalle||''],
+    ['Precio mercado','',dd.precioPromedioMercado||''],
+    ['Keywords encontradas','',( dd.keywordsEncontradas||[]).join(', ')],
+    ['Competidores','',''+( dd.competidoresDetectados||[]).join(', ')],
+    ['Plataformas detectadas','',''+( dd.plataformasDetectadas||[]).join(', ')],
+    ['Score monetizacion',o.scoreMonetizacion||o.monetizationScore||'',''],
+    ['Prioridad',o.prioridad||o.priorityLevel||'',''],
+    ['Intencion de compra',o.intencionCompra||o.purchaseIntent||'',''],
+    ['Titulo ebook',o.tituloEbook||o.ebookTitle||'',''],
+    ['Promesa ebook',o.promesaEbook||o.ebookPromise||'',''],
+    ['Precio Hotmart',o.precioHotmart||o.hotmartPrice||'',''],
+    ['Por que es oportunidad',o.porQueEstaOportunidad||o.whyThisOpportunity||'',''],
+    ['Fuente',o.urlFuente||o.sourceURL||'','']
+  ];
+  const csv='﻿'+[h,...rows].map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('
+');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='FERNI_DETALLE_'+(o.pais||o.country||'pais')+'_'+(o.problema||'opp').replace(/[^a-z0-9]/gi,'_').substring(0,20)+'.csv';
+  a.click();
+}
 
 async function goEbook(){
   const o=S.selOpp; if(!o) return;
