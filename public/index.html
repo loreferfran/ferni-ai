@@ -588,8 +588,7 @@ function dlSingleExcel(i){
     ['Por que es oportunidad',o.porQueEstaOportunidad||o.whyThisOpportunity||'',''],
     ['Fuente',o.urlFuente||o.sourceURL||'','']
   ];
-  const csv='﻿'+[h,...rows].map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('
-');
+  var csvRows2=[h].concat(rows); var csv='\uFEFF'+csvRows2.map(function(r){return r.map(function(c){return '"'+String(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   a.download='FERNI_DETALLE_'+(o.pais||o.country||'pais')+'_'+(o.problema||'opp').replace(/[^a-z0-9]/gi,'_').substring(0,20)+'.csv';
