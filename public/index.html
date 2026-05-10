@@ -180,7 +180,7 @@ select option { background: #1e2d52; }
       </div>
     </div>
     <div class="tabs">
-      <button class="tab active" onclick="showTab('search',this)">🔍 Análisis</button>
+      <button class="tab active" onclick="showTab('search',this)">📊 Análisis</button>
       <button class="tab" onclick="showTab('ebook',this)">📖 Ebook</button>
       <button class="tab" onclick="showTab('hotmart',this)">🛒 Hotmart</button>
       <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
@@ -219,7 +219,7 @@ select option { background: #1e2d52; }
           <div class="fl">Modo</div>
           <div class="mode-row">
             <button class="mbtn active" id="mb-t" onclick="setMode('trends')">📊 General</button>
-            <button class="mbtn" id="mb-n" onclick="setMode('niche')">🎯 Nicho</button>
+            <button class="mbtn" id="mb-n" onclick="setMode('niche')" style="cursor:pointer;">🎯 Nicho</button>
           </div>
         </div>
         <div class="fg">
@@ -425,7 +425,7 @@ const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'Germa
 function showTab(id,el){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.getElementById('panel-'+id).classList.add('active'); if(el)el.classList.add('active'); if(id==='hist')renderHist(); }
 function show(id){document.getElementById(id).classList.remove('hidden');}
 function hide(id){document.getElementById(id).classList.add('hidden');}
-function setMode(m){ S.mode=m; document.getElementById('mb-t').classList.toggle('active',m==='trends'); document.getElementById('mb-n').classList.toggle('active',m==='niche'); const h=document.getElementById('niche-hint'); if(m==='niche'){h.textContent='✓ Modo nicho activo';h.style.color='var(--green)';}else{h.textContent='💡 Haz clic y escribe tu nicho';h.style.color='var(--teal)';} }
+function setMode(m){ S.mode=m; document.getElementById('mb-t').classList.toggle('active',m==='trends'); document.getElementById('mb-n').classList.toggle('active',m==='niche'); const h=document.getElementById('niche-hint'); if(m==='niche'){h.textContent='✓ Modo nicho activo';h.style.color='var(--green)'; setTimeout(function(){document.getElementById('inp-niche').focus();},100);}else{h.textContent='💡 Haz clic y escribe tu nicho';h.style.color='var(--teal)';} }
 function pickChip(n,el){ document.getElementById('inp-niche').value=n; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); setMode('niche'); }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
@@ -457,7 +457,7 @@ async function runSearch(){
   S.country=country;
   const info=LANGS[country]||{lang:'English',flag:'🌍'};
   S.lang=info.lang;
-  S.niche=document.getElementById('inp-niche').value.trim()||'general';
+  S.niche=document.getElementById('inp-niche').value.trim()||'salud';
   showLoading();
   try{
     const resp=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country,niche:S.niche,language:info.lang})});
@@ -908,3 +908,4 @@ setMode('trends'); renderHist();
 </script>
 </body>
 </html>
+
