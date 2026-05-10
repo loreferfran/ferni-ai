@@ -478,21 +478,21 @@ function showResults(opps,country,niche,info){
   document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${niche} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
   document.getElementById('sr-count').textContent=opps.length+' oportunidades';
   const avg=Math.round(opps.reduce((a,b)=>a+(b.monetizationScore||0),0)/opps.length);
-  const hi=opps.filter(o=>(o.monetizationScore||0)>=80).length;
+  const hi=opps.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
   document.getElementById('sr-stats').innerHTML=`
     <div class="stat"><div class="stat-n" style="color:#a29bfe">${opps.length}</div><div class="stat-l">Oportunidades</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--green)">${avg}</div><div class="stat-l">Score prom.</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${hi}</div><div class="stat-l">Prioridad alta</div></div>`;
   document.getElementById('sr-list').innerHTML=opps.map((o,i)=>{
-    const s=o.monetizationScore||0; const sc=s>=80?'sh':s>=60?'sm':'sl'; const bc=o.priorityLevel==='ALTA'?'bg2':o.priorityLevel==='MEDIA'?'bgold':'bred';
+    const s=o.scoreMonetizacion||o.monetizationScore||0; const sc=s>=80?'sh':s>=60?'sm':'sl'; const _p=o.prioridad||o.priorityLevel; const bc=_p==='ALTA'?'bg2':_p==='MEDIA'?'bgold':'bred';
     return `<div class="opp-card" onclick="selOpp(${i})" id="oc${i}">
-      <div class="opp-top"><div class="opp-prob">${o.problem}</div><div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div></div>
-      <div class="pills"><span class="pill">📍 ${o.country}</span><span class="pill">👤 ${o.ageRange}</span><span class="pill">⚧ ${o.gender}</span><span class="pill">📊 ${o.searchVolume}</span><span class="pill">💰 ${o.purchaseIntent}</span><span class="pill">🏷 ${o.hotmartPrice}</span><span class="badge ${bc}" style="font-size:9px;padding:2px 7px;">${o.priorityLevel}</span></div>
-      ${o.whyThisOpportunity?`<div class="opp-why">🔍 ${o.whyThisOpportunity}</div>`:''}
-      <div class="opp-hint">💡 ${o.ebookTitle}</div>
+      <div class="opp-top"><div class="opp-prob">${o.problema||o.problem}</div><div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div></div>
+      <div class="pills"><span class="pill">📍 ${o.country}</span><span class="pill">👤 ${o.rangoEdad||o.ageRange}</span><span class="pill">⚧ ${o.genero||o.gender}</span><span class="pill">📊 ${o.volumenBusqueda||o.searchVolume}</span><span class="pill">💰 ${o.intencionCompra||o.purchaseIntent}</span><span class="pill">🏷 ${o.precioHotmart||o.hotmartPrice}</span><span class="badge ${bc}" style="font-size:9px;padding:2px 7px;">${o.prioridad||o.priorityLevel}</span></div>
+      ${o.porQueEstaOportunidad||o.whyThisOpportunity?`<div class="opp-why">🔍 ${o.porQueEstaOportunidad||o.whyThisOpportunity}</div>`:''}
+      <div class="opp-hint">💡 ${o.tituloEbook||o.ebookTitle}</div>
     </div>`;
   }).join('');
-  addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${S.niche}. Score máximo: ${Math.max(...opps.map(o=>o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
+  addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${S.niche}. Score máximo: ${Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
 }
 
 function selOpp(i){ document.querySelectorAll('.opp-card').forEach(c=>c.classList.remove('sel')); document.getElementById('oc'+i).classList.add('sel'); S.selOpp=S.results[i]; document.getElementById('btn-draft').disabled=false; addMsg('chat-search',`Seleccionaste: "${S.selOpp.problem}" — Score ${S.selOpp.monetizationScore}/100. Ebook: "${S.selOpp.ebookTitle}". Precio: ${S.selOpp.hotmartPrice}. ¿Generamos el borrador ahora?`,'ferni'); }
@@ -516,19 +516,19 @@ async function goEbook(){
 function renderDraft(o,eb){
   S.author=document.getElementById('inp-author').value.trim()||'Antonieta';
   const year=new Date().getFullYear();
-  document.getElementById('eb-meta').textContent=`${o.country} · ${o.ageRange} · ${o.gender} · ${o.hotmartPrice} · Autor: ${S.author}`;
+  document.getElementById('eb-meta').textContent=`${o.country} · ${o.rangoEdad||o.ageRange} · ${o.genero||o.gender} · ${o.precioHotmart||o.hotmartPrice} · Autor: ${S.author}`;
   document.getElementById('eb-body').innerHTML=`
     <div class="ebook-cover">
       <div class="ebook-cover-tagline">${eb.tagline||''}</div>
-      <div class="ebook-cover-title">${eb.title||o.ebookTitle}</div>
-      <div class="ebook-cover-sub">${eb.subtitle||o.ebookPromise}</div>
+      <div class="ebook-cover-title">${eb.title||o.tituloEbook||o.ebookTitle}</div>
+      <div class="ebook-cover-sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div>
       <div class="ebook-cover-author">por ${S.author}</div>
       <div class="ebook-copyright">© ${year} ${S.author} · Todos los derechos reservados</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
       <span class="badge bgold">✍️ Borrador en español</span>
-      <span class="badge ba">${o.ageRange} · ${o.gender}</span>
-      <span class="badge bg2">${o.hotmartPrice}</span>
+      <span class="badge ba">${o.rangoEdad||o.ageRange} · ${o.genero||o.gender}</span>
+      <span class="badge bg2">${o.precioHotmart||o.hotmartPrice}</span>
       <span class="badge bteal">Final en: ${o.language}</span>
     </div>
     <div class="section-card" style="margin-bottom:16px;">
@@ -577,15 +577,15 @@ function renderFinal(o,eb){
   document.getElementById('eb-final-body').innerHTML=`
     <div class="ebook-cover">
       ${eb.tagline?`<div class="ebook-cover-tagline">${eb.tagline}</div>`:''}
-      <div class="ebook-cover-title">${eb.title||o.ebookTitle}</div>
-      <div class="ebook-cover-sub">${eb.subtitle||o.ebookPromise}</div>
+      <div class="ebook-cover-title">${eb.title||o.tituloEbook||o.ebookTitle}</div>
+      <div class="ebook-cover-sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div>
       <div class="ebook-cover-author">par/by/von/di ${S.author}</div>
       <div class="ebook-copyright">© ${year} ${S.author}</div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
       <span class="badge bg2">✓ Aprobado — ${o.language}</span>
-      <span class="badge ba">${o.ageRange} · ${o.gender}</span>
-      <span class="badge bgold">${o.hotmartPrice}</span>
+      <span class="badge ba">${o.rangoEdad||o.ageRange} · ${o.genero||o.gender}</span>
+      <span class="badge bgold">${o.precioHotmart||o.hotmartPrice}</span>
     </div>
     <div class="ch"><div class="ch-num">INTRODUCTION</div><div class="ch-text">${(eb.intro||'').replace(/\n/g,'<br><br>')}</div></div>
     ${(eb.chapters||[]).map(c=>`<div class="ch"><div class="ch-num">CHAPTER ${c.number||''}</div><div class="ch-title">${c.title||''}</div>${c.opening?`<div class="ch-opening">${c.opening}</div>`:''}<div class="ch-text">${(c.content||'').replace(/\n/g,'<br><br>')}</div></div>`).join('')}
@@ -599,7 +599,7 @@ function dlWordDraft(){
   const o=S.selOpp; if(!o||!S.ebookData){alert('Genera el borrador primero');return;}
   const eb=S.ebookData; const author=S.author||'Antonieta'; const year=new Date().getFullYear();
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:50px 40px;text-align:center;margin-bottom:30px;page-break-after:always;border-radius:8px;}.cover h1{color:white;font-size:28px;margin-bottom:10px;line-height:1.3;}.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;margin-bottom:16px;font-size:15px;}.cover .author{color:#fdcb6e;font-size:14px;font-weight:bold;}.cover .copyright{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;}h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;font-size:17px;}h3{color:#6c5ce7;margin-top:20px;font-size:14px;}p{margin-bottom:14px;}.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;color:#5a4a2a;margin:14px 0;border-radius:0 8px 8px 0;}.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin-top:16px;}.exercise-title{color:#6c5ce7;font-weight:bold;margin-bottom:10px;}.step{display:flex;gap:10px;margin:8px 0;align-items:flex-start;}.step-num{background:#6c5ce7;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;}.key-point{color:#00b894;padding:4px 0;}.action-item{padding:6px 0;border-bottom:1px solid #eee;}.resource{color:#6c5ce7;padding:3px 0;}hr{border:1px solid #eee;margin:24px 0;}.disclaimer{font-size:11px;color:#999;font-style:italic;text-align:center;}.toc{background:#f9f9f9;padding:20px;border-radius:8px;margin-bottom:24px;}.toc-title{font-weight:bold;color:#2d3180;margin-bottom:10px;}</style></head><body>`;
-  html+=`<div class="cover"><h1>${eb.title||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.ebookPromise}</div><div class="author">por ${author}</div><div class="copyright">© ${year} ${author} · Todos los derechos reservados</div></div>`;
+  html+=`<div class="cover"><h1>${eb.title||o.tituloEbook||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div><div class="author">por ${author}</div><div class="copyright">© ${year} ${author} · Todos los derechos reservados</div></div>`;
   html+=`<div class="toc"><div class="toc-title">Índice de contenidos</div>Introducción<br>${(eb.chapters||[]).map(c=>c.title||'').join('<br>')}<br>Conclusión<br>Plan de acción · Recursos</div>`;
   html+=`<h2>INTRODUCCIÓN</h2><p>${(eb.intro||'').replace(/\n\n/g,'</p><p>')}</p>`;
   (eb.chapters||[]).forEach(c=>{
@@ -623,7 +623,7 @@ function dlFinalEbook(){
   const o=S.selOpp; if(!o) return;
   const eb=S.finalEbook||S.ebookData; const author=S.author||'Antonieta'; const year=new Date().getFullYear();
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:50px 40px;text-align:center;margin-bottom:30px;page-break-after:always;border-radius:8px;}.cover h1{color:white;font-size:28px;margin-bottom:10px;}.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;margin-bottom:16px;font-size:15px;}.cover .author{color:#fdcb6e;font-size:14px;font-weight:bold;}.cover .copyright{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;}h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;}h3{color:#6c5ce7;margin-top:20px;}p{margin-bottom:14px;}.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;margin:14px 0;border-radius:0 8px 8px 0;}.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin-top:16px;}hr{border:1px solid #eee;margin:24px 0;}.disclaimer{font-size:11px;color:#999;font-style:italic;text-align:center;}</style></head><body>`;
-  html+=`<div class="cover"><h1>${eb.title||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.ebookPromise}</div><div class="author">par/by/von ${author}</div><div class="copyright">© ${year} ${author}</div></div>`;
+  html+=`<div class="cover"><h1>${eb.title||o.tituloEbook||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div><div class="author">par/by/von ${author}</div><div class="copyright">© ${year} ${author}</div></div>`;
   html+=`<h2>Introduction</h2><p>${(eb.intro||'').replace(/\n\n/g,'</p><p>')}</p>`;
   (eb.chapters||[]).forEach(c=>{ html+=`<h2>${c.title||''}</h2>`; if(c.opening)html+=`<div class="opening">${c.opening}</div>`; html+=`<p>${(c.content||'').replace(/\n\n/g,'</p><p>')}</p>`; if(c.exercise){html+=`<div class="exercise"><strong>${c.exercise.title||''}</strong><p>${c.exercise.description||''}</p>${(c.exercise.steps||[]).map((s,i)=>`<p>${i+1}. ${s}</p>`).join('')}</div>`;} });
   html+=`<h2>Conclusion</h2><p>${(eb.conclusion||'').replace(/\n\n/g,'</p><p>')}</p>`;
@@ -649,14 +649,14 @@ function renderHotmart(o,kit){
   document.getElementById('hm-lang').textContent=`${o.language} · ${o.country}`;
   const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v}</div></div>`;
   document.getElementById('hm-body').innerHTML=
-    f('📌','Nombre del producto',kit.productName||o.ebookTitle)+
-    f('💥','Headline principal',kit.headline||o.ebookPromise)+
+    f('📌','Nombre del producto',kit.productName||o.tituloEbook||o.ebookTitle)+
+    f('💥','Headline principal',kit.headline||o.promesaEbook||o.ebookPromise)+
     f('✨','Subheadline',kit.subheadline||'')+
     f('📝','Descripción corta (listing)',kit.shortDesc||'')+
     f('📄','Descripción larga (página de ventas)',kit.longDesc||'')+
     f('✅','Beneficios',(kit.benefits||[]).map(b=>`✓ ${b}`).join('<br>')||'')+
     f('→','Bullets de venta',(kit.bullets||[]).map(b=>`→ ${b}`).join('<br>')||'')+
-    f('💰','Precio',o.hotmartPrice)+
+    f('💰','Precio',o.precioHotmart||o.hotmartPrice)+
     f('🛡','Garantía',kit.guarantee||'7 días sin preguntas')+
     f('🎁','Bonus incluidos',(kit.bonus||[]).join('<br>')||'')+
     f('⬆️','Upsell sugerido',kit.upsell||'')+
@@ -674,7 +674,7 @@ async function genCover(){
   const o=S.selOpp; if(!o) return;
   const btn=event.target; btn.textContent='⏳ Generando...'; btn.disabled=true;
   try{
-    const prompt=`Professional premium ebook cover. Title: "${o.ebookTitle}". Deep blue and purple gradient background with gold accents. Elegant typography. Abstract decorative elements suggesting ${o.problem.split(':')[0]}. No faces or people. Commercial quality. Publisher: ${S.author}.`;
+    const prompt=`Professional premium ebook cover. Title: "${o.tituloEbook||o.ebookTitle}". Deep blue and purple gradient background with gold accents. Elegant typography. Abstract decorative elements suggesting ${o.problema||o.problem.split(':')[0]}. No faces or people. Commercial quality. Publisher: ${S.author}.`;
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const d=await resp.json();
     if(d.success){ document.getElementById('hm-cover-content').innerHTML=`<img src="${d.url}" style="width:100%;border-radius:10px;margin-bottom:8px;" /><div style="font-size:10px;color:var(--muted);margin-top:4px;">Clic derecho → Guardar imagen</div><button class="btn btn-s" style="margin-top:8px;" onclick="genCover()">↺ Regenerar</button>`; }
@@ -695,7 +695,7 @@ async function genHotmartImg(idx){
   el.innerHTML='<div style="font-size:18px;">⏳</div><div>Generando...</div>';
   try{
     const o=S.selOpp; const basePrompt=HOTMART_IMG_PROMPTS[idx]||HOTMART_IMG_PROMPTS[0];
-    const prompt=`${basePrompt}. Theme: ${o?o.problem.split(':')[0]:'wellness'}. Country: ${o?o.country:'Europe'}. DALL-E 3 quality.`;
+    const prompt=`${basePrompt}. Theme: ${o?o.problema||o.problem.split(':')[0]:'wellness'}. Country: ${o?o.country:'Europe'}. DALL-E 3 quality.`;
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const d=await resp.json();
     if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" />`; }
@@ -720,8 +720,8 @@ function renderMeta(o,kit){
   document.getElementById('ma-seg').innerHTML=`
     <div class="fc-label">Segmentación recomendada — ${o.country}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
-      <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">EDAD</div><div style="font-size:12px;color:var(--text2);">${seg.age||o.ageRange}</div></div>
-      <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">GÉNERO</div><div style="font-size:12px;color:var(--text2);">${seg.gender||o.gender}</div></div>
+      <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">EDAD</div><div style="font-size:12px;color:var(--text2);">${seg.age||o.rangoEdad||o.ageRange}</div></div>
+      <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">GÉNERO</div><div style="font-size:12px;color:var(--text2);">${seg.gender||o.genero||o.gender}</div></div>
       <div><div style="font-size:9px;color:var(--muted);margin-bottom:3px;letter-spacing:1px;">PAÍS</div><div style="font-size:12px;color:var(--text2);">${o.country}</div></div>
     </div>
     <div style="margin-top:10px;"><div style="font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px;">INTERESES</div><div style="font-size:12px;color:var(--text2);">${(seg.interests||[]).join(' · ')}</div></div>
@@ -765,8 +765,8 @@ function dlHotmart(){
   if(!S.hmKit||!S.selOpp){alert('Genera el kit Hotmart primero aprobando el ebook.');return;}
   const kit=S.hmKit; const o=S.selOpp; const author=S.author;
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;margin-bottom:20px;}h2{color:#6c5ce7;font-size:16px;margin-top:24px;margin-bottom:8px;}p,div{margin-bottom:8px;}.section{background:#f8f9ff;border-left:4px solid #6c5ce7;padding:12px 16px;margin:12px 0;border-radius:0 8px 8px 0;}.label{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;font-weight:bold;}</style></head><body>`;
-  html+=`<h1>KIT HOTMART — ${kit.productName||o.ebookTitle}</h1>`;
-  html+=`<p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country} · <strong>Precio:</strong> ${o.hotmartPrice} · <strong>Autor:</strong> ${author}</p>`;
+  html+=`<h1>KIT HOTMART — ${kit.productName||o.tituloEbook||o.ebookTitle}</h1>`;
+  html+=`<p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country} · <strong>Precio:</strong> ${o.precioHotmart||o.hotmartPrice} · <strong>Autor:</strong> ${author}</p>`;
   const s=(label,val)=>`<div class="section"><div class="label">${label}</div><div>${val}</div></div>`;
   html+=s('Nombre del producto',kit.productName||'');
   html+=s('Headline',kit.headline||'');
@@ -797,8 +797,8 @@ function dlMeta(){
   if(!S.maKit||!S.selOpp){alert('Genera el kit Meta Ads primero aprobando el ebook.');return;}
   const kit=S.maKit; const o=S.selOpp;
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;}h2{color:#6c5ce7;font-size:16px;margin-top:24px;}.ad{background:#f8f9ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin:12px 0;}.label{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}.field{margin-bottom:10px;}</style></head><body>`;
-  html+=`<h1>KIT META ADS — ${o.ebookTitle}</h1><p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country}</p>`;
-  html+=`<h2>SEGMENTACIÓN</h2><p><strong>Edad:</strong> ${kit.segmentation?.age||o.ageRange}<br><strong>Género:</strong> ${kit.segmentation?.gender||o.gender}<br><strong>Intereses:</strong> ${(kit.segmentation?.interests||[]).join(', ')}<br><strong>Dolores:</strong> ${(kit.segmentation?.painPoints||[]).join(', ')}</p>`;
+  html+=`<h1>KIT META ADS — ${o.tituloEbook||o.ebookTitle}</h1><p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country}</p>`;
+  html+=`<h2>SEGMENTACIÓN</h2><p><strong>Edad:</strong> ${kit.segmentation?.age||o.rangoEdad||o.ageRange}<br><strong>Género:</strong> ${kit.segmentation?.gender||o.genero||o.gender}<br><strong>Intereses:</strong> ${(kit.segmentation?.interests||[]).join(', ')}<br><strong>Dolores:</strong> ${(kit.segmentation?.painPoints||[]).join(', ')}</p>`;
   html+=`<h2>5 ANUNCIOS</h2>`;
   (kit.ads||[]).forEach((ad,i)=>{ html+=`<div class="ad"><h3>Anuncio ${i+1}: ${ad.angle||''}</h3><div class="field"><div class="label">Headline</div>${ad.headline||''}</div><div class="field"><div class="label">Texto principal</div>${ad.primaryText||ad.copy||''}</div><div class="field"><div class="label">Descripción</div>${ad.description||''}</div><div class="field"><div class="label">CTA</div>${ad.cta||''}</div><div class="field"><div class="label">Prompt imagen DALL-E</div><em>${ad.dallePrompt||''}</em></div></div>`; });
   if(kit.landingPage){ html+=`<h2>LANDING PAGE</h2><p><strong>Headline:</strong> ${kit.landingPage.headline||''}</p><p><strong>Body:</strong> ${kit.landingPage.body||''}</p><p><strong>CTA:</strong> ${kit.landingPage.cta||''}</p>`; }
@@ -813,13 +813,13 @@ function dlExcel(){if(S.results)genCSV(S.results,S.country,S.niche);}
 function genCSV(data,country,niche){
   const h=['Fecha','Hora','País','Idioma','Nicho','Keyword','Keyword ES','Búsqueda','Problema','Por qué es oportunidad','Necesidad','Dolor emocional','Urgencia','Edad','Género','Volumen','Tendencia','Competencia','Intención','Oportunidad','Producto','Título ebook','Promesa','Precio Hotmart','Score','Prioridad','Fuente'];
   const now=new Date();
-  const rows=data.map(o=>[now.toLocaleDateString('es-CL'),now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,o.language||'',niche,o.keyword||'',o.keywordES||'',o.searchQuery||'',o.problem||'',o.whyThisOpportunity||'',o.need||'',o.emotionalPain||'',o.urgency||'',o.ageRange||'',o.gender||'',o.searchVolume||'',o.trend||'',o.competition||'',o.purchaseIntent||'',o.monetizationOpportunity||'',o.productType||'',o.ebookTitle||'',o.ebookPromise||'',o.hotmartPrice||'',o.monetizationScore||'',o.priorityLevel||'',o.sourceURL||'']);
+  const rows=data.map(o=>[now.toLocaleDateString('es-CL'),now.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,o.language||'',niche,o.keyword||'',o.keywordES||'',o.searchQuery||'',o.problema||o.problem||'',o.porQueEstaOportunidad||o.whyThisOpportunity||'',o.necesidad||o.need||'',o.dolorEmocional||o.emotionalPain||'',o.urgencia||o.urgency||'',o.rangoEdad||o.ageRange||'',o.genero||o.gender||'',o.volumenBusqueda||o.searchVolume||'',o.tendencia||o.trend||'',o.competencia||o.competition||'',o.intencionCompra||o.purchaseIntent||'',o.oportunidadMonetizacion||o.monetizationOpportunity||'',o.tipoProducto||o.productType||'',o.tituloEbook||o.ebookTitle||'',o.promesaEbook||o.ebookPromise||'',o.precioHotmart||o.hotmartPrice||'',o.scoreMonetizacion||o.monetizationScore||'',o.prioridad||o.priorityLevel||'',o.urlFuente||o.sourceURL||'']);
   const csv='\uFEFF'+[h,...rows].map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   a.download=`FERNI_AI_${country}_${niche}_${now.toLocaleDateString('es-CL').replace(/\//g,'-')}.csv`; a.click();
 }
 
-function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.monetizationScore||0)),opps}; S.history.unshift(e); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
+function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
 function renderHist(){ document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; const el=document.getElementById('hist-body'); if(!S.history.length){el.innerHTML=`<div class="state-c"><div class="big-icon">🕐</div><div class="state-sub">Sin búsquedas aún.<br>Ejecuta tu primer análisis.</div></div>`;return;} el.innerHTML=S.history.map(e=>`<div class="hist-item" onclick="loadHist(${e.id})"><div class="hdot"></div><div class="hinfo"><div class="htitle">${e.flag} ${e.country} · ${e.niche}</div><div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div><div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div></div><div class="hbtns" onclick="event.stopPropagation()"><button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button><button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button></div></div>`).join(''); }
 function loadHist(id){ const e=S.history.find(h=>h.id===id);if(!e)return; S.results=e.opps;S.country=e.country;S.niche=e.niche; const info=LANGS[e.country]||{lang:'English',flag:e.flag}; showResults(e.opps,e.country,e.niche,{...info,flag:e.flag}); showTab('search',document.querySelectorAll('.tab')[0]); }
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
