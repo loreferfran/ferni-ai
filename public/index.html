@@ -218,8 +218,8 @@ select option { background: #1e2d52; }
         <div class="fg">
           <div class="fl">Modo</div>
           <div class="mode-row">
-            <button class="mbtn active" id="mb-t" onclick="setMode('trends')">📊 General</button>
-            <button class="mbtn" id="mb-n" onclick="setMode('niche')" style="cursor:pointer;">🎯 Nicho</button>
+            <button class="mbtn active" id="mb-t" onclick="setMode('trends')" type="button">📊 General</button>
+            <button class="mbtn" id="mb-n" onclick="setMode('niche')" type="button">🎯 Nicho</button>
           </div>
         </div>
         <div class="fg">
@@ -425,7 +425,25 @@ const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'Germa
 function showTab(id,el){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.getElementById('panel-'+id).classList.add('active'); if(el)el.classList.add('active'); if(id==='hist')renderHist(); }
 function show(id){document.getElementById(id).classList.remove('hidden');}
 function hide(id){document.getElementById(id).classList.add('hidden');}
-function setMode(m){ S.mode=m; document.getElementById('mb-t').classList.toggle('active',m==='trends'); document.getElementById('mb-n').classList.toggle('active',m==='niche'); const h=document.getElementById('niche-hint'); if(m==='niche'){h.textContent='✓ Modo nicho activo';h.style.color='var(--green)'; setTimeout(function(){document.getElementById('inp-niche').focus();},100);}else{h.textContent='💡 Haz clic y escribe tu nicho';h.style.color='var(--teal)';} }
+function setMode(m){
+  S.mode=m;
+  var bt=document.getElementById('mb-t');
+  var bn=document.getElementById('mb-n');
+  var h=document.getElementById('niche-hint');
+  var inp=document.getElementById('inp-niche');
+  if(m==='niche'){
+    bt.classList.remove('active');
+    bn.classList.add('active');
+    h.textContent='✓ Modo nicho activo — escribe tu nicho abajo';
+    h.style.color='var(--green)';
+    inp.focus();
+  } else {
+    bn.classList.remove('active');
+    bt.classList.add('active');
+    h.textContent='💡 Modo general activo — FERNI detecta nichos automáticamente';
+    h.style.color='var(--teal)';
+  }
+}
 function pickChip(n,el){ document.getElementById('inp-niche').value=n; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); setMode('niche'); }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
@@ -457,7 +475,9 @@ async function runSearch(){
   S.country=country;
   const info=LANGS[country]||{lang:'English',flag:'🌍'};
   S.lang=info.lang;
-  S.niche=document.getElementById('inp-niche').value.trim()||'salud';
+  var nicheVal=document.getElementById('inp-niche').value.trim();
+  if(S.mode==='niche' && !nicheVal){alert('Escribe un nicho primero (ej: salud, ansiedad, menopausia)');return;}
+  S.niche=nicheVal||'salud bienestar';
   showLoading();
   try{
     const resp=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country,niche:S.niche,language:info.lang})});
@@ -908,4 +928,5 @@ setMode('trends'); renderHist();
 </script>
 </body>
 </html>
+
 
