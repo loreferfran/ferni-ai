@@ -167,22 +167,27 @@ async function claudeCall(system, userContent, maxTokens) {
   return d.content.map(function(c) { return c.text || ''; }).join('');
 }
 
+// Busqueda Google organica + People Also Ask
 async function serperSearch(query) {
   try {
     const r = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: query, num: 8 })
+      body: JSON.stringify({ q: query, num: 10, hl: 'fr' })
     });
     if (r.ok) {
       const d = await r.json();
       var results = (d.organic || []).map(function(x) {
-        return { title: x.title, snippet: x.snippet, url: x.link, query: query };
+        return { title: x.title, snippet: x.snippet, url: x.link, source: 'google', query: query };
       });
-      // Agregar "People Also Ask" si existe
       if (d.peopleAlsoAsk) {
         d.peopleAlsoAsk.forEach(function(paa) {
-          results.push({ title: paa.question, snippet: paa.snippet || paa.question, url: paa.link || '', query: 'People Also Ask: ' + query });
+          results.push({ title: paa.question, snippet: paa.snippet || paa.question, url: paa.link || '', source: 'people_also_ask', query: 'PAA: ' + query });
+        });
+      }
+      if (d.relatedSearches) {
+        d.relatedSearches.forEach(function(rs) {
+          results.push({ title: rs.query, snippet: rs.query, url: '', source: 'related_search', query: 'Related: ' + query });
         });
       }
       return results;
@@ -191,13 +196,111 @@ async function serperSearch(query) {
   return [];
 }
 
+// Busqueda Google Trends via Serper
+async function serperTrends(keyword, country) {
+  try {
+    const r = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: keyword + ' tendencias 2025 ' + country, num: 5, tbs: 'qdr:m' })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      return (d.organic || []).slice(0, 4).map(function(x) {
+        return { title: x.title, snippet: x.snippet, url: x.link, source: 'trends', query: 'TRENDS: ' + keyword };
+      });
+    }
+  } catch (e) {}
+  return [];
+}
+
+// Busqueda Reddit via Serper
+async function serperReddit(topic, country, language) {
+  try {
+    const r = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: 'site:reddit.com ' + topic + ' ' + country, num: 8 })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      return (d.organic || []).map(function(x) {
+        return { title: x.title, snippet: x.snippet, url: x.link, source: 'reddit', query: 'REDDIT: ' + topic };
+      });
+    }
+  } catch (e) {}
+  return [];
+}
+
+// Busqueda YouTube via Serper
+async function serperYoutube(topic, country) {
+  try {
+    const r = await fetch('https://google.serper.dev/videos', {
+      method: 'POST',
+      headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: topic + ' ' + country + ' tutorial guide 2024 2025', num: 6 })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      return (d.videos || []).map(function(x) {
+        return { title: x.title, snippet: (x.snippet||'') + ' Views: ' + (x.views||'?'), url: x.link, source: 'youtube', query: 'YOUTUBE: ' + topic };
+      });
+    }
+  } catch (e) {}
+  return [];
+}
+
+// Busqueda Amazon bestsellers via Serper
+async function serperAmazon(topic, country, currency) {
+  const amazonDomain = { France: 'amazon.fr', Germany: 'amazon.de', Italy: 'amazon.it', Spain: 'amazon.es', 'United Kingdom': 'amazon.co.uk', USA: 'amazon.com', Canada: 'amazon.ca' }[country] || 'amazon.fr';
+  try {
+    const r = await fetch('https://google.serper.dev/shopping', {
+      method: 'POST',
+      headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: topic + ' ebook guide pdf bestseller site:' + amazonDomain, num: 6 })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      return (d.shopping || []).map(function(x) {
+        return { title: x.title, snippet: 'Precio: ' + (x.price||'?') + ' Rating: ' + (x.rating||'?') + ' Reviews: ' + (x.reviews||'?'), url: x.link, source: 'amazon', query: 'AMAZON: ' + topic };
+      });
+    }
+  } catch (e) {}
+  return [];
+}
+
+// Motor de busqueda profunda multi-fuente
 async function searchWithSerper(country, niche, language) {
   const queries = buildSmartQueries(country, niche, language);
+  const topic = niche || 'tendencias digitales';
+  const currency = (REGS[country] && REGS[country].currency) || 'EUR';
   const allResults = [];
-  for (var i = 0; i < queries.length; i++) {
-    var results = await serperSearch(queries[i]);
-    results.forEach(function(r) { allResults.push(r); });
+
+  // 1. Busquedas Google organicas (queries principales)
+  for (var i = 0; i < Math.min(queries.length, 8); i++) {
+    var r = await serperSearch(queries[i]);
+    r.forEach(function(x) { allResults.push(x); });
   }
+
+  // 2. Google Trends (ultimos 30 dias)
+  var trendsQueries = [topic + ' ' + country, topic + ' tendencia 2025'];
+  for (var i = 0; i < trendsQueries.length; i++) {
+    var tr = await serperTrends(trendsQueries[i], country);
+    tr.forEach(function(x) { allResults.push(x); });
+  }
+
+  // 3. Reddit (comunidad real, problemas reales)
+  var redditResults = await serperReddit(topic, country, language);
+  redditResults.forEach(function(x) { allResults.push(x); });
+
+  // 4. YouTube (demanda de video = demanda de contenido)
+  var ytResults = await serperYoutube(topic, country);
+  ytResults.forEach(function(x) { allResults.push(x); });
+
+  // 5. Amazon bestsellers (productos que ya venden = demanda validada)
+  var amzResults = await serperAmazon(topic, country, currency);
+  amzResults.forEach(function(x) { allResults.push(x); });
+
   return allResults;
 }
 
@@ -256,12 +359,36 @@ async function analyzeWithGPT4(results, country, niche, language) {
     ' fuentesConsultadas (array de fuentes donde se detecto),' +
     ' datosDetallados (objeto con busquedasPorGenero, busquedasPorEdad, busquedasPorClase, keywordsEncontradas array en ' + language + ', competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesDeValidas array).';
 
-  const userMsg = 'Pais: ' + country + ' (poblacion: ' + pop + ')\n' +
-    'Nicho o tema: ' + (niche || 'general - detecta los temas con mayor demanda') + '\n' +
-    'Idioma del pais: ' + language + '\n\n' +
-    'Resultados reales de busquedas en Google, foros, Amazon, Reddit y otras plataformas:\n' +
-    results.slice(0, 35).map(function(r) {
-      return 'FUENTE: ' + r.query + '\nTITULO: ' + r.title + '\nCONTENIDO: ' + r.snippet + '\nURL: ' + r.url;
+  // Separar resultados por fuente para dar contexto mas rico a GPT-4o
+  var googleResults = results.filter(function(r){ return r.source === 'google' || r.source === 'people_also_ask' || r.source === 'related_search'; });
+  var redditResults = results.filter(function(r){ return r.source === 'reddit'; });
+  var youtubeResults = results.filter(function(r){ return r.source === 'youtube'; });
+  var amazonResults = results.filter(function(r){ return r.source === 'amazon'; });
+  var trendsResults = results.filter(function(r){ return r.source === 'trends'; });
+
+  var userMsg = 'PAIS: ' + country + ' (poblacion: ' + pop + ')\n' +
+    'NICHO: ' + (niche || 'general') + '\n' +
+    'IDIOMA: ' + language + '\n\n';
+
+  if (trendsResults.length) {
+    userMsg += '=== TENDENCIAS RECIENTES (ultimo mes) ===\n' +
+      trendsResults.map(function(r){ return '- ' + r.title + ': ' + r.snippet; }).join('\n') + '\n\n';
+  }
+  if (redditResults.length) {
+    userMsg += '=== REDDIT (problemas y preguntas reales de la comunidad) ===\n' +
+      redditResults.map(function(r){ return '- ' + r.title + ': ' + r.snippet; }).join('\n') + '\n\n';
+  }
+  if (youtubeResults.length) {
+    userMsg += '=== YOUTUBE (demanda de contenido video - alto interes) ===\n' +
+      youtubeResults.map(function(r){ return '- ' + r.title + ' | ' + r.snippet; }).join('\n') + '\n\n';
+  }
+  if (amazonResults.length) {
+    userMsg += '=== AMAZON BESTSELLERS (productos que ya venden = demanda validada) ===\n' +
+      amazonResults.map(function(r){ return '- ' + r.title + ' | ' + r.snippet; }).join('\n') + '\n\n';
+  }
+  userMsg += '=== GOOGLE BUSQUEDAS ORGANICAS + PREGUNTAS FRECUENTES ===\n' +
+    googleResults.slice(0, 40).map(function(r) {
+      return '[' + (r.source||'google').toUpperCase() + '] ' + r.query + '\n  ' + r.title + '\n  ' + r.snippet;
     }).join('\n---\n');
 
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -270,8 +397,8 @@ async function analyzeWithGPT4(results, country, niche, language) {
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }],
-      temperature: 0.3,
-      max_tokens: 6000
+      temperature: 0.2,
+      max_tokens: 8000
     })
   });
   const d = await resp.json();
