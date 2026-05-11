@@ -781,65 +781,193 @@ function renderDraft(o,eb){
 }
 
 async function approveEbook(){
-  const o=S.selOpp; if(!o) return;
-  hide('eb-content'); show('eb-loading');
+  const o = S.selOpp; if(!o || !S.ebookData) return;
   const lang = o.idioma || o.language || o.lang || (REGS[getCountryName(o.pais||o.country||'France')] && REGS[getCountryName(o.pais||o.country||'France')].language) || 'French';
-  document.getElementById('eb-load-txt').textContent=`Traduciendo al ${lang}...`;
-  try{
-    const resp=await fetch('/api/translate-ebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ebook:S.ebookData,language:lang,country:getCountryName(o.pais||o.country||'France'),author:S.author})});
-    const d=await resp.json();
-    if(d.success){ S.finalEbook=d.ebook; hide('eb-loading'); renderFinal(o,d.ebook,lang); genHotmart(o); genMeta(o); }
-    else{ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData,lang); genHotmart(o); genMeta(o); }
+  const countryName = getCountryName(o.pais || o.country || 'France');
+
+  hide('eb-content'); show('eb-loading');
+  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + '...';
+
+  try {
+    // PASO 1: Traducir ebook al idioma del pais
+    const tr = await fetch('/api/translate-ebook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ebook: S.ebookData, language: lang, country: countryName, author: S.author})
+    });
+    const td = await tr.json();
+    const translatedEbook = td.success ? td.ebook : S.ebookData;
+
+    // PASO 2: Generar imagen de portada con DALL-E
+    document.getElementById('eb-load-txt').textContent = 'Generando portada con IA...';
+    const coverPrompt = 'Professional ebook cover for "' + (translatedEbook.title||'') + '". Theme: ' + (o.problema||o.problem||'') + '. Country: ' + countryName + '. Elegant, modern, colorful gradient background, inspirational mood. No text. No faces. High quality commercial illustration.';
+    let coverUrl = null;
+    try {
+      const cr = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: coverPrompt})});
+      const cd = await cr.json();
+      if(cd.success) coverUrl = cd.url;
+    } catch(e) { console.log('Cover image failed:', e.message); }
+
+    // PASO 3: Generar imágenes para cada capítulo
+    document.getElementById('eb-load-txt').textContent = 'Generando imágenes de capítulos...';
+    const chapterImages = [];
+    for(var i = 0; i < (translatedEbook.chapters||[]).length; i++) {
+      const ch = translatedEbook.chapters[i];
+      const imgPrompt = 'Illustration for chapter "' + (ch.title||'') + '" about ' + (o.problema||o.problem||'') + '. ' + countryName + ' style. Warm, inviting, practical lifestyle scene. No text. No faces. Professional quality.';
+      try {
+        const ir = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: imgPrompt})});
+        const id2 = await ir.json();
+        chapterImages.push(id2.success ? id2.url : null);
+      } catch(e) { chapterImages.push(null); }
+    }
+
+    // PASO 4: Construir PDF HTML profesional
+    document.getElementById('eb-load-txt').textContent = 'Construyendo PDF final...';
+    S.finalEbook = translatedEbook;
+    S.pdfHtml = buildFinalPdfHtml(translatedEbook, o, lang, countryName, coverUrl, chapterImages);
+
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-  }catch(e){ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData,lang); genHotmart(o); genMeta(o); }
+
+    hide('eb-loading'); hide('eb-content'); show('eb-approved');
+    document.getElementById('eb-approved-badge').textContent = '✓ Aprobado en ' + lang;
+    addMsg('chat-ebook', '🎉 ¡PDF final listo en ' + lang + '! Con portada' + (coverUrl?' con imagen':'') + ', índice, ' + (translatedEbook.chapters||[]).length + ' capítulos con ejercicios, y sección legal. Haz clic en "Descargar PDF para Hotmart".', 'ferni');
+
+  } catch(e) {
+    hide('eb-loading'); show('eb-content');
+    alert('Error al generar PDF final: ' + e.message);
+  }
 }
 
-function renderFinal(o,eb,lang){
-  lang = lang || o.idioma || o.language || 'French';
-  const year=new Date().getFullYear();
-  hide('eb-loading'); hide('eb-content'); show('eb-approved');
-  document.getElementById('eb-approved-badge').textContent=`✓ Aprobado en ${lang}`;
-  document.getElementById('eb-final-body').innerHTML=`
-    <div class="ebook-cover">
-      ${eb.tagline?`<div class="ebook-cover-tagline">${eb.tagline}</div>`:''}
-      <div class="ebook-cover-title">${eb.title||o.tituloEbook||o.ebookTitle}</div>
-      <div class="ebook-cover-sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div>
-      <div class="ebook-cover-author">par/by/von/di ${S.author}</div>
-      <div class="ebook-copyright">© ${year} ${S.author}</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-      <span class="badge bg2">✓ Aprobado — ${o.language}</span>
-      <span class="badge ba">${o.rangoEdad||o.ageRange} · ${o.genero||o.gender}</span>
-      <span class="badge bgold">${o.precioHotmart||o.hotmartPrice}</span>
-    </div>
-    <div class="ch"><div class="ch-num">INTRODUCTION</div><div class="ch-text">${(eb.intro||'').replace(/\n/g,'<br><br>')}</div></div>
-    ${(eb.chapters||[]).map(c=>`<div class="ch"><div class="ch-num">CHAPTER ${c.number||''}</div><div class="ch-title">${c.title||''}</div>${c.opening?`<div class="ch-opening">${c.opening}</div>`:''}<div class="ch-text">${(c.content||'').replace(/\n/g,'<br><br>')}</div></div>`).join('')}
-    <div class="ch"><div class="ch-num">CONCLUSION</div><div class="ch-text">${(eb.conclusion||'').replace(/\n/g,'<br><br>')}</div></div>
-    <div class="divider"></div>
-    <div style="font-size:11px;color:var(--muted);">${eb.disclaimer||''}</div>`;
-  // Generate pdfHtml so dlPDF works
-  S.pdfHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:60px 40px;text-align:center;page-break-after:always;}.cover h1{color:white;font-size:32px;margin-bottom:12px;line-height:1.3;}.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;font-size:16px;margin-bottom:20px;}.cover .author{color:#fdcb6e;font-size:15px;font-weight:bold;}.cover .copy{color:rgba(255,255,255,0.4);font-size:11px;margin-top:10px;}h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;font-size:18px;}h3{color:#6c5ce7;font-size:14px;margin-top:18px;}p{margin-bottom:14px;}.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;color:#5a4a2a;margin:14px 0;border-radius:0 8px 8px 0;}.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin:16px 0;}.kp{color:#00b894;padding:3px 0;}.step{display:flex;gap:10px;margin:8px 0;}.snum{background:#6c5ce7;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;}.toc{background:#f9f9f9;padding:20px;border-radius:8px;margin-bottom:30px;}.toc-t{font-weight:bold;color:#2d3180;margin-bottom:10px;}hr{border:1px solid #eee;margin:24px 0;}.disc{font-size:11px;color:#999;text-align:center;font-style:italic;}</style></head><body>' +
-    '<div class="cover"><h1>' + (eb.title||o.tituloEbook||o.ebookTitle||'') + '</h1><div class="sub">' + (eb.subtitle||o.promesaEbook||o.ebookPromise||'') + '</div>' +
-    (eb.tagline ? '<div style="color:rgba(255,255,255,0.7);font-size:13px;margin-bottom:16px;">' + eb.tagline + '</div>' : '') +
-    '<div class="author">par ' + (S.author||'Antonieta') + '</div><div class="copy">© ' + year + ' ' + (S.author||'Antonieta') + ' · Tous droits réservés</div></div>' +
-    '<div class="toc"><div class="toc-t">Table des matières</div>Introduction<br>' + (eb.chapters||[]).map(function(c){return c.title||'';}).join('<br>') + '<br>Conclusion<br>Plan d’action</div>' +
-    '<h2>Introduction</h2><p>' + (eb.intro||'').replace(/\n\n/g,'</p><p>') + '</p>' +
-    (eb.chapters||[]).map(function(c){
-      var s = '<h2>Chapitre ' + (c.number||'') + ': ' + (c.title||'') + '</h2>';
-      if(c.opening) s += '<div class="opening">' + c.opening + '</div>';
-      s += '<p>' + (c.content||'').replace(/\n\n/g,'</p><p>') + '</p>';
-      if(c.keyPoints&&c.keyPoints.length){ s+='<h3>Points clés</h3>'; c.keyPoints.forEach(function(k){s+='<div class="kp">✓ '+k+'</div>';}); }
-      if(c.exercise){ s+='<div class="exercise"><strong>✏️ '+( c.exercise.title||'Exercice')+'</strong><p>'+(c.exercise.description||'')+'</p>'; (c.exercise.steps||[]).forEach(function(st,i){s+='<div class="step"><div class="snum">'+(i+1)+'</div><div>'+st+'</div></div>';}); s+='</div>'; }
-      return s;
-    }).join('') +
-    '<h2>Conclusion</h2><p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>') + '</p>' +
-    (eb.actionPlan&&eb.actionPlan.length ? '<h2>Plan d’action</h2>' + eb.actionPlan.map(function(a,i){return '<p><strong>'+(i+1)+'.</strong> '+a+'</p>';}).join('') : '') +
-    (eb.resources&&eb.resources.length ? '<h2>Ressources</h2>' + eb.resources.map(function(r){return '<p>→ '+r+'</p>';}).join('') : '') +
-    (eb.authorNote ? '<h2>Note de l’auteur</h2><p style="font-style:italic;">' + eb.authorNote + '</p>' : '') +
-    (eb.legalSection ? '<hr><div class="disc">' + (eb.legalSection.healthDisclaimer||'') + ' ' + (eb.legalSection.copyright||'') + '</div>' : '') +
-    '</body></html>';
-  addMsg('chat-ebook',`🎉 ¡Ebook aprobado y traducido al ${lang}! Haz clic en "Descargar PDF para Hotmart" para obtener el archivo.`,'ferni');
+function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
+  var author = S.author || 'Antonieta';
+  var year = new Date().getFullYear();
+  var pageNum = 0;
+
+  var html = '<!DOCTYPE html><html lang="' + lang.toLowerCase().slice(0,2) + '"><head><meta charset="UTF-8">' +
+    '<style>' +
+    '@page{size:A4;margin:2cm;}' +
+    'body{font-family:Georgia,serif;color:#1a1a2e;line-height:1.9;font-size:13px;margin:0;padding:0;}' +
+    '.page-break{page-break-after:always;}' +
+    '.cover{background:linear-gradient(135deg,#1a1a6e 0%,#6c5ce7 50%,#a29bfe 100%);color:white;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.cover-img{width:100%;max-width:400px;height:280px;object-fit:cover;border-radius:12px;margin-bottom:30px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}' +
+    '.cover h1{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:16px;text-shadow:0 2px 20px rgba(0,0,0,0.3);}' +
+    '.cover .subtitle{font-size:18px;font-style:italic;opacity:0.9;margin-bottom:20px;}' +
+    '.cover .tagline{font-size:14px;opacity:0.75;margin-bottom:30px;}' +
+    '.cover .author-line{font-size:16px;font-weight:bold;color:#fdcb6e;}' +
+    '.cover .copyright{font-size:11px;opacity:0.5;margin-top:10px;}' +
+    '.toc-page{padding:40px;max-width:720px;margin:0 auto;}' +
+    '.toc-title{font-size:24px;font-weight:bold;color:#2d3180;border-bottom:3px solid #6c5ce7;padding-bottom:12px;margin-bottom:24px;}' +
+    '.toc-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted #ddd;font-size:14px;}' +
+    '.toc-item .toc-ch{color:#2d3180;font-weight:600;}' +
+    '.toc-item .toc-pg{color:#6c5ce7;font-weight:bold;}' +
+    '.chapter{max-width:720px;margin:0 auto;padding:30px 40px;}' +
+    '.chapter-header{background:linear-gradient(135deg,#2d3180,#6c5ce7);color:white;padding:30px;border-radius:12px;margin-bottom:30px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.chapter-num{font-size:12px;text-transform:uppercase;letter-spacing:2px;opacity:0.7;}' +
+    '.chapter-title{font-size:24px;font-weight:bold;margin-top:8px;}' +
+    '.chapter-img{width:100%;height:220px;object-fit:cover;border-radius:10px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.15);}' +
+    '.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:16px 20px;font-style:italic;color:#5a4a2a;margin:20px 0;border-radius:0 8px 8px 0;}' +
+    'p{margin-bottom:16px;text-align:justify;}' +
+    '.key-points{background:#f0fff4;border:1px solid #00b894;border-radius:8px;padding:16px 20px;margin:20px 0;}' +
+    '.key-points h3{color:#00b894;margin-bottom:10px;font-size:14px;}' +
+    '.kp{padding:4px 0;color:#2d3436;}' +
+    '.kp::before{content:"✓ ";color:#00b894;font-weight:bold;}' +
+    '.exercise{background:#f0f4ff;border:1px solid #6c5ce7;border-radius:8px;padding:20px;margin:20px 0;}' +
+    '.exercise h3{color:#6c5ce7;margin-bottom:12px;}' +
+    '.step{display:flex;gap:12px;margin:10px 0;align-items:flex-start;}' +
+    '.snum{background:#6c5ce7;color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;flex-shrink:0;margin-top:2px;}' +
+    '.conclusion-section{max-width:720px;margin:0 auto;padding:30px 40px;}' +
+    '.action-plan{background:linear-gradient(135deg,#00b894,#00cec9);color:white;padding:24px;border-radius:12px;margin:20px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.action-plan h2{color:white;margin-bottom:16px;}' +
+    '.action-item{display:flex;gap:12px;margin:10px 0;align-items:flex-start;}' +
+    '.anum{background:rgba(255,255,255,0.3);color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;flex-shrink:0;}' +
+    '.author-note{background:#fff9f0;border:2px solid #fdcb6e;border-radius:12px;padding:24px;margin:20px 0;font-style:italic;}' +
+    '.legal{background:#f8f9fa;border-top:2px solid #ddd;padding:20px;margin-top:40px;font-size:10px;color:#636e72;text-align:center;}' +
+    '.page-num{text-align:center;font-size:10px;color:#999;margin-top:20px;}' +
+    'h2{color:#2d3180;font-size:20px;margin-top:28px;}' +
+    'h3{color:#6c5ce7;font-size:15px;}' +
+    '@media print{' +
+    '.cover,.chapter-header,.action-plan{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
+    '.page-break{page-break-after:always;}' +
+    '}' +
+    '</style></head><body>';
+
+  // PORTADA
+  html += '<div class="cover page-break">';
+  if(coverUrl) html += '<img class="cover-img" src="' + coverUrl + '" alt="portada">';
+  html += '<h1>' + (eb.title||'') + '</h1>';
+  html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
+  if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
+  html += '<div class="author-line">par ' + author + '</div>';
+  html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; Tous droits r&eacute;serv&eacute;s</div>';
+  html += '</div>';
+
+  // ÍNDICE
+  html += '<div class="toc-page page-break">';
+  html += '<div class="toc-title">Table des mati&egrave;res</div>';
+  html += '<div class="toc-item"><span class="toc-ch">Introduction</span><span class="toc-pg">3</span></div>';
+  (eb.chapters||[]).forEach(function(ch, i){
+    html += '<div class="toc-item"><span class="toc-ch">Chapitre ' + (i+1) + ': ' + (ch.title||'') + '</span><span class="toc-pg">' + (4+i*3) + '</span></div>';
+  });
+  html += '<div class="toc-item"><span class="toc-ch">Conclusion</span><span class="toc-pg">' + (4+(eb.chapters||[]).length*3) + '</span></div>';
+  html += '<div class="toc-item"><span class="toc-ch">Plan d’action</span><span class="toc-pg">' + (5+(eb.chapters||[]).length*3) + '</span></div>';
+  html += '</div>';
+
+  // INTRODUCCIÓN
+  html += '<div class="chapter page-break">';
+  html += '<div class="chapter-header"><div class="chapter-num">Introduction</div><div class="chapter-title">' + (eb.title||'') + '</div></div>';
+  html += '<p>' + (eb.intro||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+  html += '</div>';
+
+  // CAPÍTULOS
+  (eb.chapters||[]).forEach(function(ch, i){
+    html += '<div class="chapter page-break">';
+    html += '<div class="chapter-header"><div class="chapter-num">Chapitre ' + (ch.number||i+1) + '</div><div class="chapter-title">' + (ch.title||'') + '</div></div>';
+    if(chapterImages[i]) html += '<img class="chapter-img" src="' + chapterImages[i] + '" alt="illustration chapitre ' + (i+1) + '">';
+    if(ch.opening) html += '<div class="opening">' + ch.opening + '</div>';
+    html += '<p>' + (ch.content||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+    if(ch.keyPoints&&ch.keyPoints.length){
+      html += '<div class="key-points"><h3>Points cl&eacute;s</h3>';
+      ch.keyPoints.forEach(function(k){ html += '<div class="kp">' + k + '</div>'; });
+      html += '</div>';
+    }
+    if(ch.exercise){
+      html += '<div class="exercise"><h3>&#9999;&#65039; ' + (ch.exercise.title||'Exercice') + '</h3>';
+      if(ch.exercise.description) html += '<p>' + ch.exercise.description + '</p>';
+      (ch.exercise.steps||[]).forEach(function(st,j){ html += '<div class="step"><div class="snum">'+(j+1)+'</div><div>'+st+'</div></div>'; });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  // CONCLUSIÓN Y PLAN DE ACCIÓN
+  html += '<div class="conclusion-section page-break">';
+  html += '<h2>Conclusion</h2>';
+  html += '<p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+  if(eb.actionPlan&&eb.actionPlan.length){
+    html += '<div class="action-plan"><h2>Plan d’action</h2>';
+    eb.actionPlan.forEach(function(a,i){ html += '<div class="action-item"><div class="anum">'+(i+1)+'</div><div>'+a+'</div></div>'; });
+    html += '</div>';
+  }
+  if(eb.resources&&eb.resources.length){
+    html += '<h2>Ressources</h2>';
+    eb.resources.forEach(function(r){ html += '<p>&rarr; '+r+'</p>'; });
+  }
+  if(eb.authorNote){
+    html += '<div class="author-note"><strong>' + author + '</strong><br>' + eb.authorNote + '</div>';
+  }
+  if(eb.legalSection){
+    html += '<div class="legal">' +
+      (eb.legalSection.healthDisclaimer||'') + '<br>' +
+      (eb.legalSection.guarantee||'') + '<br>' +
+      (eb.legalSection.dataProtection||'') + '<br>' +
+      (eb.legalSection.copyright||'&copy; '+year+' '+author) +
+      '</div>';
+  }
+  html += '</div>';
+  html += '</body></html>';
+  return html;
 }
+
 
 function dlWordDraft(){
   const o=S.selOpp; if(!o||!S.ebookData){alert('Genera el borrador primero');return;}
@@ -1300,6 +1428,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
