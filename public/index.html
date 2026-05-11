@@ -639,24 +639,14 @@ function dlSingleExcel(i){
 }
 
 async function claudeDirect(system, userMsg, maxTokens) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetch('/api/chat-raw', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': S.claudeKey || '',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
-      max_tokens: maxTokens || 4000,
-      system: system,
-      messages: [{ role: 'user', content: userMsg }]
-    })
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({system: system, message: userMsg, maxTokens: maxTokens || 4000})
   });
   const d = await resp.json();
-  if (d.error) throw new Error(d.error.message);
-  return d.content.map(function(c) { return c.text || ''; }).join('');
+  if (!d.success) throw new Error(d.error || 'Error del servidor');
+  return d.reply;
 }
 
 async function goEbook(){
@@ -1046,6 +1036,17 @@ function delHist(id){ if(!confirm('¿Eliminar?'))return; S.history=S.history.fil
 
 setMode('trends'); renderHist();
 
+// Load API keys from server on startup
+async function initKeys() {
+  try {
+    const r = await fetch('/api/config');
+    const d = await r.json();
+    S.claudeKey = d.claudeKey || '';
+    S.openaiKey = d.openaiKey || '';
+  } catch(e) {}
+}
+initKeys();
+
 // Chat collapsible
 var chatCollapsed = {};
 function toggleChat(panel) {
@@ -1073,6 +1074,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
