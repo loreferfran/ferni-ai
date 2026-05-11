@@ -423,7 +423,25 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
 
 const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'} };
 
-function showTab(id,el){ document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.getElementById('panel-'+id).classList.add('active'); if(el)el.classList.add('active'); if(id==='hist')renderHist(); }
+function showTab(id,el){ 
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.getElementById('panel-'+id).classList.add('active'); 
+  if(el)el.classList.add('active'); 
+  if(id==='hist') renderHist(); 
+  if(id==='ebook') restoreEbookTab();
+}
+
+function restoreEbookTab(){
+  if(S.finalEbook && S.selOpp){
+    hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+  } else if(S.ebookData && S.selOpp){
+    hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
+    renderDraft(S.selOpp, S.ebookData);
+  } else {
+    hide('eb-loading'); hide('eb-content'); hide('eb-approved'); show('eb-empty');
+  }
+}
 function show(id){document.getElementById(id).classList.remove('hidden');}
 function hide(id){document.getElementById(id).classList.add('hidden');}
 function setMode(m){
@@ -1074,10 +1092,13 @@ function loadHist(id){
   S.currentHistId=id;
   const info=LANGS[e.country]||{lang:'English',flag:e.flag}; 
   showResults(e.opps,e.country,e.niche,{...info,flag:e.flag}); 
-  showTab('search',document.querySelectorAll('.tab')[0]);
-  if(e.ebook){ 
-    const msg = '📂 Historial restaurado. ' + (e.finalEbook?'✅ PDF final disponible — ve al panel Ebook.':'✏️ Borrador guardado — ve al panel Ebook para continuar.');
-    setTimeout(()=>addMsg('chat-search', msg, 'ferni'), 300);
+  if(e.finalEbook || e.ebook){
+    showTab('ebook', document.querySelectorAll('.tab')[1]);
+    setTimeout(()=>restoreEbookTab(), 100);
+    const msg = '📂 Historial restaurado. ' + (e.finalEbook ? '✅ PDF final listo — descárgalo abajo.' : '✏️ Borrador listo — apruébalo para generar el PDF final.');
+    setTimeout(()=>addMsg('chat-ebook', msg, 'ferni'), 400);
+  } else {
+    showTab('search', document.querySelectorAll('.tab')[0]);
   }
 }
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
@@ -1123,6 +1144,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
