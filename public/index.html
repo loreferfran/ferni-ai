@@ -800,7 +800,16 @@ async function approveEbook(){
 
     // PASO 2: Generar imagen de portada con DALL-E
     document.getElementById('eb-load-txt').textContent = 'Generando portada con IA...';
-    const coverPrompt = 'Professional ebook cover for "' + (translatedEbook.title||'') + '". Theme: ' + (o.problema||o.problem||'') + '. Country: ' + countryName + '. Elegant, modern, colorful gradient background, inspirational mood. No text. No faces. High quality commercial illustration.';
+    // Prompt maestro para portada — evocador, emocional, aspiracional
+    const tema = (o.problema||o.problem||'');
+    const promesa = (o.promesaEbook||o.ebookPromise||'');
+    const coverPrompt = 'Professional lifestyle photography for an ebook about "' + tema + '" in ' + countryName + '. ' +
+      'Visual: beautiful, aspirational result that readers will achieve after reading — the AFTER state, not the problem. ' +
+      'Style: warm golden hour light, rich colors, magazine quality, editorial photography. ' +
+      'Composition: wide shot showing the beautiful final result the reader desires. ' +
+      'Mood: inspiring, achievable, warm, inviting — this is possible for me. ' +
+      'No text, no watermarks, no logos, no faces. Ultra high quality commercial photography. 8K resolution. ' +
+      'Promise of the book: ' + promesa;
     let coverUrl = null;
     try {
       const cr = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: coverPrompt})});
@@ -813,7 +822,28 @@ async function approveEbook(){
     const chapterImages = [];
     for(var i = 0; i < (translatedEbook.chapters||[]).length; i++) {
       const ch = translatedEbook.chapters[i];
-      const imgPrompt = 'Illustration for chapter "' + (ch.title||'') + '" about ' + (o.problema||o.problem||'') + '. ' + countryName + ' style. Warm, inviting, practical lifestyle scene. No text. No faces. Professional quality.';
+      // Prompt maestro por capítulo — narra el progreso, muestra el hacer
+    const chTema = (o.problema||o.problem||'');
+    const chTitulo = (ch.title||'');
+    const chContenido = (ch.content||'').slice(0,200);
+    const chNum = i + 1;
+    const totalChs = (translatedEbook.chapters||[]).length;
+    // Narrativa progresiva: cap 1=inicio/problema, caps medios=proceso/herramientas, último=resultado final
+    const narrativa = chNum === 1 
+      ? 'The BEGINNING — showing the current situation and the desire to improve it. Before state with hope.'
+      : chNum === totalChs 
+        ? 'The FINAL RESULT — beautiful, completed, professional outcome. The dream achieved. After state.'
+        : 'The PROCESS — step ' + chNum + ' of ' + totalChs + ', showing hands-on action, tools, materials, and visible progress being made.';
+    const imgPrompt = 'Professional editorial photography for chapter ' + chNum + ' of an ebook about "' + chTema + '" in ' + countryName + '. ' +
+      'Chapter title: "' + chTitulo + '". ' +
+      'Narrative: ' + narrativa + ' ' +
+      'Content context: ' + chContenido + '. ' +
+      'Style: warm natural light, rich saturated colors, magazine editorial quality. ' +
+      'Show real objects, materials, tools or spaces relevant to this specific chapter topic. ' +
+      'Composition: detailed, close enough to see textures and specifics, yet wide enough to show context. ' +
+      'Mood: practical, achievable, inspiring — this is a real person doing this. ' +
+      'Country aesthetic: ' + countryName + ' lifestyle, local plants/materials/style if applicable. ' +
+      'No text, no watermarks, no faces, no people. Ultra high quality. 8K commercial photography.';
       try {
         const ir = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: imgPrompt})});
         const id2 = await ir.json();
