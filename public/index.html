@@ -711,7 +711,6 @@ function saveFullDataToHist(histId){
     try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){}
   }
 }
-}
 
 function renderDraft(o,eb){
   S.author=document.getElementById('inp-author').value.trim()||'Antonieta';
