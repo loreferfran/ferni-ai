@@ -629,6 +629,19 @@ app.post('/api/generate-pdf-html', async function(req, res) {
 });
 
 
+
+app.post('/api/chat-raw', async function(req, res) {
+  var system = req.body.system || '';
+  var message = req.body.message || '';
+  var maxTokens = req.body.maxTokens || 4000;
+  try {
+    var txt = await claudeCall(system, message, maxTokens);
+    res.json({ success: true, reply: txt });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Endpoint para que el frontend obtenga la key de Claude
 app.get('/api/config', function(req, res) {
   res.json({ 
@@ -644,6 +657,7 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
+
 
 
 
