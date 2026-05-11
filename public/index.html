@@ -278,7 +278,7 @@ select option { background: #1e2d52; }
           </div>
         </div>
         <div class="chat-area">
-          <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Asistente de análisis</div></div>
+          <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('search')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Asistente de análisis</div><div id="chat-toggle-search" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
           <div class="chat-msgs" id="chat-search"><div class="msg ferni">¡Hola! Soy FERNI 👋 Selecciona un país, escribe tu nicho y ejecuta el análisis. Te ayudaré a entender los resultados y elegir la mejor oportunidad para monetizar.</div></div>
           <div class="chat-inp-row">
             <textarea class="chat-inp" id="ci-search" placeholder="Pregúntale algo a FERNI..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('search');}"></textarea>
@@ -328,7 +328,7 @@ select option { background: #1e2d52; }
           </div>
         </div>
         <div class="chat-area">
-          <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Editora del ebook</div></div>
+          <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('ebook')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Editora del ebook</div><div id="chat-toggle-ebook" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
           <div class="chat-msgs" id="chat-ebook"><div class="msg ferni">Aquí puedes pedirme cambios al ebook 📝 Di cosas como "cambia el capítulo 2", "hazlo más emocional", "acorta la intro", o pídeme que agregue más ejercicios.</div></div>
           <div class="chat-inp-row">
             <textarea class="chat-inp" id="ci-ebook" placeholder="Pide cambios al ebook..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('ebook');}"></textarea>
@@ -369,7 +369,7 @@ select option { background: #1e2d52; }
           </div>
         </div>
         <div class="chat-area">
-          <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Estratega Hotmart</div></div>
+          <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('hotmart')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Estratega Hotmart</div><div id="chat-toggle-hotmart" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
           <div class="chat-msgs" id="chat-hotmart"><div class="msg ferni">Aquí ajusto tu estrategia Hotmart 🛒 Puedo cambiar el precio, la garantía, los bonus, el copy de ventas o cualquier parte del kit.</div></div>
           <div class="chat-inp-row">
             <textarea class="chat-inp" id="ci-hotmart" placeholder="Pide cambios al kit Hotmart..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('hotmart');}"></textarea>
@@ -395,7 +395,7 @@ select option { background: #1e2d52; }
           </div>
         </div>
         <div class="chat-area">
-          <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Estratega Meta Ads</div></div>
+          <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('meta')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Estratega Meta Ads</div><div id="chat-toggle-meta" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
           <div class="chat-msgs" id="chat-meta"><div class="msg ferni">Aquí ajusto tus anuncios 📣 Puedo cambiar el tono, ángulo, CTA, segmentación o generar nuevas variaciones.</div></div>
           <div class="chat-inp-row">
             <textarea class="chat-inp" id="ci-meta" placeholder="Pide cambios a los anuncios..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('meta');}"></textarea>
@@ -529,10 +529,10 @@ function showResults(opps,country,niche,info){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
           <div class="fc"><div class="fc-label">Búsqueda exacta (${o.idioma||'local'})</div><div class="fc-val" style="color:var(--teal);">${o.busquedaExacta||o.keyword||''}</div></div>
           <div class="fc"><div class="fc-label">Keyword en español</div><div class="fc-val">${o.keywordES||''}</div></div>
-          <div class="fc"><div class="fc-label">Distribución género</div><div class="fc-val">${o.distribucionGenero||dd.busquedasPorGenero||''}</div></div>
-          <div class="fc"><div class="fc-label">Distribución edad</div><div class="fc-val">${dd.busquedasPorEdad||o.rangoEdad||o.ageRange||''}</div></div>
-          <div class="fc"><div class="fc-label">Clase social</div><div class="fc-val">${o.claseSocial||dd.busquedasPorClase||''}</div></div>
-          <div class="fc"><div class="fc-label">Precio promedio mercado</div><div class="fc-val">${dd.precioPromedioMercado||''}</div></div>
+          <div class="fc"><div class="fc-label">Distribución género</div><div class="fc-val">${typeof(o.distribucionGenero)==='object'?JSON.stringify(o.distribucionGenero):o.distribucionGenero||typeof(dd.busquedasPorGenero)==='object'?JSON.stringify(dd.busquedasPorGenero):dd.busquedasPorGenero||''}</div></div>
+          <div class="fc"><div class="fc-label">Distribución edad</div><div class="fc-val">${typeof(dd.busquedasPorEdad)==='object'?JSON.stringify(dd.busquedasPorEdad):dd.busquedasPorEdad||o.rangoEdad||o.ageRange||''}</div></div>
+          <div class="fc"><div class="fc-label">Clase social</div><div class="fc-val">${typeof(o.claseSocial)==='object'?JSON.stringify(o.claseSocial):o.claseSocial||typeof(dd.busquedasPorClase)==='object'?JSON.stringify(dd.busquedasPorClase):dd.busquedasPorClase||''}</div></div>
+          <div class="fc"><div class="fc-label">Precio promedio mercado</div><div class="fc-val">${typeof(dd.precioPromedioMercado)==='object'?JSON.stringify(dd.precioPromedioMercado):dd.precioPromedioMercado||''}</div></div>
         </div>
         ${dd.keywordsEncontradas&&dd.keywordsEncontradas.length?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">Keywords encontradas en ${o.idioma||'idioma local'}</div><div class="fc-val">${dd.keywordsEncontradas.join(' · ')}</div></div>`:''}
         ${dd.plataformasDetectadas&&dd.plataformasDetectadas.length?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">Plataformas donde se detectó</div><div class="fc-val">${dd.plataformasDetectadas.join(' · ')}</div></div>`:''}
@@ -562,36 +562,78 @@ function selOpp(i){
 function dlSingleExcel(i){
   const o=S.results[i]; if(!o) return;
   const dd=o.datosDetallados||{};
-  const h=['Campo','Valor ES','Valor en idioma local'];
   const rows=[
-    ['Problema',o.problema||o.problem||'',o.problemaEnIdioma||''],
-    ['Busqueda exacta',o.keywordES||'',o.busquedaExacta||o.keyword||''],
-    ['Necesidad',o.necesidad||o.need||'',''],
-    ['Emocion',o.emocion||o.emotion||'',''],
-    ['Dolor emocional',o.dolorEmocional||o.emotionalPain||'',''],
-    ['Edad',o.rangoEdad||o.ageRange||'',dd.busquedasPorEdad||''],
-    ['Genero',o.genero||o.gender||'',o.distribucionGenero||dd.busquedasPorGenero||''],
-    ['Clase social',o.claseSocial||'',dd.busquedasPorClase||''],
-    ['Volumen estimado',o.volumenEstimado||o.volumenBusqueda||'',''],
-    ['Tendencia',o.tendencia||o.trend||'',''],
-    ['Competencia',o.competencia||o.competition||'',o.nivelCompetenciaDetalle||''],
-    ['Precio mercado','',dd.precioPromedioMercado||''],
-    ['Keywords encontradas','',( dd.keywordsEncontradas||[]).join(', ')],
-    ['Competidores','',''+( dd.competidoresDetectados||[]).join(', ')],
-    ['Plataformas detectadas','',''+( dd.plataformasDetectadas||[]).join(', ')],
-    ['Score monetizacion',o.scoreMonetizacion||o.monetizationScore||'',''],
-    ['Prioridad',o.prioridad||o.priorityLevel||'',''],
-    ['Intencion de compra',o.intencionCompra||o.purchaseIntent||'',''],
-    ['Titulo ebook',o.tituloEbook||o.ebookTitle||'',''],
-    ['Promesa ebook',o.promesaEbook||o.ebookPromise||'',''],
-    ['Precio Hotmart',o.precioHotmart||o.hotmartPrice||'',''],
-    ['Por que es oportunidad',o.porQueEstaOportunidad||o.whyThisOpportunity||'',''],
-    ['Fuente',o.urlFuente||o.sourceURL||'','']
+    ['Problema (ES)', safeStr(o.problema||o.problem)],
+    ['Problema (idioma local)', safeStr(o.problemaEnIdioma)],
+    ['Busqueda exacta', safeStr(o.busquedaExacta||o.keyword)],
+    ['Keyword ES', safeStr(o.keywordES)],
+    ['Necesidad', safeStr(o.necesidad||o.need)],
+    ['Tipo de demanda', safeStr(o.tipoDemanda)],
+    ['Emocion / Motivacion', safeStr(o.emocion||o.emotion)],
+    ['Dolor o deseo', safeStr(o.dolorODeseo||o.dolorEmocional||o.emotionalPain)],
+    ['Rango de edad', safeStr(o.rangoEdad||o.ageRange)],
+    ['Distribucion por edad', safeStr(dd.busquedasPorEdad)],
+    ['Genero', safeStr(o.genero||o.gender)],
+    ['Distribucion por genero', safeStr(o.distribucionGenero||dd.busquedasPorGenero)],
+    ['Clase social', safeStr(o.claseSocial||dd.busquedasPorClase)],
+    ['Volumen estimado mensual', safeStr(o.volumenEstimado||o.volumenBusqueda)],
+    ['Tendencia', safeStr(o.tendencia||o.trend)],
+    ['Competencia', safeStr(o.competencia||o.competition)],
+    ['Detalle competencia', safeStr(o.nivelCompetenciaDetalle)],
+    ['Keywords en idioma local', safeStr((dd.keywordsEncontradas||[]).join(' | '))],
+    ['Competidores detectados', safeStr((dd.competidoresDetectados||[]).join(' | '))],
+    ['Precio promedio mercado', safeStr(dd.precioPromedioMercado)],
+    ['Plataformas detectadas', safeStr((dd.plataformasDetectadas||[]).join(' | '))],
+    ['Score monetizacion', safeStr(o.scoreMonetizacion||o.monetizationScore)],
+    ['Prioridad', safeStr(o.prioridad||o.priorityLevel)],
+    ['Intencion de compra', safeStr(o.intencionCompra||o.purchaseIntent)],
+    ['Recomendacion', safeStr(o.recomendacion)],
+    ['--- PRODUCTO DIGITAL ---', ''],
+    ['Titulo ebook', safeStr(o.tituloEbook||o.ebookTitle)],
+    ['Promesa ebook', safeStr(o.promesaEbook||o.ebookPromise)],
+    ['Tipo producto digital', safeStr(o.tipoProductoDigital||o.tipoProducto)],
+    ['Precio Hotmart', safeStr(o.precioHotmart||o.hotmartPrice)],
+    ['Por que es oportunidad', safeStr(o.porQueEstaOportunidad||o.whyThisOpportunity)],
+    ['URL fuente', safeStr(o.urlFuente||o.sourceURL)]
   ];
-  var csvRows2=[h].concat(rows); var csv='\uFEFF'+csvRows2.map(function(r){return r.map(function(c){return '"'+String(c||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  a.download='FERNI_DETALLE_'+(o.pais||o.country||'pais')+'_'+(o.problema||'opp').replace(/[^a-z0-9]/gi,'_').substring(0,20)+'.csv';
+
+  var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
+  html += '<head><meta charset="UTF-8">';
+  html += '<style>';
+  html += 'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;}';
+  html += 'table{border-collapse:collapse;width:100%;}';
+  html += '.hdr{background:#2d3180;color:white;font-weight:bold;font-size:14pt;padding:12px 16px;text-align:left;}';
+  html += '.sub{background:#6c5ce7;color:white;font-size:10pt;padding:6px 16px;}';
+  html += '.th{background:#4a5568;color:white;font-weight:bold;padding:8px 12px;border:1px solid #2d3748;font-size:10pt;}';
+  html += '.td1{background:#eef2ff;padding:8px 12px;border:1px solid #c3dafe;font-weight:600;color:#2d3180;font-size:10pt;white-space:nowrap;width:220px;}';
+  html += '.td2{background:#ffffff;padding:8px 12px;border:1px solid #c3dafe;color:#1a202c;font-size:10pt;}';
+  html += '.sep{background:#a29bfe;color:white;font-weight:bold;padding:6px 12px;border:1px solid #6c5ce7;font-size:10pt;}';
+  html += '.score{background:#00b894;color:white;font-weight:bold;font-size:14pt;padding:4px 10px;border-radius:4px;}';
+  html += '</style></head><body>';
+  
+  var score = safeStr(o.scoreMonetizacion||o.monetizationScore);
+  var pais = safeStr(o.pais||o.country);
+  var fecha = new Date().toLocaleDateString('es-CL');
+  
+  html += '<table>';
+  html += '<tr><td colspan="2" class="hdr">FERNI AI — Análisis de Oportunidad de Mercado</td></tr>';
+  html += '<tr><td colspan="2" class="sub">País: ' + pais + ' | Score: ' + score + '/100 | Fecha: ' + fecha + ' | Autor: ' + (S.author||'Antonieta') + '</td></tr>';
+  html += '<tr><td class="th">CAMPO</td><td class="th">VALOR</td></tr>';
+  
+  rows.forEach(function(r) {
+    if (r[0].startsWith('---')) {
+      html += '<tr><td colspan="2" class="sep">' + r[0].replace(/---/g,'').trim() + '</td></tr>';
+    } else {
+      html += '<tr><td class="td1">' + r[0] + '</td><td class="td2">' + r[1] + '</td></tr>';
+    }
+  });
+  
+  html += '</table></body></html>';
+  
+  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'FERNI_' + pais + '_' + (o.problema||'opp').replace(/[^a-z0-9]/gi,'_').substring(0,25) + '.xls';
   a.click();
 }
 
@@ -924,6 +966,31 @@ function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps
 function delHist(id){ if(!confirm('¿Eliminar?'))return; S.history=S.history.filter(h=>h.id!==id); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history));}catch(e){} renderHist(); }
 
 setMode('trends'); renderHist();
+
+// Chat collapsible
+var chatCollapsed = {};
+function toggleChat(panel) {
+  var msgs = document.getElementById('chat-' + panel);
+  var inp = document.getElementById('ci-' + panel);
+  var btn = document.getElementById('chat-toggle-' + panel);
+  var inpRow = inp ? inp.parentElement : null;
+  chatCollapsed[panel] = !chatCollapsed[panel];
+  if (chatCollapsed[panel]) {
+    if (msgs) msgs.style.display = 'none';
+    if (inpRow) inpRow.style.display = 'none';
+    if (btn) btn.textContent = '▶';
+  } else {
+    if (msgs) msgs.style.display = '';
+    if (inpRow) inpRow.style.display = '';
+    if (btn) btn.textContent = '▼';
+  }
+}
+
+function safeStr(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
 </script>
 </body>
 </html>
