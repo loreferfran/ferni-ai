@@ -397,6 +397,224 @@ app.post('/api/generate-meta', async function(req, res) {
   }
 });
 
+
+
+app.post('/api/plan-images', async function(req, res) {
+  var ebook = req.body.ebook;
+  var opportunity = req.body.opportunity;
+  var o = opportunity;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+
+  var sys = 'Eres un director de arte experto en ebooks digitales profesionales para vender en Hotmart.' +
+    ' Tu trabajo es decidir exactamente cuantas imagenes necesita este ebook y que debe mostrar cada una para hacerlo visualmente atractivo y vendible.' +
+    ' Analiza el tema del ebook y decide de manera inteligente:' +
+    ' - Ebooks de jardineria, decoracion, cocina, manualidades, construccion, belleza: necesitan MUCHAS imagenes (6-10)' +
+    ' - Ebooks de salud, fitness, crianza, hogar practico: necesitan imagenes MODERADAS (4-6)' +
+    ' - Ebooks de finanzas, productividad, negocios, desarrollo personal: necesitan POCAS imagenes (2-4)' +
+    ' Devuelve SOLO JSON valido con esta estructura:' +
+    ' {' +
+    '   "totalImages": numero total de imagenes,' +
+    '   "coverPrompt": "prompt detallado en ingles para la portada - debe ser una imagen impactante y profesional sin texto",' +
+    '   "images": [' +
+    '     {' +
+    '       "location": "intro/chapter1/chapter1_extra/chapter2/etc",' +
+    '       "purpose": "que muestra esta imagen y por que es necesaria",' +
+    '       "prompt": "prompt detallado en ingles para DALL-E 3 - muy especifico, describe composicion colores estilo - sin texto sin caras identificables sin marcas"' +
+    '     }' +
+    '   ]' +
+    ' }';
+
+  var userMsg = 'Tema del ebook: ' + (o.problema || o.problem || '') +
+    '
+Titulo: ' + (ebook.title || '') +
+    '
+Tipo de demanda: ' + (o.tipoDemanda || 'aprendizaje') +
+    '
+Pais: ' + countryName +
+    '
+Capitulos: ' + (ebook.chapters || []).map(function(ch, i) {
+      return (i+1) + '. ' + (ch.title || '');
+    }).join(', ') +
+    '
+
+Decide cuantas imagenes necesita este ebook especifico y genera los prompts perfectos para DALL-E 3.';
+
+  try {
+    var txt = await claudeCall(sys, userMsg, 2000);
+    var plan = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    res.json({ success: true, plan: plan });
+  } catch (e) {
+    // Fallback plan if Claude fails
+    var fallback = {
+      totalImages: 4,
+      coverPrompt: 'Professional ebook cover for ' + (ebook.title || 'guide') + ', elegant design, beautiful photography, no text, no watermarks, commercial quality',
+      images: (ebook.chapters || []).map(function(ch, i) {
+        return {
+          location: 'chapter' + (i+1),
+          purpose: 'Illustration for chapter ' + (i+1),
+          prompt: 'Professional illustration for ' + (ch.title || 'chapter') + ', beautiful photography, no text, no faces, commercial quality'
+        };
+      })
+    };
+    res.json({ success: true, plan: fallback });
+  }
+});
+
+app.post('/api/generate-pdf-html', async function(req, res) {
+  var ebook = req.body.ebook;
+  var opportunity = req.body.opportunity;
+  var author = req.body.author;
+  var images = req.body.images || {};
+  var o = opportunity;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
+  var year = new Date().getFullYear();
+  var lang = o.idioma || o.language || 'French';
+
+  var coverImg = images.cover || '';
+  var imageMap = images.imageMap || {}; // location -> url map
+
+  var chapterColor = ['#6c5ce7','#00b894','#e17055','#0984e3'];
+  var chapterBg = ['#f3f0ff','#f0fff8','#fff5f3','#f0f7ff'];
+
+  var chaptersHtml = (ebook.chapters || []).map(function(ch, i) {
+    var img = imageMap['chapter'+(i+1)] || imageMap['chapter'+(i+1)+'_main'] || '';
+    var color = chapterColor[i % chapterColor.length];
+    var bg = chapterBg[i % chapterBg.length];
+    var keyPts = (ch.keyPoints || []).map(function(k) {
+      return '<li style="margin-bottom:8px;padding-left:8px;">' + k + '</li>';
+    }).join('');
+    var steps = ch.exercise ? (ch.exercise.steps || []).map(function(s, si) {
+      return '<div style="display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;"><div style="background:' + color + ';color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;flex-shrink:0;">' + (si+1) + '</div><div style="font-size:13px;line-height:1.6;">' + s + '</div></div>';
+    }).join('') : '';
+
+    return '<div style="page-break-before:always;">' +
+      '<div style="background:' + color + ';color:white;padding:30px 40px;margin-bottom:0;">' +
+        '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.8;margin-bottom:8px;">Chapitre ' + (i+1) + ' / Chapter ' + (i+1) + '</div>' +
+        '<div style="font-size:26px;font-weight:800;line-height:1.3;">' + (ch.title || '') + '</div>' +
+      '</div>' +
+      (img ? '<img src="' + img + '" style="width:100%;height:280px;object-fit:cover;display:block;" />' : '<div style="background:' + bg + ';height:8px;"></div>') +
+      '<div style="padding:32px 40px;">' +
+        (ch.opening ? '<div style="background:' + bg + ';border-left:4px solid ' + color + ';padding:16px 20px;margin-bottom:24px;font-style:italic;font-size:14px;line-height:1.8;color:#444;border-radius:0 8px 8px 0;">' + ch.opening + '</div>' : '') +
+        '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:24px;">' + (ch.content || '').replace(/
+/g,'<br>') + '</div>' +
+        (keyPts ? '<div style="background:' + bg + ';border-radius:12px;padding:20px 24px;margin-bottom:24px;"><div style="font-size:13px;font-weight:700;color:' + color + ';text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Points Cles / Key Points</div><ul style="margin:0;padding-left:20px;list-style:none;">' + keyPts.replace(/<li/g,'<li style="margin-bottom:8px;padding-left:8px;list-style:none;position:relative;"><span style="color:' + color + ';position:absolute;left:-16px;">✓</span>') + '</ul></div>' : '') +
+        (ch.exercise ? '<div style="border:2px solid ' + color + ';border-radius:12px;padding:24px;margin-top:16px;"><div style="font-size:14px;font-weight:700;color:' + color + ';margin-bottom:6px;">Exercice / Exercise: ' + (ch.exercise.title || '') + '</div><div style="font-size:13px;color:#636e72;margin-bottom:16px;">' + (ch.exercise.description || '') + '</div>' + steps + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  var actionPlanHtml = (ebook.actionPlan || []).map(function(a, i) {
+    var labels = ['Aujourd'hui / Today', 'Cette semaine / This week', 'Ce mois / This month'];
+    var colors2 = ['#6c5ce7','#00b894','#0984e3'];
+    return '<div style="display:flex;gap:16px;margin-bottom:16px;align-items:flex-start;"><div style="background:' + colors2[i] + ';color:white;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;">' + (labels[i]||'Action') + '</div><div style="font-size:13px;line-height:1.6;padding-top:4px;">' + a + '</div></div>';
+  }).join('');
+
+  var resourcesHtml = (ebook.resources || []).map(function(r) {
+    return '<div style="padding:8px 0;border-bottom:1px solid #eee;font-size:13px;">→ ' + r + '</div>';
+  }).join('');
+
+  var legal = ebook.legalSection || {};
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+    '<style>' +
+    '@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Inter:wght@300;400;500;600;700&display=swap");' +
+    '*{margin:0;padding:0;box-sizing:border-box;}' +
+    'body{font-family:"Inter",Arial,sans-serif;color:#2d3436;background:white;}' +
+    '@media print{' +
+      '.no-print{display:none!important;}' +
+      'body{margin:0;}' +
+      '@page{margin:0;size:A4;}' +
+    '}' +
+    '.print-btn{position:fixed;top:20px;right:20px;background:#6c5ce7;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;z-index:9999;box-shadow:0 4px 15px rgba(108,92,231,0.4);}' +
+    '.print-btn:hover{background:#5b4ecc;}' +
+    '</style>' +
+    '</head><body>' +
+
+    '<button class="print-btn no-print" onclick="window.print()">⬇ Guardar como PDF</button>' +
+
+    // COVER PAGE
+    '<div style="height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden;">' +
+      (coverImg ? '<img src="' + coverImg + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" />' : '<div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a6e,#6c5ce7,#00cec9);"></div>') +
+      '<div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(to bottom,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>' +
+      '<div style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;">' +
+        '<div style="font-family:'Playfair Display',serif;font-size:42px;font-weight:800;color:white;line-height:1.2;margin-bottom:20px;text-shadow:0 2px 20px rgba(0,0,0,0.5);">' + (ebook.title || '') + '</div>' +
+        '<div style="font-size:18px;color:rgba(255,255,255,0.9);font-style:italic;margin-bottom:30px;line-height:1.5;max-width:500px;">' + (ebook.subtitle || '') + '</div>' +
+        '<div style="background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.4);border-radius:50px;padding:10px 30px;color:white;font-size:14px;font-weight:600;letter-spacing:1px;margin-bottom:40px;">' + (ebook.tagline || '') + '</div>' +
+        '<div style="border-top:1px solid rgba(255,255,255,0.3);padding-top:24px;color:rgba(255,255,255,0.8);font-size:15px;letter-spacing:2px;">par ' + author + '</div>' +
+        '<div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:8px;">© ' + year + ' ' + author + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // TABLE OF CONTENTS
+    '<div style="page-break-before:always;padding:60px 40px;background:#fafafa;min-height:60vh;">' +
+      '<div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:#2d3180;margin-bottom:8px;">Table des matières</div>' +
+      '<div style="font-size:13px;color:#6c5ce7;letter-spacing:2px;text-transform:uppercase;margin-bottom:40px;">Contents</div>' +
+      '<div style="background:white;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">' +
+        '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee;font-style:italic;color:#636e72;font-size:14px;"><span>Introduction</span></div>' +
+        (ebook.chapters || []).map(function(ch, i) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #eee;">' +
+            '<div style="display:flex;align-items:center;gap:14px;">' +
+              '<div style="background:' + chapterColor[i % chapterColor.length] + ';color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">' + (i+1) + '</div>' +
+              '<div style="font-size:14px;font-weight:600;color:#2d3436;">' + (ch.title || '') + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+        '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#636e72;"><span>Conclusion</span></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:14px;color:#636e72;"><span>Plan d'action / Resources</span></div>' +
+      '</div>' +
+    '</div>' +
+
+    // INTRODUCTION
+    '<div style="page-break-before:always;padding:60px 40px;">' +
+      '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6c5ce7;margin-bottom:12px;">Introduction</div>' +
+      '<div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;line-height:1.3;">Pourquoi ce guide peut changer votre situation</div>' +
+      '<div style="font-size:14px;line-height:1.9;color:#2d3436;">' + (ebook.intro || '').replace(/
+/g,'<br><br>') + '</div>' +
+    '</div>' +
+
+    // CHAPTERS
+    chaptersHtml +
+
+    // CONCLUSION
+    '<div style="page-break-before:always;padding:60px 40px;background:linear-gradient(135deg,#f3f0ff,#f0fff8);">' +
+      '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6c5ce7;margin-bottom:12px;">Conclusion</div>' +
+      '<div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;">Votre transformation commence aujourd'hui</div>' +
+      '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:32px;">' + (ebook.conclusion || '').replace(/
+/g,'<br><br>') + '</div>' +
+      '<div style="background:white;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.06);margin-bottom:24px;">' +
+        '<div style="font-size:13px;font-weight:700;color:#6c5ce7;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Plan d'action / Action Plan</div>' +
+        actionPlanHtml +
+      '</div>' +
+      (resourcesHtml ? '<div style="background:white;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">' +
+        '<div style="font-size:13px;font-weight:700;color:#00b894;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Ressources / Resources</div>' +
+        resourcesHtml +
+      '</div>' : '') +
+    '</div>' +
+
+    // AUTHOR NOTE
+    (ebook.authorNote ? '<div style="page-break-before:always;padding:60px 40px;background:#2d3180;color:white;">' +
+      '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:12px;">Note de l'auteur</div>' +
+      '<div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:24px;">' + author + '</div>' +
+      '<div style="font-size:14px;line-height:1.9;color:rgba(255,255,255,0.85);">' + ebook.authorNote + '</div>' +
+    '</div>' : '') +
+
+    // LEGAL
+    '<div style="padding:40px;background:#f8f9fa;border-top:1px solid #eee;">' +
+      '<div style="font-size:11px;color:#636e72;line-height:1.8;">' +
+        '<div style="margin-bottom:8px;font-weight:600;">Avertissement / Disclaimer</div>' +
+        '<div style="margin-bottom:12px;">' + (legal.healthDisclaimer || regs.healthDisclaimer) + '</div>' +
+        '<div style="margin-bottom:8px;">' + (legal.dataProtection || regs.dataProtection) + '</div>' +
+        '<div style="margin-bottom:8px;">' + (legal.guarantee || regs.guarantee) + '</div>' +
+        '<div style="font-weight:600;">' + (legal.copyright || 'Copyright ' + year + ' ' + author) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '</body></html>';
+
+  res.json({ success: true, html: html });
+});
+
 app.get('*', function(req, res) {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -404,3 +622,4 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
+
