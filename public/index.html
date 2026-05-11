@@ -760,20 +760,22 @@ function renderDraft(o,eb){
 async function approveEbook(){
   const o=S.selOpp; if(!o) return;
   hide('eb-content'); show('eb-loading');
-  document.getElementById('eb-load-txt').textContent=`Traduciendo al ${o.language}...`;
+  const lang = o.idioma || o.language || 'French';
+  document.getElementById('eb-load-txt').textContent=`Traduciendo al ${lang}...`;
   try{
-    const resp=await fetch('/api/translate-ebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ebook:S.ebookData,language:o.language,country:o.country,author:S.author})});
+    const resp=await fetch('/api/translate-ebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ebook:S.ebookData,language:lang,country:getCountryName(o.pais||o.country||'France'),author:S.author})});
     const d=await resp.json();
-    if(d.success){ S.finalEbook=d.ebook; hide('eb-loading'); renderFinal(o,d.ebook); genHotmart(o); genMeta(o); }
-    else{ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData); genHotmart(o); genMeta(o); }
+    if(d.success){ S.finalEbook=d.ebook; hide('eb-loading'); renderFinal(o,d.ebook,lang); genHotmart(o); genMeta(o); }
+    else{ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData,lang); genHotmart(o); genMeta(o); }
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-  }catch(e){ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData); genHotmart(o); genMeta(o); }
+  }catch(e){ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData,lang); genHotmart(o); genMeta(o); }
 }
 
-function renderFinal(o,eb){
+function renderFinal(o,eb,lang){
+  lang = lang || o.idioma || o.language || 'French';
   const year=new Date().getFullYear();
   hide('eb-loading'); hide('eb-content'); show('eb-approved');
-  document.getElementById('eb-approved-badge').textContent=`✓ Aprobado en ${o.language}`;
+  document.getElementById('eb-approved-badge').textContent=`✓ Aprobado en ${lang}`;
   document.getElementById('eb-final-body').innerHTML=`
     <div class="ebook-cover">
       ${eb.tagline?`<div class="ebook-cover-tagline">${eb.tagline}</div>`:''}
@@ -792,7 +794,28 @@ function renderFinal(o,eb){
     <div class="ch"><div class="ch-num">CONCLUSION</div><div class="ch-text">${(eb.conclusion||'').replace(/\n/g,'<br><br>')}</div></div>
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--muted);">${eb.disclaimer||''}</div>`;
-  addMsg('chat-ebook',`🎉 ¡Ebook aprobado y traducido al ${o.language}! Los módulos Hotmart y Meta Ads ya están generando. Ve a revisarlos.`,'ferni');
+  // Generate pdfHtml so dlPDF works
+  S.pdfHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:60px 40px;text-align:center;page-break-after:always;}.cover h1{color:white;font-size:32px;margin-bottom:12px;line-height:1.3;}.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;font-size:16px;margin-bottom:20px;}.cover .author{color:#fdcb6e;font-size:15px;font-weight:bold;}.cover .copy{color:rgba(255,255,255,0.4);font-size:11px;margin-top:10px;}h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;font-size:18px;}h3{color:#6c5ce7;font-size:14px;margin-top:18px;}p{margin-bottom:14px;}.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;color:#5a4a2a;margin:14px 0;border-radius:0 8px 8px 0;}.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin:16px 0;}.kp{color:#00b894;padding:3px 0;}.step{display:flex;gap:10px;margin:8px 0;}.snum{background:#6c5ce7;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;}.toc{background:#f9f9f9;padding:20px;border-radius:8px;margin-bottom:30px;}.toc-t{font-weight:bold;color:#2d3180;margin-bottom:10px;}hr{border:1px solid #eee;margin:24px 0;}.disc{font-size:11px;color:#999;text-align:center;font-style:italic;}</style></head><body>' +
+    '<div class="cover"><h1>' + (eb.title||o.tituloEbook||o.ebookTitle||'') + '</h1><div class="sub">' + (eb.subtitle||o.promesaEbook||o.ebookPromise||'') + '</div>' +
+    (eb.tagline ? '<div style="color:rgba(255,255,255,0.7);font-size:13px;margin-bottom:16px;">' + eb.tagline + '</div>' : '') +
+    '<div class="author">par ' + (S.author||'Antonieta') + '</div><div class="copy">© ' + year + ' ' + (S.author||'Antonieta') + ' · Tous droits réservés</div></div>' +
+    '<div class="toc"><div class="toc-t">Table des matières</div>Introduction<br>' + (eb.chapters||[]).map(function(c){return c.title||'';}).join('<br>') + '<br>Conclusion<br>Plan d’action</div>' +
+    '<h2>Introduction</h2><p>' + (eb.intro||'').replace(/\n\n/g,'</p><p>') + '</p>' +
+    (eb.chapters||[]).map(function(c){
+      var s = '<h2>Chapitre ' + (c.number||'') + ': ' + (c.title||'') + '</h2>';
+      if(c.opening) s += '<div class="opening">' + c.opening + '</div>';
+      s += '<p>' + (c.content||'').replace(/\n\n/g,'</p><p>') + '</p>';
+      if(c.keyPoints&&c.keyPoints.length){ s+='<h3>Points clés</h3>'; c.keyPoints.forEach(function(k){s+='<div class="kp">✓ '+k+'</div>';}); }
+      if(c.exercise){ s+='<div class="exercise"><strong>✏️ '+( c.exercise.title||'Exercice')+'</strong><p>'+(c.exercise.description||'')+'</p>'; (c.exercise.steps||[]).forEach(function(st,i){s+='<div class="step"><div class="snum">'+(i+1)+'</div><div>'+st+'</div></div>';}); s+='</div>'; }
+      return s;
+    }).join('') +
+    '<h2>Conclusion</h2><p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>') + '</p>' +
+    (eb.actionPlan&&eb.actionPlan.length ? '<h2>Plan d’action</h2>' + eb.actionPlan.map(function(a,i){return '<p><strong>'+(i+1)+'.</strong> '+a+'</p>';}).join('') : '') +
+    (eb.resources&&eb.resources.length ? '<h2>Ressources</h2>' + eb.resources.map(function(r){return '<p>→ '+r+'</p>';}).join('') : '') +
+    (eb.authorNote ? '<h2>Note de l’auteur</h2><p style="font-style:italic;">' + eb.authorNote + '</p>' : '') +
+    (eb.legalSection ? '<hr><div class="disc">' + (eb.legalSection.healthDisclaimer||'') + ' ' + (eb.legalSection.copyright||'') + '</div>' : '') +
+    '</body></html>';
+  addMsg('chat-ebook',`🎉 ¡Ebook aprobado y traducido al ${lang}! Haz clic en "Descargar PDF para Hotmart" para obtener el archivo.`,'ferni');
 }
 
 function dlWordDraft(){
@@ -1100,6 +1123,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
