@@ -628,6 +628,15 @@ app.post('/api/generate-pdf-html', async function(req, res) {
   res.json({ success: true, html: html });
 });
 
+
+// Endpoint para que el frontend obtenga la key de Claude
+app.get('/api/config', function(req, res) {
+  res.json({ 
+    claudeKey: process.env.CLAUDE_API_KEY || '',
+    openaiKey: process.env.OPENAI_API_KEY || ''
+  });
+});
+
 app.get('*', function(req, res) {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
@@ -635,5 +644,6 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
+
 
 
