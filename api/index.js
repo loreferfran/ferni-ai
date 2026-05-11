@@ -290,48 +290,75 @@ app.post('/api/chat', async function(req, res) {
   }
 });
 
-app.post('/api/generate-ebook', async function(req, res) {
+function buildEbookContext(o, author, countryName, regs) {
+  return 'TEMA: ' + (o.problema || o.problem || '') +
+    ' NECESIDAD: ' + (o.necesidad || o.need || '') +
+    ' TIPO: ' + (o.tipoDemanda || 'aprendizaje') +
+    ' PUBLICO: ' + (o.rangoEdad || o.ageRange || '') + ' ' + (o.genero || o.gender || '') + ' ' + countryName +
+    ' TITULO: ' + (o.tituloEbook || o.ebookTitle || '') +
+    ' PROMESA: ' + (o.promesaEbook || o.ebookPromise || '') +
+    ' EMOCION: ' + (o.emocion || o.emotion || '') +
+    ' DOLOR: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
+    ' AUTOR: ' + author + ' PAIS: ' + countryName;
+}
+
+function buildEbookSystem(countryName, regs) {
+  return 'Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico practico motivador. PAIS: ' + countryName + '. PROHIBIDO: ' + regs.forbidden;
+}
+
+// Endpoint separado para cada parte - evita timeout de Vercel
+app.post('/api/generate-ebook-p1', async function(req, res) {
+  var o = req.body.opportunity;
+  var author = req.body.author;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
+  var ctx = buildEbookContext(o, author, countryName, regs);
+  var sys = buildEbookSystem(countryName, regs);
+  try {
+    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 1 del ebook. SOLO JSON: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"tagline max 8 palabras","intro":"introduccion emotiva 350 palabras","chapter1":{"number":1,"title":"titulo","opening":"apertura 100 palabras","content":"contenido practico 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter2":{"number":2,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
+    var p1 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    res.json({ success: true, part: p1 });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/generate-ebook-p2', async function(req, res) {
+  var o = req.body.opportunity;
+  var author = req.body.author;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
+  var ctx = buildEbookContext(o, author, countryName, regs);
+  var sys = buildEbookSystem(countryName, regs);
+  try {
+    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 2 del ebook. SOLO JSON: {"chapter3":{"number":3,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter4":{"number":4,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
+    var p2 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    res.json({ success: true, part: p2 });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/generate-ebook-p3', async function(req, res) {
   var o = req.body.opportunity;
   var author = req.body.author;
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var year = new Date().getFullYear();
-
-  var ctx = 'TEMA: ' + (o.problema || o.problem || '') +
-    ' NECESIDAD: ' + (o.necesidad || o.need || '') +
-    ' TIPO DE DEMANDA: ' + (o.tipoDemanda || 'aprendizaje') +
-    ' PUBLICO: ' + (o.rangoEdad || o.ageRange || '') + ' ' + (o.genero || o.gender || '') + ' ' + countryName +
-    ' TITULO: ' + (o.tituloEbook || o.ebookTitle || '') +
-    ' PROMESA: ' + (o.promesaEbook || o.ebookPromise || '') +
-    ' EMOCION O MOTIVACION: ' + (o.emocion || o.emotion || '') +
-    ' DOLOR O DESEO: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
-    ' AUTOR: ' + author + ' PAIS: ' + countryName +
-    ' REGULACIONES: ' + regs.legal + ' PROHIBIDO: ' + regs.forbidden;
-
-  var baseSys = 'Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol.' +
-    ' El contenido puede ser de cualquier tipo: salud, hogar, manualidades, negocios, tecnologia, crianza, cocina, jardineria, finanzas, etc.' +
-    ' Contenido especifico emocional accionable nunca generico.' +
-    ' Tono empatico practico y motivador.' +
-    ' REGULACIONES ' + countryName + ': ' + regs.legal +
-    ' PROHIBIDO: ' + regs.forbidden +
-    ' Disclaimer: ' + regs.healthDisclaimer;
-
+  var ctx = buildEbookContext(o, author, countryName, regs);
+  var sys = buildEbookSystem(countryName, regs);
   try {
-    var p1 = JSON.parse((await claudeCall(baseSys,
-      ctx + ' Escribe PARTE 1 del ebook. Devuelve SOLO JSON valido sin texto adicional: {"title":"titulo","subtitle":"subtitulo","tagline":"tagline corto","intro":"introduccion 400 palabras minimo","chapter1":{"number":1,"title":"titulo cap 1","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}},"chapter2":{"number":2,"title":"titulo cap 2","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}}}',
-      6000)).replace(/```json|```/g, '').trim());
-
-    var p2 = JSON.parse((await claudeCall(baseSys,
-      ctx + ' Escribe PARTE 2 del ebook. Devuelve SOLO JSON valido sin texto adicional: {"chapter3":{"number":3,"title":"titulo cap 3","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}},"chapter4":{"number":4,"title":"titulo cap 4","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}}}',
-      6000)).replace(/```json|```/g, '').trim());
-
-    var p3prompt = ctx + ' Escribe PARTE 3 del ebook. Devuelve SOLO JSON valido: {"conclusion":"conclusion motivadora de 250 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal de 100 palabras del autor","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"disclaimer de salud segun regulaciones de ' + countryName + '","guarantee":"garantia segun ley de ' + countryName + '","dataProtection":"proteccion de datos segun ley de ' + countryName + '","copyright":"Copyright ' + year + ' ' + author + ' todos los derechos reservados"}}';
-    var p3 = JSON.parse((await claudeCall(baseSys, p3prompt, 3000)).replace(/```json|```/g, '').trim());
-
-    res.json({ success: true, ebook: { title: p1.title, subtitle: p1.subtitle, tagline: p1.tagline, intro: p1.intro, chapters: [p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4], conclusion: p3.conclusion, actionPlan: p3.actionPlan, authorNote: p3.authorNote, resources: p3.resources, legalSection: p3.legalSection } });
+    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 3 del ebook. SOLO JSON: {"conclusion":"conclusion motivadora 200 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal 80 palabras del autor ' + author + '","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"Aviso legal de salud para ' + countryName + '","guarantee":"Garantia segun ley de ' + countryName + '","dataProtection":"Proteccion de datos ' + countryName + '","copyright":"Copyright ' + year + ' ' + author + '"}}', 2000);
+    var p3 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    res.json({ success: true, part: p3 });
   } catch (e) {
-    res.status(500).json({ success: false, error: 'Error generando ebook: ' + e.message });
+    res.status(500).json({ success: false, error: e.message });
   }
+});
+
+// Keep old endpoint for compatibility
+app.post('/api/generate-ebook', async function(req, res) {
+  res.json({ success: false, error: 'Use /api/generate-ebook-p1, p2, p3 separately' });
 });
 
 app.post('/api/translate-ebook', async function(req, res) {
