@@ -1075,7 +1075,7 @@ function genCSV(data,country,niche){
   a.download=`FERNI_AI_${country}_${niche}_${now.toLocaleDateString('es-CL').replace(/\//g,'-')}.csv`; a.click();
 }
 
-function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
+function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); S.currentHistId=e.id; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
 function renderHist(){ 
   document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; 
   const el=document.getElementById('hist-body'); 
@@ -1221,6 +1221,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
