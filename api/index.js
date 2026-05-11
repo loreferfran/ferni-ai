@@ -423,20 +423,7 @@ app.post('/api/plan-images', async function(req, res) {
     '   ]' +
     ' }';
 
-  var userMsg = 'Tema del ebook: ' + (o.problema || o.problem || '') +
-    '
-Titulo: ' + (ebook.title || '') +
-    '
-Tipo de demanda: ' + (o.tipoDemanda || 'aprendizaje') +
-    '
-Pais: ' + countryName +
-    '
-Capitulos: ' + (ebook.chapters || []).map(function(ch, i) {
-      return (i+1) + '. ' + (ch.title || '');
-    }).join(', ') +
-    '
-
-Decide cuantas imagenes necesita este ebook especifico y genera los prompts perfectos para DALL-E 3.';
+  var userMsg = 'Tema: ' + (o.problema || o.problem || '') + ' Titulo: ' + (ebook.title || '') + ' Tipo: ' + (o.tipoDemanda || 'aprendizaje') + ' Pais: ' + countryName + ' Capitulos: ' + (ebook.chapters || []).map(function(ch, i2) { return (i2+1) + '. ' + (ch.title || ''); }).join(', ') + ' Genera prompts perfectos para DALL-E 3.';
 
   try {
     var txt = await claudeCall(sys, userMsg, 2000);
