@@ -1076,30 +1076,107 @@ function genCSV(data,country,niche){
 }
 
 function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
-function renderHist(){ document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; const el=document.getElementById('hist-body'); if(!S.history.length){el.innerHTML=`<div class="state-c"><div class="big-icon">🕐</div><div class="state-sub">Sin búsquedas aún.<br>Ejecuta tu primer análisis.</div></div>`;return;} el.innerHTML=S.history.map(e=>{
-  const ebBadge = e.finalEbook ? '<span style="font-size:10px;background:#00b894;color:white;border-radius:10px;padding:1px 7px;margin-left:6px;">PDF ✓</span>' : e.ebook ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:1px 7px;margin-left:6px;">Borrador ✓</span>' : '';
-  return `<div class="hist-item" onclick="loadHist(${e.id})"><div class="hdot"></div><div class="hinfo"><div class="htitle">${e.flag} ${e.country} · ${e.niche}${ebBadge}</div><div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div><div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div></div><div class="hbtns" onclick="event.stopPropagation()"><button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button><button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button></div></div>`;
-}).join(''); }
-function loadHist(id){ 
-  const e=S.history.find(h=>h.id===id);if(!e)return; 
-  S.results=e.opps;S.country=e.country;S.niche=e.niche; 
-  // Restore saved ebook/pdf/kit if present
+function renderHist(){ 
+  document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; 
+  const el=document.getElementById('hist-body'); 
+  if(!S.history.length){
+    el.innerHTML=`<div class="state-c"><div class="big-icon">🕐</div><div class="state-sub">Sin búsquedas aún.<br>Ejecuta tu primer análisis.</div></div>`;
+    return;
+  } 
+  el.innerHTML=S.history.map(e=>{
+    const hasPDF = !!e.finalEbook;
+    const hasDraft = !!e.ebook;
+    const statusBadge = hasPDF 
+      ? '<span style="font-size:10px;background:#00b894;color:white;border-radius:10px;padding:2px 8px;">✅ PDF listo</span>' 
+      : hasDraft 
+        ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:2px 8px;">✏️ Borrador listo</span>' 
+        : '';
+    const actionBtns = hasPDF
+      ? `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndShowPDF(${e.id})">📄 Ver PDF final</button>
+         <button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft(${e.id})">📖 Ver borrador</button>`
+      : hasDraft
+        ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndApproveDraft(${e.id})">✓ Generar PDF final</button>
+           <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft(${e.id})">📖 Ver borrador</button>`
+        : `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndGenerateDraft(${e.id})">📖 Generar borrador</button>`;
+    return `<div class="hist-item" style="flex-direction:column;align-items:flex-start;gap:8px;" onclick="loadHist(${e.id})">
+      <div style="display:flex;align-items:center;gap:10px;width:100%;">
+        <div class="hdot"></div>
+        <div class="hinfo" style="flex:1;">
+          <div class="htitle">${e.flag} ${e.country} · ${e.niche} ${statusBadge}</div>
+          <div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div>
+          <div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div>
+        </div>
+        <div class="hbtns" onclick="event.stopPropagation()">
+          <button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button>
+          <button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding-left:22px;" onclick="event.stopPropagation()">
+        ${actionBtns}
+      </div>
+    </div>`;
+  }).join(''); 
+}
+
+// Cargar historial y mostrar borrador existente
+function loadAndDraft(id){
+  const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
+  loadHistData(e);
+  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0], e.ebook); }, 100);
+}
+
+// Cargar historial y mostrar PDF final existente  
+function loadAndShowPDF(id){
+  const e=S.history.find(h=>h.id===id); if(!e||!e.finalEbook) return;
+  loadHistData(e);
+  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  setTimeout(function(){ 
+    hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+    var lang = (e.selOpp && (e.selOpp.idioma||e.selOpp.language)) || 'French';
+    renderFinal(e.selOpp||e.opps[0], e.finalEbook, lang);
+    addMsg('chat-ebook', '📄 PDF final restaurado — descárgalo con el botón de abajo.', 'ferni');
+  }, 100);
+}
+
+// Cargar historial, mostrar borrador y lanzar aprobacion directa
+function loadAndApproveDraft(id){
+  const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
+  loadHistData(e);
+  S.ebookData = e.ebook;
+  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  setTimeout(function(){ approveEbook(); }, 200);
+}
+
+// Cargar historial y generar nuevo borrador
+function loadAndGenerateDraft(id){
+  const e=S.history.find(h=>h.id===id); if(!e) return;
+  loadHistData(e);
+  // Seleccionar primera oportunidad si no hay seleccionada
+  if(!S.selOpp && e.opps && e.opps.length){ 
+    S.selOpp = e.opps[0]; 
+    document.getElementById('btn-draft').disabled=false;
+  }
+  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  setTimeout(function(){ goEbook(); }, 200);
+}
+
+// Cargar datos del historial en el estado global
+function loadHistData(e){
+  S.results=e.opps; S.country=e.country; S.niche=e.niche;
+  S.currentHistId=e.id;
   if(e.selOpp){ S.selOpp=e.selOpp; document.getElementById('btn-draft').disabled=false; }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
   if(e.hmKit){ S.hmKit=e.hmKit; }
-  S.currentHistId=id;
-  const info=LANGS[e.country]||{lang:'English',flag:e.flag}; 
-  showResults(e.opps,e.country,e.niche,{...info,flag:e.flag}); 
-  if(e.finalEbook || e.ebook){
-    showTab('ebook', document.querySelectorAll('.tab')[1]);
-    setTimeout(()=>restoreEbookTab(), 100);
-    const msg = '📂 Historial restaurado. ' + (e.finalEbook ? '✅ PDF final listo — descárgalo abajo.' : '✏️ Borrador listo — apruébalo para generar el PDF final.');
-    setTimeout(()=>addMsg('chat-ebook', msg, 'ferni'), 400);
-  } else {
-    showTab('search', document.querySelectorAll('.tab')[0]);
-  }
+  const info=LANGS[e.country]||{lang:'English',flag:e.flag};
+  showResults(e.opps,e.country,e.niche,{...info,flag:e.flag});
+}
+function loadHist(id){ 
+  const e=S.history.find(h=>h.id===id);if(!e)return;
+  loadHistData(e);
+  showTab('search', document.querySelectorAll('.tab')[0]);
 }
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
 function delHist(id){ if(!confirm('¿Eliminar?'))return; S.history=S.history.filter(h=>h.id!==id); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history));}catch(e){} renderHist(); }
@@ -1144,6 +1221,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
