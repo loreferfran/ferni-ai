@@ -513,7 +513,7 @@ app.post('/api/generate-ebook-p1', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var schema = JSON.stringify({title:'titulo impactante',subtitle:'subtitulo vendedor',tagline:'tagline max 8 palabras',intro:'introduccion emotiva 350 palabras',chapter1:{number:1,title:'titulo',opening:'apertura 100 palabras',content:'contenido practico 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}},chapter2:{number:2,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}}});
+    var schema = JSON.stringify({title:'titulo impactante max 10 palabras',subtitle:'subtitulo vendedor max 12 palabras',tagline:'tagline max 8 palabras',intro:'introduccion emotiva MAX 150 palabras - gancho emocional + promesa + que lograra el lector',chapter1:{number:1,title:'titulo max 8 palabras',opening:'apertura MAX 60 palabras - frase impactante que engancha',content:'contenido practico MAX 200 palabras - datos especificos numeros medidas pasos concretos',keyPoints:['punto clave especifico con dato','punto clave especifico con dato','punto clave especifico con dato'],exercise:{title:'nombre del ejercicio',description:'descripcion MAX 50 palabras',steps:['paso 1 concreto','paso 2 concreto','paso 3 concreto']}},chapter2:{number:2,title:'titulo max 8 palabras',opening:'apertura MAX 60 palabras',content:'contenido MAX 200 palabras con datos especificos',keyPoints:['punto especifico','punto especifico','punto especifico'],exercise:{title:'nombre',description:'MAX 50 palabras',steps:['paso 1','paso 2','paso 3']}}});
     var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 1 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
     var p1 = extractJSON(txt);
     res.json({ success: true, part: p1 });
@@ -531,7 +531,7 @@ app.post('/api/generate-ebook-p2', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var schema = JSON.stringify({chapter3:{number:3,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}},chapter4:{number:4,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}}});
+    var schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras',opening:'apertura MAX 60 palabras',content:'contenido MAX 200 palabras con datos especificos numeros pasos',keyPoints:['punto especifico con dato','punto especifico con dato','punto especifico con dato'],exercise:{title:'nombre ejercicio',description:'MAX 50 palabras',steps:['paso 1 concreto','paso 2 concreto','paso 3 concreto']}},chapter4:{number:4,title:'titulo max 8 palabras - capitulo resultado final',opening:'apertura MAX 60 palabras - vision del resultado logrado',content:'contenido MAX 200 palabras - como queda el resultado final con datos concretos',keyPoints:['logro especifico con dato','logro especifico con dato','logro especifico con dato'],exercise:{title:'ejercicio final de consolidacion',description:'MAX 50 palabras',steps:['paso 1','paso 2','paso 3']}}});
     var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 2 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
     var p2 = extractJSON(txt);
     res.json({ success: true, part: p2 });
@@ -550,8 +550,8 @@ app.post('/api/generate-ebook-p3', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var schema = JSON.stringify({conclusion:'conclusion motivadora 200 palabras',actionPlan:['accion 1','accion 2','accion 3'],authorNote:'nota personal 80 palabras del autor '+author,resources:['recurso 1','recurso 2','recurso 3'],legalSection:{healthDisclaimer:'Aviso legal de salud para '+countryName,guarantee:'Garantia segun ley de '+countryName,dataProtection:'Proteccion de datos '+countryName,copyright:'Copyright '+year+' '+author}});
-    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 3 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 2000);
+    var schema = JSON.stringify({conclusion:'conclusion motivadora MAXIMO 100 palabras',actionPlan:['accion concreta 1','accion concreta 2','accion concreta 3'],authorNote:'nota personal MAXIMO 50 palabras autor '+author,resources:['recurso 1','recurso 2','recurso 3'],legalSection:{healthDisclaimer:'Aviso salud '+countryName,guarantee:'Garantia '+countryName,dataProtection:'Datos '+countryName,copyright:'Copyright '+year+' '+author}});
+    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 3 del ebook. IMPORTANTE: respuestas CORTAS, MAXIMO 100 palabras por campo. Responde SOLO con JSON valido sin texto previo ni markdown:\n' + schema, 1500);
     var p3 = extractJSON(txt);
     res.json({ success: true, part: p3 });
   } catch (e) {
