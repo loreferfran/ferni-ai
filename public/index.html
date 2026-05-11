@@ -782,8 +782,8 @@ function renderDraft(o,eb){
 
 async function approveEbook(){
   const o = S.selOpp; if(!o || !S.ebookData) return;
-  const lang = o.idioma || o.language || o.lang || (REGS[getCountryName(o.pais||o.country||'France')] && REGS[getCountryName(o.pais||o.country||'France')].language) || 'French';
-  const countryName = getCountryName(o.pais || o.country || 'France');
+  const lang = o.idioma || o.language || o.lang || (REGS[(function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais||o.country||'France')] && REGS[(function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais||o.country||'France')].language) || 'French';
+  const countryName = (function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais || o.country || 'France');
 
   hide('eb-content'); show('eb-loading');
   document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + '...';
@@ -1428,6 +1428,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
