@@ -643,15 +643,48 @@ async function goEbook(){
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author=document.getElementById('inp-author').value.trim()||'Antonieta';
-  const steps=['Analizando el problema y el público...','Escribiendo la introducción emotiva...','Desarrollando capítulos con contenido real...','Creando ejercicios prácticos detallados...','Escribiendo la conclusión motivadora...','Finalizando el borrador completo...'];
-  let si=0; const iv=setInterval(()=>{ if(si<steps.length){document.getElementById('eb-load-txt').textContent=steps[si];si++;} },1500);
+
   try{
-    const resp=await fetch('/api/generate-ebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
-    const d=await resp.json();
-    clearInterval(iv);
-    if(d.success){ S.ebookData=d.ebook; hide('eb-loading'); show('eb-content'); renderDraft(o,d.ebook); addMsg('chat-ebook',`📝 Tu borrador está listo en español con contenido completo (${d.ebook.chapters?.length||4} capítulos). Léelo, pídeme cambios aquí, o descárgalo en Word. Cuando estés conforme, presiona APROBAR.`,'ferni'); }
-    else{ clearInterval(iv); hide('eb-loading'); show('eb-empty'); alert('Error generando ebook: '+d.error); }
-  }catch(e){ clearInterval(iv); hide('eb-loading'); show('eb-empty'); alert('Error: '+e.message); }
+    // Parte 1
+    document.getElementById('eb-load-txt').textContent='Escribiendo portada e introducción...';
+    const r1=await fetch('/api/generate-ebook-p1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
+    const d1=await r1.json();
+    if(!d1.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 1: '+d1.error); return; }
+
+    // Parte 2
+    document.getElementById('eb-load-txt').textContent='Escribiendo capítulos 3 y 4...';
+    const r2=await fetch('/api/generate-ebook-p2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
+    const d2=await r2.json();
+    if(!d2.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 2: '+d2.error); return; }
+
+    // Parte 3
+    document.getElementById('eb-load-txt').textContent='Escribiendo conclusión y sección legal...';
+    const r3=await fetch('/api/generate-ebook-p3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
+    const d3=await r3.json();
+    if(!d3.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 3: '+d3.error); return; }
+
+    // Unir las 3 partes
+    const p1=d1.part; const p2=d2.part; const p3=d3.part;
+    const ebook={
+      title:p1.title, subtitle:p1.subtitle, tagline:p1.tagline, intro:p1.intro,
+      chapters:[p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4],
+      conclusion:p3.conclusion, actionPlan:p3.actionPlan,
+      authorNote:p3.authorNote, resources:p3.resources, legalSection:p3.legalSection
+    };
+
+    S.ebookData=ebook;
+    // Guardar en historial
+    if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
+    hide('eb-loading'); show('eb-content');
+    renderDraft(o,ebook);
+    addMsg('chat-ebook','Borrador listo en español — '+(ebook.chapters.length)+' capítulos. Revísalo, pídeme cambios, o presiona APROBAR para generar el PDF final con imágenes.','ferni');
+
+  }catch(e){ hide('eb-loading'); show('eb-empty'); alert('Error: '+e.message); }
+}
+
+function saveEbookToHist(histId, ebook){
+  var idx=S.history.findIndex(function(h){return h.id===histId;});
+  if(idx>=0){ S.history[idx].ebook=ebook; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
 }
 
 function renderDraft(o,eb){
@@ -1010,6 +1043,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
