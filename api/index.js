@@ -449,7 +449,13 @@ function buildEbookSystem(countryName, regs) {
     ' 6. CONTEXTO LOCAL: adapta ejemplos, marcas, lugares y situaciones tipicas de ' + countryName + '.' +
     ' 7. DATOS CON FUENTE IMPLICITA: "Segun estudios de la Universidad X", "Los jardineros profesionales recomiendan", "La OMS indica".' +
     ' PROHIBIDO: ' + regs.forbidden +
-    ' PROHIBIDO ABSOLUTO: vaguedad, relleno, generalidades, repeticion disfrazada, consejos obvios sin sustancia.';
+    ' PROHIBIDO ABSOLUTO:' +
+    ' (1) Vaguedad, relleno, generalidades, repeticion disfrazada, consejos obvios.' +
+    ' (2) Frases autorreferentes inventadas: "He disenado 40 jardines", "En mis anos de experiencia", "Mis clientes me dicen", "Yo personalmente..." — NUNCA.' +
+    ' (3) Primera persona singular (yo, mi, mis, me). SIEMPRE usar voz experta impersonal.' +
+    ' VOZ CORRECTA: "Los paisajistas profesionales recomiendan...", "Los estudios demuestran...", "La tecnica X consiste en...", "El metodo mas efectivo es...", "Los expertos coinciden en...".' +
+    ' La autoridad viene del CONOCIMIENTO, no de experiencias personales inventadas.' +
+    ' EDITORIAL: Ferni Guides — nunca escribas como si fuera una persona individual.';
 }
 
 function buildEbookContext(o, author, countryName, regs) {
@@ -463,7 +469,7 @@ function buildEbookContext(o, author, countryName, regs) {
     '\nDOLOR O DESEO PROFUNDO: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
     '\nASI BUSCA SOLUCIONES EN GOOGLE: "' + (o.busquedaExacta || o.keyword || '') + '"' +
     '\nPRECIO QUE PAGARA: ' + (o.precioHotmart || o.hotmartPrice || '') +
-    '\nAUTOR: ' + author +
+    '\nEDITORIAL: Ferni Guides (voz experta impersonal, NUNCA primera persona singular ni experiencias personales inventadas)' +
     '\nPAIS: ' + countryName +
     '\n\nMISION CRITICA: Esta persona pago ' + (o.precioHotmart || o.hotmartPrice || 'dinero real') + ' por este ebook.' +
     ' Tiene exactamente este problema: "' + (o.dolorODeseo || o.problema || o.problem || '') + '".' +
@@ -471,7 +477,7 @@ function buildEbookContext(o, author, countryName, regs) {
     ' USA TU CONOCIMIENTO EXPERTO REAL sobre "' + (o.problema || o.problem || '') + '" para dar:' +
     ' medidas exactas, pasos concretos con numeros, ejemplos reales de ' + countryName + ', resultados verificables.' +
     ' CADA CAPITULO debe incluir: minimo 3 datos especificos (numeros, medidas, estadisticas), 1 ejemplo tipico de ' + countryName + ', pasos que se ejecutan hoy mismo.' +
-    ' El lector debe quedar ENCANTADO y sentir que pago poco por tanta informacion de calidad.';
+    ' El lector debe quedar ENCANTADO y sentir que pago poco por tanta informacion de calidad.' +' RECUERDA: escribe en nombre de Ferni Guides — voz de experto impersonal, nunca primera persona singular.';
 }
 
 function extractJSON(txt) {
@@ -863,8 +869,6 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
-
-
 
 
 
