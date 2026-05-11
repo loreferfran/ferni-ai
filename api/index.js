@@ -29,16 +29,21 @@ const REGS = {
   Canada: { legal: 'PIPEDA, CASL Anti-Spam, Consumer Protection Acts', healthDisclaimer: 'This guide is for informational purposes only.', guarantee: 'Satisfaction guarantee per provincial laws', dataProtection: 'Data protected under PIPEDA.', forbidden: 'No guaranteed health claims.', language: 'English', currency: 'CAD' }
 };
 
-const LOCAL_FORUMS = {
-  France: ['site:doctissimo.fr', 'site:aufeminin.com', 'site:marmiton.org', 'site:reddit.com/r/france'],
-  Germany: ['site:gutefrage.net', 'site:reddit.com/r/de', 'site:forum.helpster.de'],
-  Italy: ['site:reddit.com/r/italy', 'site:cercasalute.it'],
-  Spain: ['site:reddit.com/r/es', 'site:forocoches.com'],
-  Portugal: ['site:reddit.com/r/portugal', 'site:sapo.pt'],
-  'United Kingdom': ['site:reddit.com/r/unitedkingdom', 'site:mumsnet.com'],
-  Netherlands: ['site:reddit.com/r/netherlands', 'site:forum.viva.nl'],
-  USA: ['site:reddit.com', 'site:quora.com'],
-  Canada: ['site:reddit.com/r/canada', 'site:quora.com']
+const POPULATION = {
+  France: '68 millones total, 55 millones adultos',
+  Germany: '84 millones total, 70 millones adultos',
+  Italy: '60 millones total, 50 millones adultos',
+  Spain: '47 millones total, 39 millones adultos',
+  Portugal: '10 millones total, 8 millones adultos',
+  'United Kingdom': '67 millones total, 55 millones adultos',
+  Netherlands: '18 millones total, 15 millones adultos',
+  Belgium: '11 millones total, 9 millones adultos',
+  Sweden: '10 millones total, 8 millones adultos',
+  Switzerland: '8.5 millones total, 7 millones adultos',
+  Austria: '9 millones total, 7.5 millones adultos',
+  Poland: '38 millones total, 31 millones adultos',
+  USA: '335 millones total, 260 millones adultos',
+  Canada: '40 millones total, 32 millones adultos'
 };
 
 function getCountryName(countryStr) {
@@ -47,8 +52,97 @@ function getCountryName(countryStr) {
   return parts.length > 1 ? parts.slice(1).join(' ') : countryStr;
 }
 
-function getRegs(country) {
-  return REGS[country] || REGS.France;
+function getRegs(country) { return REGS[country] || REGS.France; }
+
+// Genera queries de busqueda inteligentes basadas en el pais, nicho e idioma
+function buildSmartQueries(country, niche, language) {
+  const isGeneral = !niche || niche.trim() === '' || niche === 'general' || niche === 'salud bienestar';
+  const topic = isGeneral ? '' : niche;
+
+  // Prefijos en el idioma del pais para buscar como busca la gente real
+  const prefixes = {
+    French: ['comment', 'comment faire', 'comment apprendre', 'guide pour', 'etapes pour', 'cours de', 'manuel de', 'idees de', 'problemes avec', 'erreurs de', 'meilleure facon de', 'debutant', 'depuis zero', 'pdf', 'tutoriel'],
+    German: ['wie', 'wie macht man', 'wie lernt man', 'anleitung fuer', 'schritt fuer schritt', 'kurs fuer', 'handbuch fuer', 'ideen fuer', 'probleme mit', 'fehler bei', 'beste art zu', 'anfaenger', 'von null', 'pdf', 'ratgeber'],
+    Italian: ['come', 'come fare', 'come imparare', 'guida per', 'passo dopo passo', 'corso di', 'manuale di', 'idee per', 'problemi con', 'errori nel', 'modo migliore per', 'principianti', 'da zero', 'pdf', 'tutorial'],
+    Spanish: ['como', 'como hacer', 'como aprender', 'guia para', 'paso a paso', 'curso de', 'manual de', 'ideas de', 'problemas con', 'errores al', 'mejor forma de', 'principiantes', 'desde cero', 'pdf', 'plantilla'],
+    Portuguese: ['como', 'como fazer', 'como aprender', 'guia para', 'passo a passo', 'curso de', 'manual de', 'ideias de', 'problemas com', 'erros ao', 'melhor forma de', 'iniciantes', 'do zero', 'pdf', 'tutorial'],
+    English: ['how to', 'how to make', 'how to learn', 'guide for', 'step by step', 'course for', 'manual for', 'ideas for', 'problems with', 'mistakes when', 'best way to', 'beginners', 'from scratch', 'pdf', 'template'],
+    Dutch: ['hoe', 'hoe maak je', 'hoe leer je', 'gids voor', 'stap voor stap', 'cursus voor', 'handleiding voor', 'ideeen voor', 'problemen met', 'fouten bij', 'beste manier om', 'beginners', 'van nul', 'pdf', 'sjabloon'],
+    Swedish: ['hur', 'hur man gor', 'hur man larer sig', 'guide for', 'steg for steg', 'kurs i', 'handbok for', 'ideer for', 'problem med', 'misstag nar', 'basta sattet att', 'nyborjare', 'fran noll', 'pdf', 'mall'],
+    Polish: ['jak', 'jak zrobic', 'jak nauczyc sie', 'przewodnik po', 'krok po kroku', 'kurs', 'poradnik', 'pomysly na', 'problemy z', 'bledy przy', 'najlepszy sposob', 'dla poczatkujacych', 'od zera', 'pdf', 'szablon']
+  };
+
+  const lang = language || 'French';
+  const pfx = prefixes[lang] || prefixes['English'];
+  const queries = [];
+
+  if (topic) {
+    // Con nicho especifico - busca como busca la gente real en su idioma
+    pfx.slice(0, 10).forEach(function(p) {
+      queries.push(p + ' ' + topic + ' ' + country);
+    });
+    // Busquedas en foros y plataformas
+    queries.push(topic + ' forum ' + country + ' aide aide');
+    queries.push(topic + ' reddit ' + country);
+    queries.push('amazon bestseller ' + topic + ' ' + country);
+    queries.push(topic + ' youtube ' + country + ' tutoriel');
+    queries.push(topic + ' questions frequentes ' + country);
+    queries.push(topic + ' debutant ' + country + ' conseil');
+  } else {
+    // Modo general - busca tendencias de alta demanda en el pais
+    const generalQueries = {
+      French: [
+        'tendances numeriques France 2024 quoi apprendre',
+        'site:doctissimo.fr probleme courant solution',
+        'site:aufeminin.com conseil pratique quotidien',
+        'comment resoudre probleme courant France forum',
+        'quoi apprendre en ligne France 2024',
+        'ebook pdf guide pratique France populaire',
+        'amazon.fr bestseller guides pratiques 2024',
+        'reddit france probleme solution aide',
+        'formation en ligne France tendance 2024',
+        'tutoriel populaire France youtube 2024',
+        'guide pratique France populaire blog',
+        'cours en ligne populaire France 2024'
+      ],
+      German: [
+        'Trends Deutschland 2024 online lernen',
+        'site:gutefrage.net Problem Loesung',
+        'amazon.de Bestseller Ratgeber 2024',
+        'reddit Deutschland Problem Hilfe Loesung',
+        'Online Kurs Deutschland Trend 2024',
+        'Anleitung Deutschland populaer Blog',
+        'Handbuch Deutschland populaer 2024'
+      ],
+      English: [
+        'most searched how to guides USA 2024',
+        'amazon bestseller practical guides 2024',
+        'reddit most helpful guides 2024',
+        'youtube most viewed tutorial USA 2024',
+        'trending online courses USA 2024',
+        'most popular ebooks USA practical 2024',
+        'site:quora.com most asked questions 2024'
+      ],
+      Italian: [
+        'tendenze digitali Italia 2024 cosa imparare',
+        'amazon.it bestseller guide pratiche 2024',
+        'reddit italia problema soluzione aiuto',
+        'youtube tutorial piu visti Italia 2024',
+        'corso online popolare Italia 2024'
+      ],
+      Spanish: [
+        'tendencias digitales Espana 2024 que aprender',
+        'amazon.es bestseller guias practicas 2024',
+        'reddit Espana problema solucion ayuda',
+        'youtube tutorial mas vistos Espana 2024',
+        'curso online popular Espana 2024'
+      ]
+    };
+    const gq = generalQueries[lang] || generalQueries['English'];
+    gq.forEach(function(q) { queries.push(q); });
+  }
+
+  return queries.slice(0, 12);
 }
 
 async function claudeCall(system, userContent, maxTokens) {
@@ -67,84 +161,96 @@ async function serperSearch(query) {
     const r = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: query, num: 5 })
+      body: JSON.stringify({ q: query, num: 8 })
     });
     if (r.ok) {
       const d = await r.json();
-      return (d.organic || []).map(function(x) {
+      var results = (d.organic || []).map(function(x) {
         return { title: x.title, snippet: x.snippet, url: x.link, query: query };
       });
+      // Agregar "People Also Ask" si existe
+      if (d.peopleAlsoAsk) {
+        d.peopleAlsoAsk.forEach(function(paa) {
+          results.push({ title: paa.question, snippet: paa.snippet || paa.question, url: paa.link || '', query: 'People Also Ask: ' + query });
+        });
+      }
+      return results;
     }
   } catch (e) {}
   return [];
 }
 
 async function searchWithSerper(country, niche, language) {
-  const forums = LOCAL_FORUMS[country] || [];
-  const localQueries = getLocalQueries(country, niche);
-  
-  const allQueries = [
-    niche + ' problems ' + country + ' Reddit forum 2024',
-    niche + ' questions ' + country + ' Quora',
-    'best selling ' + niche + ' books ' + country + ' Amazon',
-    niche + ' YouTube ' + country + ' most viewed',
-    niche + ' ' + country + ' solution forum help',
-    niche + ' ' + country + ' ' + language + ' problem',
-  ];
-
-  if (forums.length > 0) {
-    allQueries.push(forums[0] + ' ' + niche + ' probleme aide');
-    allQueries.push(forums[1] ? forums[1] + ' ' + niche + ' solution' : niche + ' forum ' + country);
-  }
-
-  localQueries.forEach(function(q) { allQueries.push(q); });
-
+  const queries = buildSmartQueries(country, niche, language);
   const allResults = [];
-  for (let i = 0; i < Math.min(allQueries.length, 10); i++) {
-    const results = await serperSearch(allQueries[i]);
+  for (var i = 0; i < queries.length; i++) {
+    var results = await serperSearch(queries[i]);
     results.forEach(function(r) { allResults.push(r); });
   }
   return allResults;
 }
 
-function getLocalQueries(country, niche) {
-  const map = {
-    France: {
-      salud: ['migraine solution naturelle doctissimo', 'menopause symptomes aufeminin forum', 'anxiete insomnie remede naturel france', 'enfant autiste crise calmer forum', 'fatigue chronique femme france forum', 'douleur dos chronique solution france'],
-      finanzas: ['credit immobilier france forum', 'investissement bourse debutant france', 'epargne retraite france conseil'],
-      belleza: ['soin peau naturel france forum', 'chute cheveux femme solution france', 'anti age naturel france astuce'],
-      ansiedad: ['anxiete chronique solution france forum', 'attaque panique que faire france', 'stress travail burnout france forum'],
-      menopausia: ['menopause prise de poids solution france', 'symptomes menopause france forum', 'menopause naturelle traitement france'],
-      crianza: ['enfant autiste france aide parents', 'troubles apprentissage enfant france', 'hyperactivite enfant france forum'],
-      fitness: ['perdre poids rapidement france methode', 'sport maison france programme', 'regime efficace france forum']
-    },
-    Germany: {
-      salud: ['Rueckenschmerzen Loesung Forum Deutschland', 'Burnout Symptome Deutschland Forum', 'Schlafprobleme Loesung Deutschland', 'Wechseljahre Beschwerden Forum'],
-      ansiedad: ['Angststoerung Hilfe Forum Deutschland', 'Panikattacke was tun Deutschland'],
-      menopausia: ['Wechseljahre Gewicht Forum Deutschland', 'Klimakterium Symptome Hilfe']
-    },
-    'United Kingdom': {
-      salud: ['chronic pain UK forum Reddit', 'menopause symptoms UK Mumsnet', 'anxiety depression UK forum help', 'perimenopause UK Reddit forum'],
-      ansiedad: ['anxiety UK forum help Reddit', 'panic attacks UK what to do']
-    },
-    USA: {
-      salud: ['chronic pain Reddit forum 2024', 'perimenopause symptoms Reddit r/Menopause', 'long covid fatigue Reddit forum', 'anxiety without medication Reddit'],
-      ansiedad: ['anxiety natural remedies Reddit forum', 'panic disorder help Reddit USA'],
-      menopausia: ['perimenopause Reddit r/Menopause forum', 'menopause weight gain help Reddit']
-    }
-  };
-
-  if (map[country] && map[country][niche]) return map[country][niche];
-  if (map[country] && map[country].salud) return map[country].salud.slice(0, 3);
-  return [niche + ' problems ' + country + ' forum help desperate'];
-}
-
 async function analyzeWithGPT4(results, country, niche, language) {
-  const sys = 'Eres un analista senior de investigacion de mercado especializado en productos digitales para Europa y USA. IMPORTANTE: Responde TODO en ESPANOL. El campo problemaEnIdioma debe estar en ' + language + '. El campo busquedaExacta debe estar en ' + language + '. Analiza los resultados de busqueda reales de multiples plataformas (Google, Reddit, Amazon, YouTube, foros locales) y extrae SOLO problemas genuinos y monetizables de personas en ' + country + ' sobre el tema ' + niche + '. Devuelve SOLO un JSON array valido con 6 oportunidades ordenadas por scoreMonetizacion descendente. Cada oportunidad DEBE tener TODOS estos campos exactos: problema (en espanol), problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como buscan realmente), necesidad (espanol), emocion (espanol), intencionCompra, rangoEdad, genero, distribucionGenero, claseSocial, pais, idioma, volumenBusqueda, volumenEstimado, tendencia, competencia, nivelCompetenciaDetalle, oportunidadMonetizacion, tipoProducto, tituloEbook (espanol), promesaEbook (espanol), precioHotmart, scoreMonetizacion (numero 1-100), urlFuente, keyword (en ' + language + '), keywordES (espanol), dolorEmocional (espanol), urgencia, prioridad, porQueEstaOportunidad (espanol con evidencia de los resultados), fuentesConsultadas (array de fuentes), datosDetallados (objeto con: busquedasPorGenero, busquedasPorEdad, busquedasPorClase, keywordsEncontradas array en ' + language + ', competidoresDetectados array, precioPromedioMercado, tendenciaMensual, plataformasDetectadas array).';
+  const pop = POPULATION[country] || '50 millones total, 40 millones adultos';
+  const isGeneral = !niche || niche === 'general' || niche === 'salud bienestar';
 
-  const userMsg = 'Pais: ' + country + '\nNicho: ' + niche + '\nIdioma del pais: ' + language + '\n\nResultados de multiples plataformas (Google, Reddit, Amazon, YouTube, foros locales):\n' +
-    results.slice(0, 30).map(function(r) {
-      return 'PLATAFORMA/BUSQUEDA: ' + r.query + '\nTITULO: ' + r.title + '\nCONTENIDO: ' + r.snippet + '\nURL: ' + r.url;
+  const sys = 'Eres un motor de investigacion de demanda digital especializado en detectar oportunidades de productos digitales vendibles.' +
+    ' Pais: ' + country + ' (poblacion: ' + pop + '). Idioma del pais: ' + language + '.' +
+    ' IMPORTANTE: Responde TODO en ESPANOL excepto los campos que deben estar en ' + language + '.' +
+    '\n\nTu tarea es analizar los resultados de busqueda reales y detectar que necesitan APRENDER, RESOLVER, MEJORAR, FABRICAR, REPARAR, ORGANIZAR, CUIDAR, VENDER, CREAR o ENTENDER las personas de ' + country + (isGeneral ? ' en cualquier tema' : ' sobre el tema: ' + niche) + '.' +
+    '\n\nNO te limites solo a problemas emocionales o de salud. Detecta tambien:' +
+    ' intereses de alta demanda, aprendizajes practicos, habilidades, manualidades, oficios, hogar, cocina, plantas, mascotas, tecnologia, negocios, belleza, crianza, finanzas, productividad, deportes, arte, construccion, reparaciones, costura, jardineria, o cualquier tema que pueda convertirse en un PDF, ebook, guia, checklist, plantilla o mini curso digital.' +
+    '\n\nPara considerar una oportunidad VALIDA debe cumplir al menos 3 de estas señales:' +
+    ' muchas personas preguntan lo mismo, aparece en varias fuentes distintas, hay videos con muchas visualizaciones, hay cursos o ebooks vendiendose, hay preguntas repetidas en foros o Reddit, hay busquedas tipo como hacer guia paso a paso, hay comentarios pidiendo ayuda, hay productos similares en Amazon Hotmart Udemy.' +
+    '\n\nREGLAS IMPORTANTES:' +
+    ' No entregues ideas inventadas sin señales de demanda.' +
+    ' No confundas curiosidad con intencion de compra.' +
+    ' Prioriza temas donde la gente quiera una solucion clara rapida y ordenada que pueda venderse como producto digital.' +
+    ' Si hay mucha demanda y poca oferta clara es una OPORTUNIDAD FUERTE.' +
+    '\n\nDevuelve SOLO un JSON array valido con 6 oportunidades ordenadas por scoreMonetizacion descendente.' +
+    ' scoreMonetizacion: urgencia del tema (0-25) + volumen estimado (0-25) + intencion de compra (0-25) + baja competencia o nicho claro (0-25).' +
+    '\n\nCada oportunidad DEBE tener TODOS estos campos:' +
+    ' problema (en espanol - puede ser problema deseo habilidad o interes),' +
+    ' problemaEnIdioma (en ' + language + '),' +
+    ' busquedaExacta (frase exacta como busca la gente en ' + language + '),' +
+    ' necesidad (que quiere lograr la gente en espanol),' +
+    ' tipoDemanda (problema / aprendizaje / deseo / habilidad / oficio / manualidad / salud / negocio / crianza / hogar / belleza / tecnologia / otro),' +
+    ' emocion (emocion o motivacion principal),' +
+    ' intencionCompra (alta/media/baja),' +
+    ' rangoEdad,' +
+    ' genero,' +
+    ' distribucionGenero (con porcentajes estimados),' +
+    ' claseSocial,' +
+    ' pais,' +
+    ' idioma,' +
+    ' volumenBusqueda (alto/medio/bajo),' +
+    ' volumenEstimado (numero mensual estimado para ' + country + '),' +
+    ' tendencia (creciendo/estable/bajando),' +
+    ' competencia (alta/media/baja),' +
+    ' nivelCompetenciaDetalle,' +
+    ' oportunidadMonetizacion,' +
+    ' tipoProductoDigital (PDF / ebook / guia / checklist / plantilla / mini curso / pack),' +
+    ' tituloEbook (titulo comercial atractivo en espanol),' +
+    ' promesaEbook (que lograra el lector),' +
+    ' precioHotmart (precio realista en ' + (REGS[country] ? REGS[country].currency : 'EUR') + '),' +
+    ' scoreMonetizacion (1-100),' +
+    ' urlFuente,' +
+    ' keyword (en ' + language + '),' +
+    ' keywordES (en espanol),' +
+    ' dolorODeseo (dolor o deseo principal en espanol),' +
+    ' urgencia (alta/media/baja),' +
+    ' prioridad (ALTA/MEDIA/BAJA),' +
+    ' porQueEstaOportunidad (evidencia de los resultados de busqueda),' +
+    ' recomendacion (CREAR / VALIDAR MAS / DESCARTAR),' +
+    ' fuentesConsultadas (array de fuentes donde se detecto),' +
+    ' datosDetallados (objeto con busquedasPorGenero, busquedasPorEdad, busquedasPorClase, keywordsEncontradas array en ' + language + ', competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesDeValidas array).';
+
+  const userMsg = 'Pais: ' + country + ' (poblacion: ' + pop + ')\n' +
+    'Nicho o tema: ' + (niche || 'general - detecta los temas con mayor demanda') + '\n' +
+    'Idioma del pais: ' + language + '\n\n' +
+    'Resultados reales de busquedas en Google, foros, Amazon, Reddit y otras plataformas:\n' +
+    results.slice(0, 35).map(function(r) {
+      return 'FUENTE: ' + r.query + '\nTITULO: ' + r.title + '\nCONTENIDO: ' + r.snippet + '\nURL: ' + r.url;
     }).join('\n---\n');
 
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -163,11 +269,11 @@ async function analyzeWithGPT4(results, country, niche, language) {
 
 app.post('/api/search', async function(req, res) {
   try {
-    const country = req.body.country;
-    const niche = req.body.niche;
-    const language = req.body.language;
-    const serperResults = await searchWithSerper(country, niche, language);
-    const opportunities = await analyzeWithGPT4(serperResults, country, niche, language);
+    var country = req.body.country;
+    var niche = req.body.niche;
+    var language = req.body.language;
+    var serperResults = await searchWithSerper(country, niche, language);
+    var opportunities = await analyzeWithGPT4(serperResults, country, niche, language);
     res.json({ success: true, opportunities: opportunities, searchCount: serperResults.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -176,8 +282,8 @@ app.post('/api/search', async function(req, res) {
 
 app.post('/api/chat', async function(req, res) {
   try {
-    const sys = 'Eres FERNI, AI experta en market intelligence y creacion de ebooks vendibles para Europa y USA. Contexto: ' + req.body.context + '. Responde SIEMPRE en espanol, conciso y accionable. Maximo 3 parrafos.';
-    const reply = await claudeCall(sys, req.body.message, 1000);
+    var sys = 'Eres FERNI, AI experta en market intelligence y creacion de productos digitales vendibles para Europa y USA. Contexto: ' + req.body.context + '. Responde SIEMPRE en espanol, conciso y accionable. Maximo 3 parrafos.';
+    var reply = await claudeCall(sys, req.body.message, 1000);
     res.json({ success: true, reply: reply });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -185,30 +291,43 @@ app.post('/api/chat', async function(req, res) {
 });
 
 app.post('/api/generate-ebook', async function(req, res) {
-  const o = req.body.opportunity;
-  const author = req.body.author;
-  const countryName = getCountryName(o.pais || o.country || 'France');
-  const regs = getRegs(countryName);
-  const year = new Date().getFullYear();
+  var o = req.body.opportunity;
+  var author = req.body.author;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
+  var year = new Date().getFullYear();
 
-  const ctx = 'PROBLEMA: ' + (o.problema || o.problem || '') +
+  var ctx = 'TEMA: ' + (o.problema || o.problem || '') +
     ' NECESIDAD: ' + (o.necesidad || o.need || '') +
+    ' TIPO DE DEMANDA: ' + (o.tipoDemanda || 'aprendizaje') +
     ' PUBLICO: ' + (o.rangoEdad || o.ageRange || '') + ' ' + (o.genero || o.gender || '') + ' ' + countryName +
     ' TITULO: ' + (o.tituloEbook || o.ebookTitle || '') +
     ' PROMESA: ' + (o.promesaEbook || o.ebookPromise || '') +
-    ' EMOCION: ' + (o.emocion || o.emotion || '') +
-    ' DOLOR: ' + (o.dolorEmocional || o.emotionalPain || '') +
+    ' EMOCION O MOTIVACION: ' + (o.emocion || o.emotion || '') +
+    ' DOLOR O DESEO: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
     ' AUTOR: ' + author + ' PAIS: ' + countryName +
     ' REGULACIONES: ' + regs.legal + ' PROHIBIDO: ' + regs.forbidden;
 
-  const baseSys = 'Eres escritor profesional de bestsellers para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico cientifico pero accesible. REGULACIONES ' + countryName + ': ' + regs.legal + '. PROHIBIDO: ' + regs.forbidden + '. Disclaimer obligatorio: ' + regs.healthDisclaimer;
+  var baseSys = 'Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol.' +
+    ' El contenido puede ser de cualquier tipo: salud, hogar, manualidades, negocios, tecnologia, crianza, cocina, jardineria, finanzas, etc.' +
+    ' Contenido especifico emocional accionable nunca generico.' +
+    ' Tono empatico practico y motivador.' +
+    ' REGULACIONES ' + countryName + ': ' + regs.legal +
+    ' PROHIBIDO: ' + regs.forbidden +
+    ' Disclaimer: ' + regs.healthDisclaimer;
 
   try {
-    const p1 = JSON.parse((await claudeCall(baseSys, ctx + ' Escribe PARTE 1 del ebook. SOLO JSON valido: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"frase corta maxima 10 palabras","intro":"introduccion de minimo 500 palabras emocionalmente poderosa que haga al lector sentirse completamente identificado","chapter1":{"number":1,"title":"titulo capitulo 1","opening":"historia apertura minimo 150 palabras que el lector sienta como propia","content":"contenido minimo 500 palabras con tecnicas especificas y datos reales","keyPoints":["punto clave 1","punto clave 2","punto clave 3","punto clave 4"],"exercise":{"title":"nombre del ejercicio","description":"descripcion y proposito del ejercicio","steps":["paso especifico 1","paso 2","paso 3","paso 4","paso 5"]}},"chapter2":{"number":2,"title":"titulo capitulo 2","opening":"historia apertura minimo 150 palabras","content":"contenido minimo 500 palabras","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}}}', 6000)).replace(/```json|```/g, '').trim());
+    var p1 = JSON.parse((await claudeCall(baseSys,
+      ctx + ' Escribe PARTE 1 del ebook. SOLO JSON valido: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"frase corta maxima 10 palabras","intro":"introduccion de minimo 500 palabras que enganche al lector y le haga sentir que encontro exactamente lo que buscaba","chapter1":{"number":1,"title":"titulo capitulo 1","opening":"apertura con historia o escenario real de 150 palabras minimo","content":"contenido minimo 500 palabras con pasos especificos y ejemplos reales","keyPoints":["punto clave 1","punto clave 2","punto clave 3","punto clave 4"],"exercise":{"title":"nombre del ejercicio o actividad practica","description":"descripcion y proposito","steps":["paso especifico 1","paso 2","paso 3","paso 4","paso 5"]}},"chapter2":{"number":2,"title":"titulo capitulo 2","opening":"apertura 150 palabras","content":"contenido minimo 500 palabras","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}}}',
+      6000)).replace(/```json|```/g, '').trim());
 
-    const p2 = JSON.parse((await claudeCall(baseSys, ctx + ' Escribe PARTE 2 del ebook. SOLO JSON valido: {"chapter3":{"number":3,"title":"titulo capitulo 3","opening":"historia apertura minimo 150 palabras","content":"contenido minimo 500 palabras con tecnicas probadas y ejercicios","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}},"chapter4":{"number":4,"title":"titulo capitulo 4","opening":"historia apertura minimo 150 palabras","content":"contenido minimo 500 palabras","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}}}', 6000)).replace(/```json|```/g, '').trim());
+    var p2 = JSON.parse((await claudeCall(baseSys,
+      ctx + ' Escribe PARTE 2 del ebook. SOLO JSON valido: {"chapter3":{"number":3,"title":"titulo capitulo 3","opening":"apertura 150 palabras","content":"contenido minimo 500 palabras con tecnicas avanzadas","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}},"chapter4":{"number":4,"title":"titulo capitulo 4","opening":"apertura 150 palabras","content":"contenido minimo 500 palabras","keyPoints":["punto 1","punto 2","punto 3","punto 4"],"exercise":{"title":"nombre","description":"descripcion","steps":["paso 1","paso 2","paso 3","paso 4","paso 5"]}}}',
+      6000)).replace(/```json|```/g, '').trim());
 
-    const p3 = JSON.parse((await claudeCall(baseSys, ctx + ' Escribe PARTE 3 del ebook. SOLO JSON valido: {"conclusion":"conclusion motivadora minimo 350 palabras con plan de accion claro","actionPlan":["accion concreta esta semana","accion concreta este mes","accion concreta proximos 3 meses"],"authorNote":"nota personal minimo 120 palabras calida y autentica firmada por ' + author + '","resources":["recurso especifico 1","recurso 2","recurso 3","recurso 4"],"legalSection":{"healthDisclaimer":"' + regs.healthDisclaimer + '","guarantee":"' + regs.guarantee + '","dataProtection":"' + regs.dataProtection + '","copyright":"Copyright ' + year + ' ' + author + '. Todos los derechos reservados."}}', 3000)).replace(/```json|```/g, '').trim());
+    var p3 = JSON.parse((await claudeCall(baseSys,
+      ctx + ' Escribe PARTE 3 del ebook. SOLO JSON valido: {"conclusion":"conclusion motivadora minimo 350 palabras con vision de lo que lograra el lector","actionPlan":["accion concreta para hoy","accion concreta esta semana","accion concreta este mes"],"authorNote":"nota personal minimo 120 palabras calida y autentica firmada por ' + author + '","resources":["recurso especifico 1","recurso 2","recurso 3","recurso 4"],"legalSection":{"healthDisclaimer":"' + regs.healthDisclaimer + '","guarantee":"' + regs.guarantee + '","dataProtection":"' + regs.dataProtection + '","copyright":"Copyright ' + year + ' ' + author + '. Todos los derechos reservados."}}',
+      3000)).replace(/```json|```/g, '').trim());
 
     res.json({ success: true, ebook: { title: p1.title, subtitle: p1.subtitle, tagline: p1.tagline, intro: p1.intro, chapters: [p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4], conclusion: p3.conclusion, actionPlan: p3.actionPlan, authorNote: p3.authorNote, resources: p3.resources, legalSection: p3.legalSection } });
   } catch (e) {
@@ -217,15 +336,15 @@ app.post('/api/generate-ebook', async function(req, res) {
 });
 
 app.post('/api/translate-ebook', async function(req, res) {
-  const ebook = req.body.ebook;
-  const language = req.body.language;
-  const country = req.body.country;
-  const author = req.body.author;
-  const regs = getRegs(country);
-  const sys = 'Traductor literario experto en ' + language + ' para ' + country + '. Traduce espanol a ' + language + ' de manera completamente nativa. Adapta culturalmente. Mantener nombre ' + author + ' sin cambios. Regulaciones: ' + regs.legal + '. Devuelve SOLO JSON con misma estructura. Sin markdown.';
+  var ebook = req.body.ebook;
+  var language = req.body.language;
+  var country = req.body.country;
+  var author = req.body.author;
+  var regs = getRegs(country);
+  var sys = 'Traductor literario experto en ' + language + ' para ' + country + '. Traduce espanol a ' + language + ' de manera completamente nativa. Adapta culturalmente cada frase. El lector NO debe saber que fue traducido. Mantener nombre ' + author + ' sin cambios. Regulaciones de ' + country + ': ' + regs.legal + '. Devuelve SOLO JSON con misma estructura. Sin markdown.';
   try {
-    const t1 = JSON.parse((await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro, chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 6000)).replace(/```json|```/g, '').trim());
-    const t2 = JSON.parse((await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3], conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, authorNote: ebook.authorNote, resources: ebook.resources, legalSection: ebook.legalSection }), 6000)).replace(/```json|```/g, '').trim());
+    var t1 = JSON.parse((await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro, chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 6000)).replace(/```json|```/g, '').trim());
+    var t2 = JSON.parse((await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3], conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, authorNote: ebook.authorNote, resources: ebook.resources, legalSection: ebook.legalSection }), 6000)).replace(/```json|```/g, '').trim());
     res.json({ success: true, ebook: { title: t1.title, subtitle: t1.subtitle, tagline: t1.tagline, intro: t1.intro, chapters: [t1.chapter1, t1.chapter2, t2.chapter3, t2.chapter4], conclusion: t2.conclusion, actionPlan: t2.actionPlan, authorNote: t2.authorNote, resources: t2.resources, legalSection: t2.legalSection } });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -234,12 +353,12 @@ app.post('/api/translate-ebook', async function(req, res) {
 
 app.post('/api/generate-image', async function(req, res) {
   try {
-    const resp = await fetch('https://api.openai.com/v1/images/generations', {
+    var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
       body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'hd', style: 'natural' })
     });
-    const d = await resp.json();
+    var d = await resp.json();
     if (d.data && d.data[0]) res.json({ success: true, url: d.data[0].url });
     else res.status(500).json({ success: false, error: 'No image generated' });
   } catch (e) {
@@ -248,15 +367,15 @@ app.post('/api/generate-image', async function(req, res) {
 });
 
 app.post('/api/generate-hotmart', async function(req, res) {
-  const o = req.body.opportunity;
-  const author = req.body.author;
-  const language = req.body.language;
-  const countryName = getCountryName(o.pais || o.country || 'France');
-  const regs = getRegs(countryName);
+  var o = req.body.opportunity;
+  var author = req.body.author;
+  var language = req.body.language;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
   try {
-    const sys = 'Copywriter experto Hotmart para Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. Garantia: ' + regs.guarantee + '. PROHIBIDO: ' + regs.forbidden + '. Devuelve SOLO JSON con: productName, headline, subheadline, shortDesc, longDesc, benefits array 6, bullets array 6, salesPageTitle, salesPageBody, guarantee, bonus array 3, upsell, orderBump, category, cta, facebookPost, instagramCaption, instagramStory, emailSubject, emailBody.';
-    const userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Promesa: ' + (o.promesaEbook || o.ebookPromise) + ' Problema: ' + (o.problema || o.problem) + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Precio: ' + (o.precioHotmart || o.hotmartPrice) + ' Autor: ' + author + ' Emocion: ' + (o.emocion || o.emotion) + ' Dolor: ' + (o.dolorEmocional || o.emotionalPain);
-    const txt = await claudeCall(sys, userMsg, 4000);
+    var sys = 'Copywriter experto en ventas de productos digitales en Hotmart para Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. Garantia: ' + regs.guarantee + '. PROHIBIDO: ' + regs.forbidden + '. Devuelve SOLO JSON con: productName, headline, subheadline, shortDesc, longDesc, benefits array 6, bullets array 6, salesPageTitle, salesPageBody, guarantee, bonus array 3, upsell, orderBump, category, cta, facebookPost, instagramCaption, instagramStory, emailSubject, emailBody.';
+    var userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Promesa: ' + (o.promesaEbook || o.ebookPromise) + ' Tema: ' + (o.problema || o.problem) + ' Tipo: ' + (o.tipoDemanda || 'aprendizaje') + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Precio: ' + (o.precioHotmart || o.hotmartPrice) + ' Autor: ' + author + ' Motivacion: ' + (o.emocion || o.emotion) + ' Deseo o dolor: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
+    var txt = await claudeCall(sys, userMsg, 4000);
     res.json({ success: true, kit: JSON.parse(txt.replace(/```json|```/g, '').trim()) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -264,14 +383,14 @@ app.post('/api/generate-hotmart', async function(req, res) {
 });
 
 app.post('/api/generate-meta', async function(req, res) {
-  const o = req.body.opportunity;
-  const language = req.body.language;
-  const countryName = getCountryName(o.pais || o.country || 'France');
-  const regs = getRegs(countryName);
+  var o = req.body.opportunity;
+  var language = req.body.language;
+  var countryName = getCountryName(o.pais || o.country || 'France');
+  var regs = getRegs(countryName);
   try {
-    const sys = 'Estratega Meta Ads para productos digitales Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. PROHIBIDO: ' + regs.forbidden + '. Devuelve SOLO JSON con: segmentation con age gender interests array 6 behaviors array 4 painPoints array 5 excludeAudiences array 3 lookalike budget. ads array 5 con angle platform format headline max40chars primaryText 150palabras description max30chars cta dallePrompt en ingles sin texto ni caras targetEmotion. landingPage con headline subheadline body 400palabras socialProof cta urgency. retargeting con headline copy cta offer. emailSequence array 3 con subject y body 200palabras. Genera 5 anuncios angulos: dolor urgencia testimonio curiosidad autoridad.';
-    const userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Problema: ' + (o.problema || o.problem) + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Emocion: ' + (o.emocion || o.emotion) + ' Dolor: ' + (o.dolorEmocional || o.emotionalPain) + ' Precio: ' + (o.precioHotmart || o.hotmartPrice);
-    const txt = await claudeCall(sys, userMsg, 5000);
+    var sys = 'Estratega experto en Meta Ads para productos digitales en Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. PROHIBIDO: ' + regs.forbidden + '. Devuelve SOLO JSON con: segmentation con age gender interests array 6 behaviors array 4 painPoints array 5 excludeAudiences array 3 lookalike budget. ads array 5 con angle platform format headline primaryText description cta dallePrompt en ingles sin texto ni caras targetEmotion. landingPage con headline subheadline body socialProof cta urgency. retargeting con headline copy cta offer. emailSequence array 3 con subject y body. 5 anuncios con angulos: problema urgencia aspiracion curiosidad autoridad.';
+    var userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Tema: ' + (o.problema || o.problem) + ' Tipo demanda: ' + (o.tipoDemanda || 'aprendizaje') + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Motivacion: ' + (o.emocion || o.emotion) + ' Deseo o dolor: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain) + ' Precio: ' + (o.precioHotmart || o.hotmartPrice);
+    var txt = await claudeCall(sys, userMsg, 5000);
     res.json({ success: true, kit: JSON.parse(txt.replace(/```json|```/g, '').trim()) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
