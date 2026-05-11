@@ -571,6 +571,11 @@ function selOpp(i){
   document.getElementById('oc'+i).classList.add('sel');
   S.selOpp=S.results[i];
   document.getElementById('btn-draft').disabled=false;
+  // Guardar oportunidad seleccionada en historial inmediatamente
+  if(S.currentHistId){ 
+    var idx=S.history.findIndex(function(h){return h.id===S.currentHistId;});
+    if(idx>=0){ S.history[idx].selOpp=S.selOpp; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
+  }
   // Toggle detail panel
   const det=document.getElementById('detail-'+i);
   if(det){det.style.display=det.style.display==='none'?'block':'none';}
@@ -778,7 +783,7 @@ function renderDraft(o,eb){
 async function approveEbook(){
   const o=S.selOpp; if(!o) return;
   hide('eb-content'); show('eb-loading');
-  const lang = o.idioma || o.language || 'French';
+  const lang = o.idioma || o.language || o.lang || (REGS[getCountryName(o.pais||o.country||'France')] && REGS[getCountryName(o.pais||o.country||'France')].language) || 'French';
   document.getElementById('eb-load-txt').textContent=`Traduciendo al ${lang}...`;
   try{
     const resp=await fetch('/api/translate-ebook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ebook:S.ebookData,language:lang,country:getCountryName(o.pais||o.country||'France'),author:S.author})});
@@ -1237,7 +1242,9 @@ function loadAndGenerateDraft(id){
 function loadHistData(e){
   S.results=e.opps; S.country=e.country; S.niche=e.niche;
   S.currentHistId=e.id;
-  if(e.selOpp){ S.selOpp=e.selOpp; document.getElementById('btn-draft').disabled=false; }
+  // Restaurar oportunidad seleccionada (guardada o primera disponible)
+  var opp = e.selOpp || (e.opps && e.opps[0]) || null;
+  if(opp){ S.selOpp=opp; document.getElementById('btn-draft').disabled=false; }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
