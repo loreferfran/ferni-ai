@@ -321,10 +321,11 @@ select option { background: #1e2d52; }
             <div class="row-hd"><div class="sec-lbl">✅ Ebook final aprobado</div><span class="badge bg2" id="eb-approved-badge"></span></div>
             <div id="eb-final-body"></div>
             <div class="btn-row">
-              <button class="btn btn-p" onclick="dlFinalEbook()">⬇ Descargar ebook final</button>
+              <button class="btn btn-p" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
               <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
               <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
             </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Abre el PDF en Chrome → Ctrl+P → Guardar como PDF → listo para Hotmart</div>
           </div>
         </div>
         <div class="chat-area">
@@ -759,6 +760,21 @@ function dlWordDraft(){
   a.download=`FERNI_BORRADOR_${o.country}_${author}_${year}.doc`; a.click();
 }
 
+function dlPDF(){
+  if(!S.pdfHtml){ alert('Genera y aprueba el ebook primero'); return; }
+  const blob=new Blob([S.pdfHtml],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const o=S.selOpp;
+  a.download='FERNI_PDF_'+(o?getCountryName(o.pais||o.country||'France'):'ebook')+'_'+(S.author||'Antonieta')+'_'+new Date().getFullYear()+'.html';
+  a.click();
+  setTimeout(function(){
+    if(confirm('¿Abrir el PDF ahora para guardarlo?\n\nInstrucciones:\n1. Se abrirá en el navegador\n2. Presiona Ctrl+P\n3. Selecciona "Guardar como PDF"\n4. Listo para Hotmart')){
+      window.open(URL.createObjectURL(blob),'_blank');
+    }
+  },500);
+}
+
 function dlFinalEbook(){
   const o=S.selOpp; if(!o) return;
   const eb=S.finalEbook||S.ebookData; const author=S.author||'Antonieta'; const year=new Date().getFullYear();
@@ -994,5 +1010,6 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
