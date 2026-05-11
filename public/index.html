@@ -655,34 +655,29 @@ async function goEbook(){
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author=document.getElementById('inp-author').value.trim()||'Antonieta';
 
-  const countryName=o.pais?(o.pais.split(' ').length>1?o.pais.split(' ').slice(1).join(' '):o.pais):(o.country||'France');
-  const ctx='TEMA: '+(o.problema||o.problem||'')+
-    ' NECESIDAD: '+(o.necesidad||o.need||'')+
-    ' TIPO: '+(o.tipoDemanda||'aprendizaje')+
-    ' PUBLICO: '+(o.rangoEdad||o.ageRange||'')+' '+(o.genero||o.gender||'')+' '+countryName+
-    ' TITULO: '+(o.tituloEbook||o.ebookTitle||'')+
-    ' PROMESA: '+(o.promesaEbook||o.ebookPromise||'')+
-    ' EMOCION: '+(o.emocion||o.emotion||'')+
-    ' DOLOR: '+(o.dolorODeseo||o.dolorEmocional||o.emotionalPain||'')+
-    ' AUTOR: '+S.author+' PAIS: '+countryName;
-
-  const sys='Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico practico motivador.';
+  const payload = { opportunity: o, author: S.author };
 
   try{
-    // Parte 1
+    // Parte 1 — via server endpoint (evita problemas de serialización)
     document.getElementById('eb-load-txt').textContent='Escribiendo portada e introducción...';
-    const t1=await claudeDirect(sys, ctx+' Escribe PARTE 1 del ebook. SOLO JSON sin texto extra: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"tagline max 8 palabras","intro":"introduccion emotiva 350 palabras","chapter1":{"number":1,"title":"titulo","opening":"apertura 100 palabras","content":"contenido practico 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter2":{"number":2,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
-    const p1=JSON.parse(t1.replace(/```json|```/g,'').trim());
+    const r1=await fetch('/api/generate-ebook-p1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d1=await r1.json();
+    if(!d1.success) throw new Error('P1: '+d1.error);
+    const p1=d1.part;
 
     // Parte 2
     document.getElementById('eb-load-txt').textContent='Escribiendo capítulos 3 y 4...';
-    const t2=await claudeDirect(sys, ctx+' Escribe PARTE 2 del ebook. SOLO JSON sin texto extra: {"chapter3":{"number":3,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter4":{"number":4,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
-    const p2=JSON.parse(t2.replace(/```json|```/g,'').trim());
+    const r2=await fetch('/api/generate-ebook-p2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d2=await r2.json();
+    if(!d2.success) throw new Error('P2: '+d2.error);
+    const p2=d2.part;
 
     // Parte 3
     document.getElementById('eb-load-txt').textContent='Escribiendo conclusión y sección legal...';
-    const t3=await claudeDirect(sys, ctx+' Escribe PARTE 3 del ebook. SOLO JSON: {"conclusion":"conclusion motivadora 200 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal 80 palabras del autor '+S.author+'","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"Aviso informativo para '+countryName+'","guarantee":"Garantia legal '+countryName+'","dataProtection":"Proteccion datos '+countryName+'","copyright":"Copyright '+new Date().getFullYear()+' '+S.author+'"}}', 2000);
-    const p3=JSON.parse(t3.replace(/```json|```/g,'').trim());
+    const r3=await fetch('/api/generate-ebook-p3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d3=await r3.json();
+    if(!d3.success) throw new Error('P3: '+d3.error);
+    const p3=d3.part;
 
     const ebook={
       title:p1.title, subtitle:p1.subtitle, tagline:p1.tagline, intro:p1.intro,
@@ -692,19 +687,30 @@ async function goEbook(){
     };
 
     S.ebookData=ebook;
+    if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     hide('eb-loading'); show('eb-content');
     renderDraft(o,ebook);
     addMsg('chat-ebook','Borrador listo en español — '+(ebook.chapters.length)+' capítulos. Revísalo, pídeme cambios aquí, o presiona APROBAR para generar el PDF final con imágenes en '+( o.idioma||o.language||'el idioma del país')+'.','ferni');
 
   }catch(e){ 
     hide('eb-loading'); show('eb-empty'); 
-    alert('Error generando ebook: '+e.message+'. Verifica que tu clave de Claude API esté configurada en Vercel.');
+    alert('Error generando ebook: '+e.message);
   }
 }
-
 function saveEbookToHist(histId, ebook){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
   if(idx>=0){ S.history[idx].ebook=ebook; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
+}
+function saveFullDataToHist(histId){
+  var idx=S.history.findIndex(function(h){return h.id===histId;});
+  if(idx>=0){
+    if(S.finalEbook) S.history[idx].finalEbook=S.finalEbook;
+    if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
+    if(S.hmKit) S.history[idx].hmKit=S.hmKit;
+    if(S.selOpp) S.history[idx].selOpp=S.selOpp;
+    try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){}
+  }
+}
 }
 
 function renderDraft(o,eb){
@@ -761,6 +767,7 @@ async function approveEbook(){
     const d=await resp.json();
     if(d.success){ S.finalEbook=d.ebook; hide('eb-loading'); renderFinal(o,d.ebook); genHotmart(o); genMeta(o); }
     else{ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData); genHotmart(o); genMeta(o); }
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
   }catch(e){ hide('eb-loading'); S.finalEbook=S.ebookData; renderFinal(o,S.ebookData); genHotmart(o); genMeta(o); }
 }
 
@@ -1029,8 +1036,28 @@ function genCSV(data,country,niche){
 }
 
 function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
-function renderHist(){ document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; const el=document.getElementById('hist-body'); if(!S.history.length){el.innerHTML=`<div class="state-c"><div class="big-icon">🕐</div><div class="state-sub">Sin búsquedas aún.<br>Ejecuta tu primer análisis.</div></div>`;return;} el.innerHTML=S.history.map(e=>`<div class="hist-item" onclick="loadHist(${e.id})"><div class="hdot"></div><div class="hinfo"><div class="htitle">${e.flag} ${e.country} · ${e.niche}</div><div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div><div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div></div><div class="hbtns" onclick="event.stopPropagation()"><button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button><button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button></div></div>`).join(''); }
-function loadHist(id){ const e=S.history.find(h=>h.id===id);if(!e)return; S.results=e.opps;S.country=e.country;S.niche=e.niche; const info=LANGS[e.country]||{lang:'English',flag:e.flag}; showResults(e.opps,e.country,e.niche,{...info,flag:e.flag}); showTab('search',document.querySelectorAll('.tab')[0]); }
+function renderHist(){ document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; const el=document.getElementById('hist-body'); if(!S.history.length){el.innerHTML=`<div class="state-c"><div class="big-icon">🕐</div><div class="state-sub">Sin búsquedas aún.<br>Ejecuta tu primer análisis.</div></div>`;return;} el.innerHTML=S.history.map(e=>{
+  const ebBadge = e.finalEbook ? '<span style="font-size:10px;background:#00b894;color:white;border-radius:10px;padding:1px 7px;margin-left:6px;">PDF ✓</span>' : e.ebook ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:1px 7px;margin-left:6px;">Borrador ✓</span>' : '';
+  return `<div class="hist-item" onclick="loadHist(${e.id})"><div class="hdot"></div><div class="hinfo"><div class="htitle">${e.flag} ${e.country} · ${e.niche}${ebBadge}</div><div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div><div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div></div><div class="hbtns" onclick="event.stopPropagation()"><button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button><button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button></div></div>`;
+}).join(''); }
+function loadHist(id){ 
+  const e=S.history.find(h=>h.id===id);if(!e)return; 
+  S.results=e.opps;S.country=e.country;S.niche=e.niche; 
+  // Restore saved ebook/pdf/kit if present
+  if(e.selOpp){ S.selOpp=e.selOpp; document.getElementById('btn-draft').disabled=false; }
+  if(e.ebook){ S.ebookData=e.ebook; }
+  if(e.finalEbook){ S.finalEbook=e.finalEbook; }
+  if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
+  if(e.hmKit){ S.hmKit=e.hmKit; }
+  S.currentHistId=id;
+  const info=LANGS[e.country]||{lang:'English',flag:e.flag}; 
+  showResults(e.opps,e.country,e.niche,{...info,flag:e.flag}); 
+  showTab('search',document.querySelectorAll('.tab')[0]);
+  if(e.ebook){ 
+    const msg = '📂 Historial restaurado. ' + (e.finalEbook?'✅ PDF final disponible — ve al panel Ebook.':'✏️ Borrador guardado — ve al panel Ebook para continuar.');
+    setTimeout(()=>addMsg('chat-search', msg, 'ferni'), 300);
+  }
+}
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
 function delHist(id){ if(!confirm('¿Eliminar?'))return; S.history=S.history.filter(h=>h.id!==id); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history));}catch(e){} renderHist(); }
 
