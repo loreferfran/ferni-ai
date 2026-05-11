@@ -428,20 +428,50 @@ app.post('/api/chat', async function(req, res) {
   }
 });
 
-function buildEbookContext(o, author, countryName, regs) {
-  return 'TEMA: ' + (o.problema || o.problem || '') +
-    ' NECESIDAD: ' + (o.necesidad || o.need || '') +
-    ' TIPO: ' + (o.tipoDemanda || 'aprendizaje') +
-    ' PUBLICO: ' + (o.rangoEdad || o.ageRange || '') + ' ' + (o.genero || o.gender || '') + ' ' + countryName +
-    ' TITULO: ' + (o.tituloEbook || o.ebookTitle || '') +
-    ' PROMESA: ' + (o.promesaEbook || o.ebookPromise || '') +
-    ' EMOCION: ' + (o.emocion || o.emotion || '') +
-    ' DOLOR: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
-    ' AUTOR: ' + author + ' PAIS: ' + countryName;
+function buildEbookSystem(countryName, regs) {
+  return 'Eres simultaneamente: el mejor experto mundial en el tema solicitado + escritor bestseller + pedagogo excepcional.' +
+    ' Tu mision es escribir en espanol un ebook que resuelva el problema del lector COMPLETAMENTE.' +
+    ' PAIS DESTINO: ' + countryName + '.' +
+    ' USA TU INTELIGENCIA Y CONOCIMIENTO REAL sobre el tema:' +
+    ' - Si el tema es jardineria: aplica conocimiento real de botanica, medidas exactas, tipos de suelo, plantas compatibles, ciclos de crecimiento.' +
+    ' - Si el tema es salud/bienestar: aplica conocimiento medico real, remedios probados, mecanismos fisiologicos explicados simplemente.' +
+    ' - Si el tema es finanzas: aplica calculos reales, tasas, estrategias probadas con ejemplos numericos concretos.' +
+    ' - Si el tema es crianza: aplica psicologia del desarrollo real, edades especificas, tecnicas con nombres y origen.' +
+    ' - Cualquier tema: aplica el conocimiento experto real que tienes sobre ese campo.' +
+    ' REGLAS DE ORO:' +
+    ' 1. ESPECIFICIDAD TOTAL: numeros reales, medidas exactas, estadisticas, porcentajes, nombres cientificos cuando aplique.' +
+    '    MAL: "planta en un espacio adecuado".' +
+    '    BIEN: "en 4m² puedes plantar 12 lechugas (30cm entre plantas), 6 tomates cherry (50cm entre plantas) y un borde de albahaca (20cm). Rinde aprox. 8kg de vegetales al mes."' +
+    ' 2. SOLUCION COMPLETA: el lector no necesita buscar mas informacion despues de leer. Todo esta aqui.' +
+    ' 3. PROGRESION NARRATIVA: cap 1=diagnstico/comprension del problema, caps 2-3=herramientas y metodos, cap 4=implementacion paso a paso.' +
+    ' 4. TONO: experto amigable — como un amigo que sabe mucho y te lo explica con calidez y precision.' +
+    ' 5. EJERCICIOS REALES: cada ejercicio produce un resultado tangible y verificable al terminarlo.' +
+    ' 6. CONTEXTO LOCAL: adapta ejemplos, marcas, lugares y situaciones tipicas de ' + countryName + '.' +
+    ' 7. DATOS CON FUENTE IMPLICITA: "Segun estudios de la Universidad X", "Los jardineros profesionales recomiendan", "La OMS indica".' +
+    ' PROHIBIDO: ' + regs.forbidden +
+    ' PROHIBIDO ABSOLUTO: vaguedad, relleno, generalidades, repeticion disfrazada, consejos obvios sin sustancia.';
 }
 
-function buildEbookSystem(countryName, regs) {
-  return 'Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico practico motivador. PAIS: ' + countryName + '. PROHIBIDO: ' + regs.forbidden;
+function buildEbookContext(o, author, countryName, regs) {
+  return 'PROBLEMA QUE RESUELVE ESTE EBOOK: ' + (o.problema || o.problem || '') +
+    '\nNECESIDAD ESPECIFICA DEL LECTOR: ' + (o.necesidad || o.need || '') +
+    '\nTIPO: ' + (o.tipoDemanda || 'aprendizaje') +
+    '\nPUBLICO: ' + (o.rangoEdad || o.ageRange || '') + ', ' + (o.genero || o.gender || '') + ', vive en ' + countryName +
+    '\nTITULO: ' + (o.tituloEbook || o.ebookTitle || '') +
+    '\nPROMESA AL LECTOR: ' + (o.promesaEbook || o.ebookPromise || '') +
+    '\nEMOCION QUE SIENTE EL LECTOR AHORA: ' + (o.emocion || o.emotion || '') +
+    '\nDOLOR O DESEO PROFUNDO: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain || '') +
+    '\nASI BUSCA SOLUCIONES EN GOOGLE: "' + (o.busquedaExacta || o.keyword || '') + '"' +
+    '\nPRECIO QUE PAGARA: ' + (o.precioHotmart || o.hotmartPrice || '') +
+    '\nAUTOR: ' + author +
+    '\nPAIS: ' + countryName +
+    '\n\nMISION CRITICA: Esta persona pago ' + (o.precioHotmart || o.hotmartPrice || 'dinero real') + ' por este ebook.' +
+    ' Tiene exactamente este problema: "' + (o.dolorODeseo || o.problema || o.problem || '') + '".' +
+    ' Al terminar de leer DEBE poder resolver ese problema completamente.' +
+    ' USA TU CONOCIMIENTO EXPERTO REAL sobre "' + (o.problema || o.problem || '') + '" para dar:' +
+    ' medidas exactas, pasos concretos con numeros, ejemplos reales de ' + countryName + ', resultados verificables.' +
+    ' CADA CAPITULO debe incluir: minimo 3 datos especificos (numeros, medidas, estadisticas), 1 ejemplo tipico de ' + countryName + ', pasos que se ejecutan hoy mismo.' +
+    ' El lector debe quedar ENCANTADO y sentir que pago poco por tanta informacion de calidad.';
 }
 
 function extractJSON(txt) {
@@ -521,7 +551,13 @@ app.post('/api/translate-ebook', async function(req, res) {
   var country = req.body.country;
   var author = req.body.author;
   var regs = getRegs(country);
-  var sys = 'Traductor literario experto en ' + language + ' para ' + country + '. Traduce espanol a ' + language + ' de manera completamente nativa. Adapta culturalmente cada frase. El lector NO debe saber que fue traducido. Mantener nombre ' + author + ' sin cambios. Regulaciones de ' + country + ': ' + regs.legal + '. Devuelve SOLO JSON con misma estructura. Sin markdown.';
+  var sys = 'Eres traductor literario nativo de ' + language + ' especializado en contenido practico para ' + country + '.' +
+    ' REGLAS: 1. Traduce al ' + language + ' mas natural posible, el lector debe sentir que fue escrito originalmente en ese idioma.' +
+    ' 2. CONSERVA TODOS LOS DATOS NUMERICOS EXACTOS: medidas, estadisticas, porcentajes, dimensiones.' +
+    ' 3. ADAPTA referencias culturales a ' + country + ' cuando sea posible.' +
+    ' 4. Nombre del autor: ' + author + ' — NO traducir.' +
+    ' 5. Regulaciones: ' + regs.legal +
+    ' 6. Devuelve SOLO JSON con exactamente la misma estructura. Sin markdown. Sin texto extra.';
   try {
     var t1 = JSON.parse((await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro, chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 6000)).replace(/```json|```/g, '').trim());
     var t2 = JSON.parse((await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3], conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, authorNote: ebook.authorNote, resources: ebook.resources, legalSection: ebook.legalSection }), 6000)).replace(/```json|```/g, '').trim());
