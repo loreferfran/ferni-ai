@@ -152,7 +152,18 @@ async function claudeCall(system, userContent, maxTokens) {
     headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: maxTokens, system: system, messages: [{ role: 'user', content: userContent }] })
   });
-  const d = await resp.json();
+  const raw = await resp.text();
+  let d;
+  try { d = JSON.parse(raw); } catch (e) {
+    throw new Error('Claude API returned non-JSON: ' + raw.slice(0, 200));
+  }
+  if (!resp.ok || d.error) {
+    const msg = (d.error && d.error.message) || ('HTTP ' + resp.status);
+    throw new Error('Claude API error: ' + msg);
+  }
+  if (!d.content || !Array.isArray(d.content)) {
+    throw new Error('Claude API unexpected response shape: ' + JSON.stringify(d).slice(0, 200));
+  }
   return d.content.map(function(c) { return c.text || ''; }).join('');
 }
 
@@ -306,6 +317,16 @@ function buildEbookSystem(countryName, regs) {
   return 'Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico practico motivador. PAIS: ' + countryName + '. PROHIBIDO: ' + regs.forbidden;
 }
 
+function extractJSON(txt) {
+  try { return JSON.parse(txt.replace(/```json|```/g, '').trim()); } catch(e) {}
+  var start = txt.indexOf('{');
+  var end = txt.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    try { return JSON.parse(txt.slice(start, end + 1)); } catch(e) {}
+  }
+  throw new Error('No valid JSON in Claude response. Preview: ' + txt.slice(0, 300));
+}
+
 // Endpoint separado para cada parte - evita timeout de Vercel
 app.post('/api/generate-ebook-p1', async function(req, res) {
   var o = req.body.opportunity;
@@ -315,10 +336,12 @@ app.post('/api/generate-ebook-p1', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 1 del ebook. SOLO JSON: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"tagline max 8 palabras","intro":"introduccion emotiva 350 palabras","chapter1":{"number":1,"title":"titulo","opening":"apertura 100 palabras","content":"contenido practico 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter2":{"number":2,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
-    var p1 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    var schema = JSON.stringify({title:'titulo impactante',subtitle:'subtitulo vendedor',tagline:'tagline max 8 palabras',intro:'introduccion emotiva 350 palabras',chapter1:{number:1,title:'titulo',opening:'apertura 100 palabras',content:'contenido practico 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}},chapter2:{number:2,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}}});
+    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 1 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
+    var p1 = extractJSON(txt);
     res.json({ success: true, part: p1 });
   } catch (e) {
+    console.error('p1 error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -331,10 +354,12 @@ app.post('/api/generate-ebook-p2', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 2 del ebook. SOLO JSON: {"chapter3":{"number":3,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter4":{"number":4,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
-    var p2 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    var schema = JSON.stringify({chapter3:{number:3,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}},chapter4:{number:4,title:'titulo',opening:'apertura 100 palabras',content:'contenido 350 palabras',keyPoints:['p1','p2','p3'],exercise:{title:'nombre',description:'descripcion',steps:['s1','s2','s3','s4']}}});
+    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 2 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
+    var p2 = extractJSON(txt);
     res.json({ success: true, part: p2 });
   } catch (e) {
+    console.error('p2 error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -348,10 +373,12 @@ app.post('/api/generate-ebook-p3', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var txt = await claudeCall(sys, ctx + ' Escribe PARTE 3 del ebook. SOLO JSON: {"conclusion":"conclusion motivadora 200 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal 80 palabras del autor ' + author + '","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"Aviso legal de salud para ' + countryName + '","guarantee":"Garantia segun ley de ' + countryName + '","dataProtection":"Proteccion de datos ' + countryName + '","copyright":"Copyright ' + year + ' ' + author + '"}}', 2000);
-    var p3 = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    var schema = JSON.stringify({conclusion:'conclusion motivadora 200 palabras',actionPlan:['accion 1','accion 2','accion 3'],authorNote:'nota personal 80 palabras del autor '+author,resources:['recurso 1','recurso 2','recurso 3'],legalSection:{healthDisclaimer:'Aviso legal de salud para '+countryName,guarantee:'Garantia segun ley de '+countryName,dataProtection:'Proteccion de datos '+countryName,copyright:'Copyright '+year+' '+author}});
+    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 3 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 2000);
+    var p3 = extractJSON(txt);
     res.json({ success: true, part: p3 });
   } catch (e) {
+    console.error('p3 error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
@@ -509,8 +536,7 @@ app.post('/api/generate-pdf-html', async function(req, res) {
       (img ? '<img src="' + img + '" style="width:100%;height:280px;object-fit:cover;display:block;" />' : '<div style="background:' + bg + ';height:8px;"></div>') +
       '<div style="padding:32px 40px;">' +
         (ch.opening ? '<div style="background:' + bg + ';border-left:4px solid ' + color + ';padding:16px 20px;margin-bottom:24px;font-style:italic;font-size:14px;line-height:1.8;color:#444;border-radius:0 8px 8px 0;">' + ch.opening + '</div>' : '') +
-        '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:24px;">' + (ch.content || '').replace(/
-/g,'<br>') + '</div>' +
+        '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:24px;">' + (ch.content || '').replace(/\n/g,'<br>') + '</div>' +
         (keyPts ? '<div style="background:' + bg + ';border-radius:12px;padding:20px 24px;margin-bottom:24px;"><div style="font-size:13px;font-weight:700;color:' + color + ';text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Points Cles / Key Points</div><ul style="margin:0;padding-left:20px;list-style:none;">' + keyPts.replace(/<li/g,'<li style="margin-bottom:8px;padding-left:8px;list-style:none;position:relative;"><span style="color:' + color + ';position:absolute;left:-16px;">✓</span>') + '</ul></div>' : '') +
         (ch.exercise ? '<div style="border:2px solid ' + color + ';border-radius:12px;padding:24px;margin-top:16px;"><div style="font-size:14px;font-weight:700;color:' + color + ';margin-bottom:6px;">Exercice / Exercise: ' + (ch.exercise.title || '') + '</div><div style="font-size:13px;color:#636e72;margin-bottom:16px;">' + (ch.exercise.description || '') + '</div>' + steps + '</div>' : '') +
       '</div>' +
@@ -518,7 +544,7 @@ app.post('/api/generate-pdf-html', async function(req, res) {
   }).join('');
 
   var actionPlanHtml = (ebook.actionPlan || []).map(function(a, i) {
-    var labels = ['Aujourd'hui / Today', 'Cette semaine / This week', 'Ce mois / This month'];
+    var labels = ["Aujourd'hui / Today", "Cette semaine / This week", "Ce mois / This month"];
     var colors2 = ['#6c5ce7','#00b894','#0984e3'];
     return '<div style="display:flex;gap:16px;margin-bottom:16px;align-items:flex-start;"><div style="background:' + colors2[i] + ';color:white;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;">' + (labels[i]||'Action') + '</div><div style="font-size:13px;line-height:1.6;padding-top:4px;">' + a + '</div></div>';
   }).join('');
@@ -551,7 +577,7 @@ app.post('/api/generate-pdf-html', async function(req, res) {
       (coverImg ? '<img src="' + coverImg + '" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;" />' : '<div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a1a6e,#6c5ce7,#00cec9);"></div>') +
       '<div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(to bottom,rgba(0,0,0,0.3),rgba(0,0,0,0.7));"></div>' +
       '<div style="position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;">' +
-        '<div style="font-family:'Playfair Display',serif;font-size:42px;font-weight:800;color:white;line-height:1.2;margin-bottom:20px;text-shadow:0 2px 20px rgba(0,0,0,0.5);">' + (ebook.title || '') + '</div>' +
+        '<div style="font-family:Playfair Display,serif;font-size:42px;font-weight:800;color:white;line-height:1.2;margin-bottom:20px;text-shadow:0 2px 20px rgba(0,0,0,0.5);">' + (ebook.title || '') + '</div>' +
         '<div style="font-size:18px;color:rgba(255,255,255,0.9);font-style:italic;margin-bottom:30px;line-height:1.5;max-width:500px;">' + (ebook.subtitle || '') + '</div>' +
         '<div style="background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.4);border-radius:50px;padding:10px 30px;color:white;font-size:14px;font-weight:600;letter-spacing:1px;margin-bottom:40px;">' + (ebook.tagline || '') + '</div>' +
         '<div style="border-top:1px solid rgba(255,255,255,0.3);padding-top:24px;color:rgba(255,255,255,0.8);font-size:15px;letter-spacing:2px;">par ' + author + '</div>' +
@@ -561,7 +587,7 @@ app.post('/api/generate-pdf-html', async function(req, res) {
 
     // TABLE OF CONTENTS
     '<div style="page-break-before:always;padding:60px 40px;background:#fafafa;min-height:60vh;">' +
-      '<div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:#2d3180;margin-bottom:8px;">Table des matières</div>' +
+      '<div style="font-family:Playfair Display,serif;font-size:32px;font-weight:700;color:#2d3180;margin-bottom:8px;">Table des matières</div>' +
       '<div style="font-size:13px;color:#6c5ce7;letter-spacing:2px;text-transform:uppercase;margin-bottom:40px;">Contents</div>' +
       '<div style="background:white;border-radius:16px;padding:32px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">' +
         '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee;font-style:italic;color:#636e72;font-size:14px;"><span>Introduction</span></div>' +
@@ -574,16 +600,15 @@ app.post('/api/generate-pdf-html', async function(req, res) {
           '</div>';
         }).join('') +
         '<div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee;font-size:14px;color:#636e72;"><span>Conclusion</span></div>' +
-        '<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:14px;color:#636e72;"><span>Plan d'action / Resources</span></div>' +
+        '<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:14px;color:#636e72;"><span>Plan d’action / Resources</span></div>' +
       '</div>' +
     '</div>' +
 
     // INTRODUCTION
     '<div style="page-break-before:always;padding:60px 40px;">' +
       '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6c5ce7;margin-bottom:12px;">Introduction</div>' +
-      '<div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;line-height:1.3;">Pourquoi ce guide peut changer votre situation</div>' +
-      '<div style="font-size:14px;line-height:1.9;color:#2d3436;">' + (ebook.intro || '').replace(/
-/g,'<br><br>') + '</div>' +
+      '<div style="font-family:Playfair Display,serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;line-height:1.3;">Pourquoi ce guide peut changer votre situation</div>' +
+      '<div style="font-size:14px;line-height:1.9;color:#2d3436;">' + (ebook.intro || '').replace(/\n/g,'<br><br>') + '</div>' +
     '</div>' +
 
     // CHAPTERS
@@ -592,11 +617,10 @@ app.post('/api/generate-pdf-html', async function(req, res) {
     // CONCLUSION
     '<div style="page-break-before:always;padding:60px 40px;background:linear-gradient(135deg,#f3f0ff,#f0fff8);">' +
       '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#6c5ce7;margin-bottom:12px;">Conclusion</div>' +
-      '<div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;">Votre transformation commence aujourd'hui</div>' +
-      '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:32px;">' + (ebook.conclusion || '').replace(/
-/g,'<br><br>') + '</div>' +
+      '<div style="font-family:Playfair Display,serif;font-size:28px;font-weight:700;color:#2d3180;margin-bottom:32px;">Votre transformation commence aujourd’hui</div>' +
+      '<div style="font-size:14px;line-height:1.9;color:#2d3436;margin-bottom:32px;">' + (ebook.conclusion || '').replace(/\n/g,'<br><br>') + '</div>' +
       '<div style="background:white;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.06);margin-bottom:24px;">' +
-        '<div style="font-size:13px;font-weight:700;color:#6c5ce7;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Plan d'action / Action Plan</div>' +
+        '<div style="font-size:13px;font-weight:700;color:#6c5ce7;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;">Plan d’action / Action Plan</div>' +
         actionPlanHtml +
       '</div>' +
       (resourcesHtml ? '<div style="background:white;border-radius:16px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.06);">' +
@@ -607,8 +631,8 @@ app.post('/api/generate-pdf-html', async function(req, res) {
 
     // AUTHOR NOTE
     (ebook.authorNote ? '<div style="page-break-before:always;padding:60px 40px;background:#2d3180;color:white;">' +
-      '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:12px;">Note de l'auteur</div>' +
-      '<div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:24px;">' + author + '</div>' +
+      '<div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:12px;">Note de l’auteur</div>' +
+      '<div style="font-family:Playfair Display,serif;font-size:24px;font-weight:700;margin-bottom:24px;">' + author + '</div>' +
       '<div style="font-size:14px;line-height:1.9;color:rgba(255,255,255,0.85);">' + ebook.authorNote + '</div>' +
     '</div>' : '') +
 
@@ -642,11 +666,10 @@ app.post('/api/chat-raw', async function(req, res) {
   }
 });
 
-// Endpoint para que el frontend obtenga la key de Claude
+// Endpoint de config - NO expone keys sensibles
 app.get('/api/config', function(req, res) {
   res.json({ 
-    claudeKey: process.env.CLAUDE_API_KEY || '',
-    openaiKey: process.env.OPENAI_API_KEY || ''
+    ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY)
   });
 });
 
@@ -657,6 +680,7 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
+
 
 
 
