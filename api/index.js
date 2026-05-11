@@ -325,13 +325,12 @@ app.post('/api/generate-ebook', async function(req, res) {
       ctx + ' Escribe PARTE 2 del ebook. Devuelve SOLO JSON valido sin texto adicional: {"chapter3":{"number":3,"title":"titulo cap 3","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}},"chapter4":{"number":4,"title":"titulo cap 4","opening":"apertura 120 palabras","content":"contenido 400 palabras","keyPoints":["p1","p2","p3","p4"],"exercise":{"title":"ejercicio","description":"descripcion","steps":["s1","s2","s3","s4","s5"]}}}',
       6000)).replace(/```json|```/g, '').trim());
 
-    var p3 = JSON.parse((await claudeCall(baseSys,
-      ctx + ' Escribe PARTE 3 del ebook. Devuelve SOLO JSON valido sin texto adicional: {"conclusion":"conclusion motivadora 250 palabras","actionPlan":["accion para hoy","accion esta semana","accion este mes"],"authorNote":"nota personal 100 palabras firmada por ' + author + '","resources":["recurso especifico 1","recurso 2","recurso 3","recurso 4"],"legalSection":{"healthDisclaimer":"' + regs.healthDisclaimer + '","guarantee":"' + regs.guarantee + '","dataProtection":"' + regs.dataProtection + '","copyright":"Copyright ' + year + ' ' + author + '. Todos los derechos reservados."}}',
-      3000)).replace(/```json|```/g, '').trim());
+    var p3prompt = ctx + ' Escribe PARTE 3 del ebook. Devuelve SOLO JSON valido: {"conclusion":"conclusion motivadora de 250 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal de 100 palabras del autor","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"disclaimer de salud segun regulaciones de ' + countryName + '","guarantee":"garantia segun ley de ' + countryName + '","dataProtection":"proteccion de datos segun ley de ' + countryName + '","copyright":"Copyright ' + year + ' ' + author + ' todos los derechos reservados"}}';
+    var p3 = JSON.parse((await claudeCall(baseSys, p3prompt, 3000)).replace(/```json|```/g, '').trim());
 
     res.json({ success: true, ebook: { title: p1.title, subtitle: p1.subtitle, tagline: p1.tagline, intro: p1.intro, chapters: [p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4], conclusion: p3.conclusion, actionPlan: p3.actionPlan, authorNote: p3.authorNote, resources: p3.resources, legalSection: p3.legalSection } });
   } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: 'Error generando ebook: ' + e.message });
   }
 });
 
@@ -622,4 +621,5 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
+
 
