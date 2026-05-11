@@ -475,11 +475,31 @@ function buildEbookContext(o, author, countryName, regs) {
 }
 
 function extractJSON(txt) {
+  // Intento 1: limpiar markdown y parsear directo
   try { return JSON.parse(txt.replace(/```json|```/g, '').trim()); } catch(e) {}
+  // Intento 2: encontrar primer { y ultimo }
   var start = txt.indexOf('{');
   var end = txt.lastIndexOf('}');
   if (start !== -1 && end !== -1 && end > start) {
     try { return JSON.parse(txt.slice(start, end + 1)); } catch(e) {}
+  }
+  // Intento 3: buscar bloque ```json ... ```
+  var m = txt.match(/```json\s*([\s\S]*?)```/);
+  if (m) { try { return JSON.parse(m[1].trim()); } catch(e) {} }
+  // Intento 4: buscar bloque ``` ... ```
+  var m2 = txt.match(/```\s*([\s\S]*?)```/);
+  if (m2) { try { return JSON.parse(m2[1].trim()); } catch(e) {} }
+  // Intento 5: reparar JSON truncado agregando cierre
+  if (start !== -1) {
+    var partial = txt.slice(start);
+    // Contar llaves abiertas y cerrar las que faltan
+    var opens = (partial.match(/{/g)||[]).length;
+    var closes = (partial.match(/}/g)||[]).length;
+    var missing = opens - closes;
+    if (missing > 0) {
+      var repaired = partial + '}'.repeat(missing);
+      try { return JSON.parse(repaired); } catch(e) {}
+    }
   }
   throw new Error('No valid JSON in Claude response. Preview: ' + txt.slice(0, 300));
 }
