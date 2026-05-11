@@ -418,7 +418,7 @@ select option { background: #1e2d52; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Antonieta', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Antonieta', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', pdfHtml:null, ebookImages:null, currentHistId:null };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 
 const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'} };
@@ -638,33 +638,62 @@ function dlSingleExcel(i){
   a.click();
 }
 
+async function claudeDirect(system, userMsg, maxTokens) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': S.claudeKey || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: maxTokens || 4000,
+      system: system,
+      messages: [{ role: 'user', content: userMsg }]
+    })
+  });
+  const d = await resp.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content.map(function(c) { return c.text || ''; }).join('');
+}
+
 async function goEbook(){
   const o=S.selOpp; if(!o) return;
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author=document.getElementById('inp-author').value.trim()||'Antonieta';
 
+  const countryName=o.pais?(o.pais.split(' ').length>1?o.pais.split(' ').slice(1).join(' '):o.pais):(o.country||'France');
+  const ctx='TEMA: '+(o.problema||o.problem||'')+
+    ' NECESIDAD: '+(o.necesidad||o.need||'')+
+    ' TIPO: '+(o.tipoDemanda||'aprendizaje')+
+    ' PUBLICO: '+(o.rangoEdad||o.ageRange||'')+' '+(o.genero||o.gender||'')+' '+countryName+
+    ' TITULO: '+(o.tituloEbook||o.ebookTitle||'')+
+    ' PROMESA: '+(o.promesaEbook||o.ebookPromise||'')+
+    ' EMOCION: '+(o.emocion||o.emotion||'')+
+    ' DOLOR: '+(o.dolorODeseo||o.dolorEmocional||o.emotionalPain||'')+
+    ' AUTOR: '+S.author+' PAIS: '+countryName;
+
+  const sys='Eres escritor profesional de bestsellers practicos para Europa y USA. Escribes en espanol. Contenido especifico emocional accionable nunca generico. Tono empatico practico motivador.';
+
   try{
     // Parte 1
     document.getElementById('eb-load-txt').textContent='Escribiendo portada e introducción...';
-    const r1=await fetch('/api/generate-ebook-p1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
-    const d1=await r1.json();
-    if(!d1.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 1: '+d1.error); return; }
+    const t1=await claudeDirect(sys, ctx+' Escribe PARTE 1 del ebook. SOLO JSON sin texto extra: {"title":"titulo impactante","subtitle":"subtitulo vendedor","tagline":"tagline max 8 palabras","intro":"introduccion emotiva 350 palabras","chapter1":{"number":1,"title":"titulo","opening":"apertura 100 palabras","content":"contenido practico 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter2":{"number":2,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
+    const p1=JSON.parse(t1.replace(/```json|```/g,'').trim());
 
     // Parte 2
     document.getElementById('eb-load-txt').textContent='Escribiendo capítulos 3 y 4...';
-    const r2=await fetch('/api/generate-ebook-p2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
-    const d2=await r2.json();
-    if(!d2.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 2: '+d2.error); return; }
+    const t2=await claudeDirect(sys, ctx+' Escribe PARTE 2 del ebook. SOLO JSON sin texto extra: {"chapter3":{"number":3,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}},"chapter4":{"number":4,"title":"titulo","opening":"apertura 100 palabras","content":"contenido 350 palabras","keyPoints":["p1","p2","p3"],"exercise":{"title":"nombre","description":"descripcion","steps":["s1","s2","s3","s4"]}}}', 5000);
+    const p2=JSON.parse(t2.replace(/```json|```/g,'').trim());
 
     // Parte 3
     document.getElementById('eb-load-txt').textContent='Escribiendo conclusión y sección legal...';
-    const r3=await fetch('/api/generate-ebook-p3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author})});
-    const d3=await r3.json();
-    if(!d3.success){ hide('eb-loading'); show('eb-empty'); alert('Error parte 3: '+d3.error); return; }
+    const t3=await claudeDirect(sys, ctx+' Escribe PARTE 3 del ebook. SOLO JSON: {"conclusion":"conclusion motivadora 200 palabras","actionPlan":["accion 1","accion 2","accion 3"],"authorNote":"nota personal 80 palabras del autor '+S.author+'","resources":["recurso 1","recurso 2","recurso 3"],"legalSection":{"healthDisclaimer":"Aviso informativo para '+countryName+'","guarantee":"Garantia legal '+countryName+'","dataProtection":"Proteccion datos '+countryName+'","copyright":"Copyright '+new Date().getFullYear()+' '+S.author+'"}}', 2000);
+    const p3=JSON.parse(t3.replace(/```json|```/g,'').trim());
 
-    // Unir las 3 partes
-    const p1=d1.part; const p2=d2.part; const p3=d3.part;
     const ebook={
       title:p1.title, subtitle:p1.subtitle, tagline:p1.tagline, intro:p1.intro,
       chapters:[p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4],
@@ -673,13 +702,14 @@ async function goEbook(){
     };
 
     S.ebookData=ebook;
-    // Guardar en historial
-    if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     hide('eb-loading'); show('eb-content');
     renderDraft(o,ebook);
-    addMsg('chat-ebook','Borrador listo en español — '+(ebook.chapters.length)+' capítulos. Revísalo, pídeme cambios, o presiona APROBAR para generar el PDF final con imágenes.','ferni');
+    addMsg('chat-ebook','Borrador listo en español — '+(ebook.chapters.length)+' capítulos. Revísalo, pídeme cambios aquí, o presiona APROBAR para generar el PDF final con imágenes en '+( o.idioma||o.language||'el idioma del país')+'.','ferni');
 
-  }catch(e){ hide('eb-loading'); show('eb-empty'); alert('Error: '+e.message); }
+  }catch(e){ 
+    hide('eb-loading'); show('eb-empty'); 
+    alert('Error generando ebook: '+e.message+'. Verifica que tu clave de Claude API esté configurada en Vercel.');
+  }
 }
 
 function saveEbookToHist(histId, ebook){
@@ -1043,6 +1073,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
