@@ -272,7 +272,7 @@ select option { background: #1e2d52; }
             <div class="stats" id="sr-stats"></div>
             <div id="sr-list"></div>
             <div class="btn-row">
-              <button class="btn btn-p" id="btn-draft" onclick="goEbook()" disabled>📖 Generar borrador ebook</button>
+              <button class="btn btn-p" id="btn-draft" onclick="goEbook()" disabled>📄 Generar PDF</button>
               <button class="btn btn-s" onclick="resetSearch()">↺ Nueva búsqueda</button>
             </div>
           </div>
@@ -298,6 +298,7 @@ select option { background: #1e2d52; }
             <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="eb-load-txt">Generando introducción...</div>
           </div>
           <div id="eb-content" class="hidden">
+            <div id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
             <div class="row-hd">
               <div><div class="sec-lbl">Borrador del ebook</div><div style="font-size:11px;color:var(--text2);margin-top:3px;" id="eb-meta"></div></div>
               <span class="badge bgold">✍️ En español · Pendiente aprobación</span>
@@ -312,30 +313,30 @@ select option { background: #1e2d52; }
               </div>
             </div>
             <div class="btn-row">
-              <button class="btn btn-g" onclick="approveEbook()">✓ APROBAR → Generar en idioma del país</button>
-              <button class="btn btn-word" onclick="dlWordDraft()">📝 Descargar Word borrador</button>
-              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar</button>
+              <button class="btn btn-g" style="font-size:15px;padding:12px 24px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país y Descargar</button>
+              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar desde cero</button>
             </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">💡 Usa el chat de abajo para pedir correcciones antes de aprobar.</div>
           </div>
           <div id="eb-approved" class="hidden">
             <div class="row-hd"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">👇 Revisa el PDF final aquí. Pide correcciones en el chat de abajo antes de descargar.</div>
             <div id="eb-final-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
             <div class="btn-row" style="flex-wrap:wrap;gap:8px;">
-              <button class="btn btn-p" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
-              <button class="btn btn-g" onclick="applyFinalCorrection()">✏️ Aplicar corrección del chat</button>
+              <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
               <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
               <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
             </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px;">💡 Puedes seguir pidiendo correcciones en el chat antes de descargar.</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Para descargar: abre el PDF en Chrome → Ctrl+P → Guardar como PDF → listo para Hotmart</div>
           </div>
         </div>
         <div class="chat-area">
-          <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('ebook')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Editora del ebook</div><div id="chat-toggle-ebook" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
-          <div class="chat-msgs" id="chat-ebook"><div class="msg ferni">Aquí puedes pedirme cambios al ebook 📝 Di cosas como "cambia el capítulo 2", "hazlo más emocional", "acorta la intro", o pídeme que agregue más ejercicios.</div></div>
+          <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">✏️ Correcciones al PDF</div></div>
+          <div class="chat-msgs" id="chat-ebook"><div class="msg ferni">Escribe aquí qué quieres cambiar en el PDF y presiona Enviar. Claude aplicará los cambios directamente en pantalla. Ejemplo: "simplifica el capítulo 2", "agrega una tabla de plantas en el cap 1", "el título no me convence, cámbialo a algo más impactante".</div></div>
           <div class="chat-inp-row">
-            <textarea class="chat-inp" id="ci-ebook" placeholder="Pide cambios al ebook o al PDF final... ej: 'cambia el título', 'agrega una tabla en cap 2', 'el texto del cap 3 está muy técnico'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('ebook');}"></textarea>
-            <button class="chat-send" onclick="sendChat('ebook')">Enviar</button>
+            <textarea class="chat-inp" id="ci-ebook" placeholder="¿Qué quieres cambiar? Ej: 'el cap 2 está muy técnico, simplifícalo', 'cambia el título a algo más vendedor'..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCorrectionChat();}"></textarea>
+            <button class="chat-send" onclick="sendCorrectionChat()">Corregir PDF</button>
           </div>
         </div>
       </div>
@@ -420,7 +421,7 @@ select option { background: #1e2d52; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', pdfHtml:null, ebookImages:null, currentHistId:null };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[] };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 
 const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'} };
@@ -679,49 +680,87 @@ async function goEbook(){
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author='Ferni Guides';
-
   const payload = { opportunity: o, author: S.author };
 
   try{
-    // Parte 1 — via server endpoint (evita problemas de serialización)
-    document.getElementById('eb-load-txt').textContent='Escribiendo portada e introducción...';
+    // PASO 1: Generar contenido en español (3 partes)
+    document.getElementById('eb-load-txt').textContent='Escribiendo contenido experto...';
     const r1=await fetch('/api/generate-ebook-p1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d1=await r1.json();
     if(!d1.success) throw new Error('P1: '+d1.error);
-    const p1=d1.part;
 
-    // Parte 2
-    document.getElementById('eb-load-txt').textContent='Escribiendo capítulos 3 y 4...';
+    document.getElementById('eb-load-txt').textContent='Desarrollando capítulos 3 y 4...';
     const r2=await fetch('/api/generate-ebook-p2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d2=await r2.json();
     if(!d2.success) throw new Error('P2: '+d2.error);
-    const p2=d2.part;
 
-    // Parte 3
-    document.getElementById('eb-load-txt').textContent='Escribiendo conclusión y sección legal...';
+    document.getElementById('eb-load-txt').textContent='Finalizando conclusión y sección legal...';
     const r3=await fetch('/api/generate-ebook-p3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d3=await r3.json();
     if(!d3.success) throw new Error('P3: '+d3.error);
-    const p3=d3.part;
 
     const ebook={
-      title:p1.title, subtitle:p1.subtitle, tagline:p1.tagline, intro:p1.intro,
-      chapters:[p1.chapter1, p1.chapter2, p2.chapter3, p2.chapter4],
-      conclusion:p3.conclusion, actionPlan:p3.actionPlan,
-      authorNote:p3.authorNote, resources:p3.resources, legalSection:p3.legalSection
+      title:d1.part.title, subtitle:d1.part.subtitle, tagline:d1.part.tagline, intro:d1.part.intro,
+      chapters:[d1.part.chapter1, d1.part.chapter2, d2.part.chapter3, d2.part.chapter4],
+      conclusion:d3.part.conclusion, actionPlan:d3.part.actionPlan,
+      authorNote:d3.part.authorNote, resources:d3.part.resources, legalSection:d3.part.legalSection
     };
+    S.ebookData = ebook;
 
-    S.ebookData=ebook;
+    // PASO 2: Generar imagen de portada
+    document.getElementById('eb-load-txt').textContent='Generando portada con IA...';
+    const coverPrompt = 'Professional lifestyle photography for an ebook about "' + (o.problema||o.problem||'') + '" in ' + (o.country||'France') + '. Show the beautiful aspirational result readers will achieve. Warm golden light, magazine quality, editorial photography. No text, no faces, no watermarks. Ultra high quality 8K.';
+    let coverUrl = null;
+    try {
+      const cr=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:coverPrompt})});
+      const cd=await cr.json();
+      if(cd.success) coverUrl=cd.url;
+    } catch(e){ console.log('Cover failed:', e.message); }
+
+    // PASO 3: Generar imágenes por capítulo
+    document.getElementById('eb-load-txt').textContent='Generando imágenes de capítulos...';
+    const chapterImages=[];
+    for(var i=0;i<(ebook.chapters||[]).length;i++){
+      const ch=ebook.chapters[i];
+      const total=ebook.chapters.length;
+      const narrativa = i===0 ? 'The BEGINNING — current situation with hope for improvement' : i===total-1 ? 'The FINAL RESULT — beautiful completed outcome, dream achieved' : 'The PROCESS step '+(i+1)+' of '+total+' — hands-on action, tools, visible progress';
+      const imgPrompt='Professional editorial photography for chapter '+(i+1)+' about "'+( o.problema||o.problem||'')+'" in France. Chapter: "'+( ch.title||'')+'". Narrative: '+narrativa+'. Warm natural light, rich colors, magazine quality. Show real objects and materials. No text, no faces. 8K commercial photography.';
+      try{
+        const ir=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
+        const id2=await ir.json();
+        chapterImages.push(id2.success?id2.url:null);
+      }catch(e){ chapterImages.push(null); }
+    }
+    S.chapterImages = chapterImages;
+    S.coverUrl = coverUrl;
+
+    // PASO 4: Construir PDF en español y mostrar preview
+    document.getElementById('eb-load-txt').textContent='Construyendo PDF...';
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), coverUrl, chapterImages);
+
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
-    hide('eb-loading'); show('eb-content');
-    renderDraft(o,ebook);
-    addMsg('chat-ebook','Borrador listo en español — '+(ebook.chapters.length)+' capítulos. Revísalo, pídeme cambios aquí, o presiona APROBAR para generar el PDF final con imágenes en '+( o.idioma||o.language||'el idioma del país')+'.','ferni');
 
-  }catch(e){ 
-    hide('eb-loading'); show('eb-empty'); 
-    alert('Error generando ebook: '+e.message);
+    hide('eb-loading'); hide('eb-empty'); show('eb-content');
+
+    // Mostrar preview del PDF en pantalla
+    var preview = document.getElementById('eb-draft-preview');
+    if(preview) preview.innerHTML = S.pdfHtml;
+
+    addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista presiona ✅ APROBAR para traducir al idioma del país y descargar.','ferni');
+
+  }catch(e){
+    hide('eb-loading'); show('eb-empty');
+    alert('Error generando PDF: '+e.message);
   }
 }
+
+function getCountryNameFront(s){
+  if(!s) return 'France';
+  var p=s.split(' ');
+  return p.length>1?p.slice(1).join(' '):s;
+}
+
+
 function saveEbookToHist(histId, ebook){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
   if(idx>=0){ S.history[idx].ebook=ebook; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
@@ -784,94 +823,47 @@ function renderDraft(o,eb){
 
 async function approveEbook(){
   const o = S.selOpp; if(!o || !S.ebookData) return;
-  const lang = o.idioma || o.language || o.lang || (REGS[(function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais||o.country||'France')] && REGS[(function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais||o.country||'France')].language) || 'French';
-  const countryName = (function(s){ if(!s) return 'France'; var p=s.split(' '); return p.length>1?p.slice(1).join(' '):s; })(o.pais || o.country || 'France');
+  const lang = o.idioma || o.language || (REGS[getCountryNameFront(o.pais||o.country||'France')] && REGS[getCountryNameFront(o.pais||o.country||'France')].language) || 'French';
+  const countryName = getCountryNameFront(o.pais || o.country || 'France');
 
   hide('eb-content'); show('eb-loading');
-  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + '...';
+  document.getElementById('eb-load-txt').textContent = 'Traduciendo texto al ' + lang + '...';
 
   try {
-    // PASO 1: Traducir ebook al idioma del pais
+    // Solo traducir el texto — las imágenes ya están generadas
     const tr = await fetch('/api/translate-ebook', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ebook: S.ebookData, language: lang, country: countryName, author: S.author})
+      body: JSON.stringify({ebook: S.ebookData, language: lang, country: countryName, author: 'Ferni Guides'})
     });
     const td = await tr.json();
     const translatedEbook = td.success ? td.ebook : S.ebookData;
-
-    // PASO 2: Generar imagen de portada con DALL-E
-    document.getElementById('eb-load-txt').textContent = 'Generando portada con IA...';
-    // Prompt maestro para portada — evocador, emocional, aspiracional
-    const tema = (o.problema||o.problem||'');
-    const promesa = (o.promesaEbook||o.ebookPromise||'');
-    const coverPrompt = 'Professional lifestyle photography for an ebook about "' + tema + '" in ' + countryName + '. ' +
-      'Visual: beautiful, aspirational result that readers will achieve after reading — the AFTER state, not the problem. ' +
-      'Style: warm golden hour light, rich colors, magazine quality, editorial photography. ' +
-      'Composition: wide shot showing the beautiful final result the reader desires. ' +
-      'Mood: inspiring, achievable, warm, inviting — this is possible for me. ' +
-      'No text, no watermarks, no logos, no faces. Ultra high quality commercial photography. 8K resolution. ' +
-      'Promise of the book: ' + promesa;
-    let coverUrl = null;
-    try {
-      const cr = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: coverPrompt})});
-      const cd = await cr.json();
-      if(cd.success) coverUrl = cd.url;
-    } catch(e) { console.log('Cover image failed:', e.message); }
-
-    // PASO 3: Generar imágenes para cada capítulo
-    document.getElementById('eb-load-txt').textContent = 'Generando imágenes de capítulos...';
-    const chapterImages = [];
-    for(var i = 0; i < (translatedEbook.chapters||[]).length; i++) {
-      const ch = translatedEbook.chapters[i];
-      // Prompt maestro por capítulo — narra el progreso, muestra el hacer
-    const chTema = (o.problema||o.problem||'');
-    const chTitulo = (ch.title||'');
-    const chContenido = (ch.content||'').slice(0,200);
-    const chNum = i + 1;
-    const totalChs = (translatedEbook.chapters||[]).length;
-    // Narrativa progresiva: cap 1=inicio/problema, caps medios=proceso/herramientas, último=resultado final
-    const narrativa = chNum === 1 
-      ? 'The BEGINNING — showing the current situation and the desire to improve it. Before state with hope.'
-      : chNum === totalChs 
-        ? 'The FINAL RESULT — beautiful, completed, professional outcome. The dream achieved. After state.'
-        : 'The PROCESS — step ' + chNum + ' of ' + totalChs + ', showing hands-on action, tools, materials, and visible progress being made.';
-    const imgPrompt = 'Professional editorial photography for chapter ' + chNum + ' of an ebook about "' + chTema + '" in ' + countryName + '. ' +
-      'Chapter title: "' + chTitulo + '". ' +
-      'Narrative: ' + narrativa + ' ' +
-      'Content context: ' + chContenido + '. ' +
-      'Style: warm natural light, rich saturated colors, magazine editorial quality. ' +
-      'Show real objects, materials, tools or spaces relevant to this specific chapter topic. ' +
-      'Composition: detailed, close enough to see textures and specifics, yet wide enough to show context. ' +
-      'Mood: practical, achievable, inspiring — this is a real person doing this. ' +
-      'Country aesthetic: ' + countryName + ' lifestyle, local plants/materials/style if applicable. ' +
-      'No text, no watermarks, no faces, no people. Ultra high quality. 8K commercial photography.';
-      try {
-        const ir = await fetch('/api/generate-image', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt: imgPrompt})});
-        const id2 = await ir.json();
-        chapterImages.push(id2.success ? id2.url : null);
-      } catch(e) { chapterImages.push(null); }
-    }
-
-    // PASO 4: Construir PDF HTML profesional
-    document.getElementById('eb-load-txt').textContent = 'Construyendo PDF final...';
     S.finalEbook = translatedEbook;
+
+    // Reusar imágenes ya generadas
+    const coverUrl = S.coverUrl || null;
+    const chapterImages = S.chapterImages || [];
+
+    // Construir PDF final traducido con las mismas imágenes
     S.pdfHtml = buildFinalPdfHtml(translatedEbook, o, lang, countryName, coverUrl, chapterImages);
 
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
-    document.getElementById('eb-approved-badge').textContent = '✓ Listo en ' + lang;
-    // Mostrar preview del PDF final en pantalla
+    document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
+
+    // Mostrar preview del PDF final
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.innerHTML = S.pdfHtml;
-    addMsg('chat-ebook', '🎉 ¡PDF final listo en ' + lang + '! Revísalo arriba. Si algo no te gusta, escríbeme aquí qué corregir y presiona "Aplicar corrección". Cuando estés satisfecha, descárgalo.', 'ferni');
+
+    addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar. Revísalo arriba — si quieres algún ajuste escríbelo en el chat y presiona "Aplicar corrección". Cuando estés lista, descárgalo.', 'ferni');
 
   } catch(e) {
     hide('eb-loading'); show('eb-content');
-    alert('Error al generar PDF final: ' + e.message);
+    alert('Error al traducir: ' + e.message);
   }
 }
+
 
 function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var author = S.author || 'Antonieta';
@@ -1028,32 +1020,129 @@ function dlWordDraft(){
   a.download=`FERNI_BORRADOR_${o.country}_${author}_${year}.doc`; a.click();
 }
 
+async function sendCorrectionChat(){
+  const msg = document.getElementById('ci-ebook').value.trim();
+  if(!msg) return;
+  
+  const ebook = S.finalEbook || S.ebookData;
+  if(!ebook){ 
+    addMsg('chat-ebook','Primero genera el PDF con el botón "Generar PDF".','ferni');
+    return; 
+  }
+
+  addMsg('chat-ebook', msg, 'user');
+  document.getElementById('ci-ebook').value = '';
+
+  const o = S.selOpp || {};
+  const lang = S.finalEbook ? (o.idioma||o.language||'French') : 'Español';
+  const countryName = getCountryNameFront(o.pais||o.country||'France');
+
+  // Detectar si pide regenerar una imagen
+  const imgMatch = msg.match(/regenera?\s+(?:la\s+)?imagen\s+(?:del?\s+)?(?:cap[ií]tulo\s+)?(\d+|portada)/i) ||
+                   msg.match(/(?:cambia|nueva|reemplaza)\s+(?:la\s+)?imagen\s+(?:del?\s+)?(?:cap[ií]tulo\s+)?(\d+|portada)/i);
+
+  if(imgMatch){
+    const target = imgMatch[1].toLowerCase();
+    addMsg('chat-ebook', '🎨 Generando nueva imagen con DALL-E...', 'ferni');
+    
+    try {
+      // Construir prompt mejorado con las indicaciones del usuario
+      const extraDetail = msg.replace(imgMatch[0], '').trim();
+      let imgPrompt;
+      
+      if(target === 'portada'){
+        imgPrompt = 'Professional lifestyle photography for ebook about "' + (o.problema||o.problem||'') + '" in ' + countryName + '. Aspirational result readers will achieve. Warm golden light, magazine quality. No text, no faces. 8K. ' + extraDetail;
+        const ir = await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
+        const id2 = await ir.json();
+        if(id2.success){ 
+          S.coverUrl = id2.url;
+          addMsg('chat-ebook', '✅ Nueva portada generada. Actualizando PDF...', 'ferni');
+        }
+      } else {
+        const chIdx = parseInt(target) - 1;
+        if(chIdx >= 0 && chIdx < (ebook.chapters||[]).length){
+          const ch = ebook.chapters[chIdx];
+          const total = ebook.chapters.length;
+          const narrativa = chIdx===0 ? 'beginning, current situation with hope' : chIdx===total-1 ? 'final beautiful result achieved' : 'process step '+(chIdx+1)+', hands-on action and progress';
+          imgPrompt = 'Professional editorial photography for chapter '+(chIdx+1)+' about "'+( o.problema||o.problem||'')+'" in '+countryName+'. Chapter: "'+( ch.title||'')+'". '+narrativa+'. Warm light, magazine quality. No text, no faces. 8K. ' + extraDetail;
+          const ir = await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
+          const id2 = await ir.json();
+          if(id2.success){
+            if(!S.chapterImages) S.chapterImages = [];
+            S.chapterImages[chIdx] = id2.url;
+            addMsg('chat-ebook', '✅ Nueva imagen del capítulo '+(chIdx+1)+' generada. Actualizando PDF...', 'ferni');
+          }
+        }
+      }
+
+      // Reconstruir PDF con nueva imagen
+      S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages);
+      const previewDraft = document.getElementById('eb-draft-preview');
+      const previewFinal = document.getElementById('eb-final-preview');
+      if(previewDraft) previewDraft.innerHTML = S.pdfHtml;
+      if(previewFinal) previewFinal.innerHTML = S.pdfHtml;
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+      addMsg('chat-ebook', '✅ PDF actualizado con la nueva imagen. ¿Algo más?', 'ferni');
+
+    } catch(e){
+      addMsg('chat-ebook', 'Error generando imagen: ' + e.message, 'ferni');
+    }
+    return;
+  }
+
+  // Corrección de texto normal
+  addMsg('chat-ebook', '✏️ Aplicando cambios al texto...', 'ferni');
+  try {
+    const resp = await fetch('/api/correct-ebook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ebook: ebook, correction: msg, language: lang})
+    });
+    const d = await resp.json();
+    if(d.success && d.ebook){
+      if(S.finalEbook) S.finalEbook = d.ebook;
+      else S.ebookData = d.ebook;
+      
+      S.pdfHtml = buildFinalPdfHtml(d.ebook, o, lang, countryName, S.coverUrl, S.chapterImages);
+      const previewDraft = document.getElementById('eb-draft-preview');
+      const previewFinal = document.getElementById('eb-final-preview');
+      if(previewDraft) previewDraft.innerHTML = S.pdfHtml;
+      if(previewFinal) previewFinal.innerHTML = S.pdfHtml;
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+      addMsg('chat-ebook', '✅ Listo. PDF actualizado. ¿Algo más?', 'ferni');
+    } else {
+      addMsg('chat-ebook', 'No pude aplicar el cambio: ' + (d.error||'intenta de nuevo con más detalle.'), 'ferni');
+    }
+  } catch(e) {
+    addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');
+  }
+}
+
 async function applyFinalCorrection(){
   const msg = document.getElementById('ci-ebook').value.trim();
-  if(!msg){ alert('Escribe qué quieres corregir en el chat primero'); return; }
-  if(!S.finalEbook){ alert('Genera el PDF final primero'); return; }
+  if(!msg){ addMsg('chat-ebook', 'Escríbeme primero qué quieres cambiar del PDF final.', 'ferni'); return; }
+  if(!S.finalEbook){ addMsg('chat-ebook', 'Genera el PDF final primero presionando APROBAR.', 'ferni'); return; }
   const o = S.selOpp || {};
   const lang = o.idioma || o.language || 'French';
   addMsg('chat-ebook', msg, 'user');
   document.getElementById('ci-ebook').value = '';
-  addMsg('chat-ebook', 'Aplicando corrección al PDF final...', 'ferni');
+  addMsg('chat-ebook', '✏️ Aplicando tu corrección al PDF... espera un momento.', 'ferni');
   try {
-    const sys = 'Eres editor experto de ebooks. Tienes el ebook final en JSON. Aplica la correccion solicitada y devuelve el JSON completo corregido con la misma estructura. SOLO JSON sin markdown.';
-    const userMsg = 'EBOOK ACTUAL:\n' + JSON.stringify(S.finalEbook) + '\n\nCORRECCION SOLICITADA: ' + msg + '\n\nDevuelve el ebook completo corregido en JSON con exactamente la misma estructura.';
-    const resp = await fetch('/api/chat-raw', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({system: sys, message: userMsg, maxTokens: 6000})});
+    const resp = await fetch('/api/correct-ebook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ebook: S.finalEbook, correction: msg, language: lang})
+    });
     const d = await resp.json();
-    if(d.success && d.reply){
-      try {
-        var corrected = JSON.parse(d.reply.replace(/```json|```/g,'').trim());
-        S.finalEbook = corrected;
-        S.pdfHtml = buildPdfHtml();
-        var preview = document.getElementById('eb-final-preview');
-        if(preview) preview.innerHTML = S.pdfHtml;
-        if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-        addMsg('chat-ebook', '✅ Corrección aplicada. Revisa el PDF actualizado arriba. ¿Algo más que cambiar?', 'ferni');
-      } catch(e) {
-        addMsg('chat-ebook', 'No pude aplicar la corrección. Intenta ser más específica: "cambia el título del capítulo 2 a X", "acorta la introducción a 3 párrafos".', 'ferni');
-      }
+    if(d.success && d.ebook){
+      S.finalEbook = d.ebook;
+      S.pdfHtml = buildPdfHtml();
+      const preview = document.getElementById('eb-final-preview');
+      if(preview) preview.innerHTML = S.pdfHtml;
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+      addMsg('chat-ebook', '✅ ¡Listo! Corrección aplicada. Revisa el PDF actualizado arriba. ¿Algo más que cambiar?', 'ferni');
+    } else {
+      addMsg('chat-ebook', 'No pude aplicar la corrección: ' + (d.error||'error desconocido') + '. Intenta ser más específica.', 'ferni');
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error al aplicar corrección: ' + e.message, 'ferni');
@@ -1495,6 +1584,7 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
 
