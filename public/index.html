@@ -929,19 +929,31 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   html += '<h1>' + (eb.title||'') + '</h1>';
   html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
   if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
-  html += '<div class="author-line">par ' + author + '</div>';
+  var authorPrefix = lang==='French'?'par':lang==='German'?'von':lang==='Italian'?'di':lang==='Portuguese'?'por':lang==='Spanish'?'por':'by';
+  html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
   html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; Tous droits r&eacute;serv&eacute;s</div>';
   html += '</div>';
 
   // ÍNDICE
   html += '<div class="toc-page page-break">';
   html += '<div class="toc-title">Table des mati&egrave;res</div>';
-  html += '<div class="toc-item"><span class="toc-ch">Introduction</span><span class="toc-pg">3</span></div>';
+  var isEs = (lang==='Español'||lang==='Spanish'||lang==='español');
+  var isFr = lang==='French'||lang==='Français';
+  var isDe = lang==='German'||lang==='Deutsch';
+  var isIt = lang==='Italian'||lang==='Italiano';
+  var isPt = lang==='Portuguese'||lang==='Português';
+  var lblIntro = isEs?'Introducción':isFr?'Introduction':isDe?'Einleitung':isIt?'Introduzione':isPt?'Introdução':'Introduction';
+  var lblChap = isEs?'Capítulo':isFr?'Chapitre':isDe?'Kapitel':isIt?'Capitolo':isPt?'Capítulo':'Chapter';
+  var lblConcl = isEs?'Conclusión':isFr?'Conclusion':isDe?'Fazit':isIt?'Conclusione':isPt?'Conclusão':'Conclusion';
+  var lblPlan = isEs?'Plan de acción':isFr?'Plan d’action':isDe?'Aktionsplan':isIt?'Piano d’azione':isPt?'Plano de ação':'Action Plan';
+  var lblResources = isEs?'Recursos':isFr?'Ressources':isDe?'Ressourcen':isIt?'Risorse':isPt?'Recursos':'Resources';
+  
+  html += '<div class="toc-item"><span class="toc-ch">' + lblIntro + '</span><span class="toc-pg">3</span></div>';
   (eb.chapters||[]).forEach(function(ch, i){
-    html += '<div class="toc-item"><span class="toc-ch">Chapitre ' + (i+1) + ': ' + (ch.title||'') + '</span><span class="toc-pg">' + (4+i*3) + '</span></div>';
+    html += '<div class="toc-item"><span class="toc-ch">' + lblChap + ' ' + (i+1) + ': ' + (ch.title||'') + '</span><span class="toc-pg">' + (4+i*4) + '</span></div>';
   });
-  html += '<div class="toc-item"><span class="toc-ch">Conclusion</span><span class="toc-pg">' + (4+(eb.chapters||[]).length*3) + '</span></div>';
-  html += '<div class="toc-item"><span class="toc-ch">Plan d’action</span><span class="toc-pg">' + (5+(eb.chapters||[]).length*3) + '</span></div>';
+  html += '<div class="toc-item"><span class="toc-ch">' + lblConcl + '</span><span class="toc-pg">' + (4+(eb.chapters||[]).length*4) + '</span></div>';
+  html += '<div class="toc-item"><span class="toc-ch">' + lblPlan + '</span><span class="toc-pg">' + (5+(eb.chapters||[]).length*4) + '</span></div>';
   html += '</div>';
 
   // INTRODUCCIÓN
@@ -953,7 +965,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   // CAPÍTULOS
   (eb.chapters||[]).forEach(function(ch, i){
     html += '<div class="chapter page-break">';
-    html += '<div class="chapter-header"><div class="chapter-num">Chapitre ' + (ch.number||i+1) + '</div><div class="chapter-title">' + (ch.title||'') + '</div></div>';
+    html += '<div class="chapter-header"><div class="chapter-num">' + lblChap + ' ' + (ch.number||i+1) + '</div><div class="chapter-title">' + (ch.title||'') + '</div></div>';
     if(chapterImages[i]){ 
       html += '<img class="chapter-img" src="' + chapterImages[i] + '" alt="illustration chapitre ' + (i+1) + '" onerror="this.style.display=\"none\"">';
     } else {
@@ -979,15 +991,15 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
 
   // CONCLUSIÓN Y PLAN DE ACCIÓN
   html += '<div class="conclusion-section page-break">';
-  html += '<h2>Conclusion</h2>';
+  html += '<h2>' + lblConcl + '</h2>';
   html += '<p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
   if(eb.actionPlan&&eb.actionPlan.length){
-    html += '<div class="action-plan"><h2>Plan d’action</h2>';
+    html += '<div class="action-plan"><h2>' + lblPlan + '</h2>';
     eb.actionPlan.forEach(function(a,i){ html += '<div class="action-item"><div class="anum">'+(i+1)+'</div><div>'+a+'</div></div>'; });
     html += '</div>';
   }
   if(eb.resources&&eb.resources.length){
-    html += '<h2>Ressources</h2>';
+    html += '<h2>' + lblResources + '</h2>';
     eb.resources.forEach(function(r){ html += '<p>&rarr; '+r+'</p>'; });
   }
   if(eb.authorNote){
@@ -1217,7 +1229,7 @@ function buildPdfHtml(){
     eb.actionPlan.forEach(function(a,i){ html += '<p><strong>'+(i+1)+'.</strong> '+a+'</p>'; });
   }
   if(eb.resources&&eb.resources.length){
-    html += '<h2>Ressources</h2>';
+    html += '<h2>' + lblResources + '</h2>';
     eb.resources.forEach(function(r){ html += '<p>&rarr; '+r+'</p>'; });
   }
   if(eb.authorNote) html += '<h2>Note de l’auteur</h2><p style="font-style:italic;">'+eb.authorNote+'</p>';
@@ -1595,11 +1607,6 @@ function safeStr(v) {
 </script>
 </body>
 </html>
-
-
-
-
-
 
 
 
