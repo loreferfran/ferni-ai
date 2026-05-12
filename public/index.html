@@ -729,12 +729,12 @@ async function goEbook(){
 
     // PASO 3: Construir PDF en español y mostrar preview
     document.getElementById('eb-load-txt').textContent='Construyendo PDF...';
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), coverUrl, chapterImages);
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), S.coverUrl, S.chapterImages);
 
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
 
     // Construir PDF en español con imágenes
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, coverUrl, chapterImages);
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, S.coverUrl, S.chapterImages);
 
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
 
@@ -934,7 +934,7 @@ async function approveEbook(){
     const chapterImages = S.chapterImages || [];
 
     // Construir PDF final traducido con las mismas imágenes
-    S.pdfHtml = buildFinalPdfHtml(translatedEbook, o, lang, countryName, coverUrl, chapterImages);
+    S.pdfHtml = buildFinalPdfHtml(translatedEbook, o, lang, countryName, S.coverUrl, S.chapterImages);
 
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
