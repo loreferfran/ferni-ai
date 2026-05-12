@@ -298,25 +298,16 @@ select option { background: #1e2d52; }
             <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="eb-load-txt">Generando introducción...</div>
           </div>
           <div id="eb-content" class="hidden">
-            <div id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
             <div class="row-hd">
-              <div><div class="sec-lbl">Borrador del ebook</div><div style="font-size:11px;color:var(--text2);margin-top:3px;" id="eb-meta"></div></div>
-              <span class="badge bgold">✍️ En español · Pendiente aprobación</span>
+              <div><div class="sec-lbl">📄 PDF en Español — Revisa y corrige</div></div>
+              <span class="badge bgold">✍️ En español · Pendiente traducción</span>
             </div>
-            <div id="eb-body"></div>
-            <div style="margin-top:16px;">
-              <div class="fl" style="margin-bottom:10px;color:var(--gold);">Formato del ebook final</div>
-              <div class="fmt-select">
-                <button class="fmt-btn active" id="fmt-word" onclick="setFmt('word',this)"><div class="fmt-icon">📝</div>Word<br><span style="font-size:9px;color:var(--muted);">Para editar</span></button>
-                <button class="fmt-btn" id="fmt-pdf" onclick="setFmt('pdf',this)"><div class="fmt-icon">📄</div>PDF<br><span style="font-size:9px;color:var(--muted);">Para Hotmart</span></button>
-                <button class="fmt-btn" id="fmt-epub" onclick="setFmt('epub',this)"><div class="fmt-icon">📱</div>EPUB<br><span style="font-size:9px;color:var(--muted);">Para Amazon KDP</span></button>
-              </div>
-            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Revisa el PDF abajo. Usa el chat para pedir correcciones o regenerar imágenes. Cuando estés lista presiona APROBAR.</div>
+            <div id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
             <div class="btn-row">
-              <button class="btn btn-g" style="font-size:15px;padding:12px 24px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país y Descargar</button>
-              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar desde cero</button>
+              <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país</button>
+              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar</button>
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;">💡 Usa el chat de abajo para pedir correcciones antes de aprobar.</div>
           </div>
           <div id="eb-approved" class="hidden">
             <div class="row-hd"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
@@ -421,8 +412,24 @@ select option { background: #1e2d52; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[] };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[] };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
+// Cargar OpenAI key para generacion de imagenes directa
+fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
+
+// Generacion de imagenes directo desde browser — sin timeout de Vercel
+async function genImgDirectGlobal(prompt){
+  if(!S.openaiKey) return null;
+  try {
+    const r = await fetch('https://api.openai.com/v1/images/generations',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.openaiKey},
+      body:JSON.stringify({model:'dall-e-3',prompt:prompt+'. Professional commercial quality. No text. No watermarks. No faces.',n:1,size:'1024x1024',quality:'standard',style:'natural'})
+    });
+    const d = await r.json();
+    return (d.data&&d.data[0])?d.data[0].url:null;
+  } catch(e){ console.log('DALL-E error:',e.message); return null; }
+}
 
 const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'} };
 
@@ -707,29 +714,22 @@ async function goEbook(){
     };
     S.ebookData = ebook;
 
-    // PASO 2: Generar imagen de portada
+    // PASO 2: Portada directo desde browser (sin timeout Vercel)
     document.getElementById('eb-load-txt').textContent='Generando portada con IA...';
-    const coverPrompt = 'Professional lifestyle photography for an ebook about "' + (o.problema||o.problem||'') + '" in ' + (o.country||'France') + '. Show the beautiful aspirational result readers will achieve. Warm golden light, magazine quality, editorial photography. No text, no faces, no watermarks. Ultra high quality 8K.';
-    let coverUrl = null;
-    try {
-      const cr=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:coverPrompt})});
-      const cd=await cr.json();
-      if(cd.success) coverUrl=cd.url;
-    } catch(e){ console.log('Cover failed:', e.message); }
+    const countryName = getCountryNameFront(o.pais||o.country||'France');
+    const coverPrompt = 'Professional lifestyle photography for ebook about "' + (o.problema||o.problem||'') + '" in ' + countryName + '. Show beautiful aspirational result. Warm golden light, magazine quality. No text, no faces.';
+    let coverUrl = await genImgDirectGlobal(coverPrompt);
 
-    // PASO 3: Generar imágenes por capítulo
-    document.getElementById('eb-load-txt').textContent='Generando imágenes de capítulos...';
+    // PASO 3: Imágenes por capítulo directo desde browser
     const chapterImages=[];
     for(var i=0;i<(ebook.chapters||[]).length;i++){
       const ch=ebook.chapters[i];
       const total=ebook.chapters.length;
-      const narrativa = i===0 ? 'The BEGINNING — current situation with hope for improvement' : i===total-1 ? 'The FINAL RESULT — beautiful completed outcome, dream achieved' : 'The PROCESS step '+(i+1)+' of '+total+' — hands-on action, tools, visible progress';
-      const imgPrompt='Professional editorial photography for chapter '+(i+1)+' about "'+( o.problema||o.problem||'')+'" in France. Chapter: "'+( ch.title||'')+'". Narrative: '+narrativa+'. Warm natural light, rich colors, magazine quality. Show real objects and materials. No text, no faces. 8K commercial photography.';
-      try{
-        const ir=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
-        const id2=await ir.json();
-        chapterImages.push(id2.success?id2.url:null);
-      }catch(e){ chapterImages.push(null); }
+      document.getElementById('eb-load-txt').textContent='Generando imagen '+(i+1)+' de '+total+'...';
+      const narrativa = i===0?'beginning, current situation with hope':i===total-1?'final beautiful result achieved':'process step '+(i+1)+', hands-on action and progress';
+      const imgPrompt='Professional editorial photography chapter '+(i+1)+' about "'+( o.problema||o.problem||'')+'" in '+countryName+'. Topic: "'+( ch.title||'')+'". '+narrativa+'. Warm light, magazine quality. No text, no faces.';
+      const imgUrl = await genImgDirectGlobal(imgPrompt);
+      chapterImages.push(imgUrl);
     }
     S.chapterImages = chapterImages;
     S.coverUrl = coverUrl;
@@ -920,7 +920,9 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
 
   // PORTADA
   html += '<div class="cover page-break">';
-  if(coverUrl) html += '<img class="cover-img" src="' + coverUrl + '" alt="portada">';
+  if(coverUrl){ 
+    html += '<img class="cover-img" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\"none\"">';
+  }
   html += '<h1>' + (eb.title||'') + '</h1>';
   html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
   if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
@@ -949,7 +951,12 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   (eb.chapters||[]).forEach(function(ch, i){
     html += '<div class="chapter page-break">';
     html += '<div class="chapter-header"><div class="chapter-num">Chapitre ' + (ch.number||i+1) + '</div><div class="chapter-title">' + (ch.title||'') + '</div></div>';
-    if(chapterImages[i]) html += '<img class="chapter-img" src="' + chapterImages[i] + '" alt="illustration chapitre ' + (i+1) + '">';
+    if(chapterImages[i]){ 
+      html += '<img class="chapter-img" src="' + chapterImages[i] + '" alt="illustration chapitre ' + (i+1) + '" onerror="this.style.display=\"none\"">';
+    } else {
+      var colors=['#6c5ce7','#00b894','#0984e3','#e17055'];
+      html += '<div style="width:100%;height:160px;background:linear-gradient(135deg,'+colors[i%4]+','+colors[(i+1)%4]+');border-radius:10px;margin:16px 0;display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:13px;opacity:0.8;">📸 ' + (ch.title||'Capítulo '+(i+1)) + '</span></div>';
+    }
     if(ch.opening) html += '<div class="opening">' + ch.opening + '</div>';
     html += '<p>' + (ch.content||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
     if(ch.keyPoints&&ch.keyPoints.length){
@@ -963,6 +970,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
       (ch.exercise.steps||[]).forEach(function(st,j){ html += '<div class="step"><div class="snum">'+(j+1)+'</div><div>'+st+'</div></div>'; });
       html += '</div>';
     }
+    html += '<div style="text-align:center;font-size:10px;color:#bbb;margin-top:20px;padding-top:10px;border-top:1px solid #eee;">— ' + (i+2+2) + ' —</div>';
     html += '</div>';
   });
 
@@ -1584,13 +1592,6 @@ function safeStr(v) {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
