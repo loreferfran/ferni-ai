@@ -1088,12 +1088,13 @@ async function sendCorrectionChat(){
           const total = ebook.chapters.length;
           const narrativa = chIdx===0 ? 'beginning, current situation with hope' : chIdx===total-1 ? 'final beautiful result achieved' : 'process step '+(chIdx+1)+', hands-on action and progress';
           imgPrompt = 'Professional editorial photography for chapter '+(chIdx+1)+' about "'+( o.problema||o.problem||'')+'" in '+countryName+'. Chapter: "'+( ch.title||'')+'". '+narrativa+'. Warm light, magazine quality. No text, no faces. 8K. ' + extraDetail;
-          const ir = await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
-          const id2 = await ir.json();
-          if(id2.success){
+          const newUrl = await genImgDirectGlobal(imgPrompt);
+          if(newUrl){
             if(!S.chapterImages) S.chapterImages = [];
-            S.chapterImages[chIdx] = id2.url;
+            S.chapterImages[chIdx] = newUrl;
             addMsg('chat-ebook', '✅ Nueva imagen del capítulo '+(chIdx+1)+' generada. Actualizando PDF...', 'ferni');
+          } else {
+            addMsg('chat-ebook', 'No se pudo generar la imagen. Verifica que la OpenAI key esté configurada en Vercel.', 'ferni');
           }
         }
       }
@@ -1126,15 +1127,23 @@ async function sendCorrectionChat(){
       if(S.finalEbook) S.finalEbook = d.ebook;
       else S.ebookData = d.ebook;
       
-      S.pdfHtml = buildFinalPdfHtml(d.ebook, o, lang, countryName, S.coverUrl, S.chapterImages);
+      // Reconstruir PDF con el ebook corregido
+      const currentEbook = S.finalEbook || S.ebookData;
+      S.pdfHtml = buildFinalPdfHtml(currentEbook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
+      
+      // Actualizar AMBOS previews
       const previewDraft = document.getElementById('eb-draft-preview');
       const previewFinal = document.getElementById('eb-final-preview');
-      if(previewDraft) previewDraft.innerHTML = S.pdfHtml;
-      if(previewFinal) previewFinal.innerHTML = S.pdfHtml;
+      if(previewDraft && previewDraft.innerHTML) previewDraft.innerHTML = S.pdfHtml;
+      if(previewFinal && previewFinal.innerHTML) previewFinal.innerHTML = S.pdfHtml;
+      // Forzar refresh del preview visible
+      var activePreview = document.querySelector('#eb-content:not(.hidden) #eb-draft-preview, #eb-approved:not(.hidden) #eb-final-preview');
+      if(activePreview) activePreview.innerHTML = S.pdfHtml;
+      
       if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-      addMsg('chat-ebook', '✅ Listo. PDF actualizado. ¿Algo más?', 'ferni');
+      addMsg('chat-ebook', '✅ Corrección aplicada y PDF actualizado. ¿Algo más?', 'ferni');
     } else {
-      addMsg('chat-ebook', 'No pude aplicar el cambio: ' + (d.error||'intenta de nuevo con más detalle.'), 'ferni');
+      addMsg('chat-ebook', 'No pude aplicar el cambio: ' + (d.error||'intenta con más detalle, por ejemplo: "en la frase X cambia Y por Z"'), 'ferni');
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');
@@ -1607,6 +1616,5 @@ function safeStr(v) {
 </script>
 </body>
 </html>
-
 
 
