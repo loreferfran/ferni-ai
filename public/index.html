@@ -302,11 +302,19 @@ select option { background: #1e2d52; }
               <div><div class="sec-lbl">📄 PDF en Español — Revisa y corrige</div></div>
               <span class="badge bgold">✍️ En español · Pendiente traducción</span>
             </div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Revisa el PDF abajo. Usa el chat para pedir correcciones o regenerar imágenes. Cuando estés lista presiona APROBAR.</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Revisa el PDF abajo. Usa el chat de texto para correcciones. Usa el panel de imágenes para insertar fotos. Cuando estés lista presiona APROBAR.</div>
+            
+            <!-- Panel de imágenes -->
+            <div id="img-panel" style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
+              <div style="font-weight:700;color:var(--accent);margin-bottom:10px;">🖼️ Imágenes del PDF</div>
+              <div id="img-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px;"></div>
+              <div style="font-size:11px;color:var(--muted);">Haz clic en un slot para describir la imagen que quieres. DALL-E la generará y la insertará automáticamente en el PDF.</div>
+            </div>
+
             <div id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
             <div class="btn-row">
               <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país</button>
-              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar</button>
+              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar texto</button>
             </div>
           </div>
           <div id="eb-approved" class="hidden">
@@ -714,27 +722,12 @@ async function goEbook(){
     };
     S.ebookData = ebook;
 
-    // PASO 2: Portada directo desde browser (sin timeout Vercel)
-    document.getElementById('eb-load-txt').textContent='Generando portada con IA...';
+    // PASO 2: Preparar slots de imágenes vacíos
     const countryName = getCountryNameFront(o.pais||o.country||'France');
-    const coverPrompt = 'Professional lifestyle photography for ebook about "' + (o.problema||o.problem||'') + '" in ' + countryName + '. Show beautiful aspirational result. Warm golden light, magazine quality. No text, no faces.';
-    let coverUrl = await genImgDirectGlobal(coverPrompt);
+    S.coverUrl = null;
+    S.chapterImages = new Array((ebook.chapters||[]).length).fill(null);
 
-    // PASO 3: Imágenes por capítulo directo desde browser
-    const chapterImages=[];
-    for(var i=0;i<(ebook.chapters||[]).length;i++){
-      const ch=ebook.chapters[i];
-      const total=ebook.chapters.length;
-      document.getElementById('eb-load-txt').textContent='Generando imagen '+(i+1)+' de '+total+'...';
-      const narrativa = i===0?'beginning, current situation with hope':i===total-1?'final beautiful result achieved':'process step '+(i+1)+', hands-on action and progress';
-      const imgPrompt='Professional editorial photography chapter '+(i+1)+' about "'+( o.problema||o.problem||'')+'" in '+countryName+'. Topic: "'+( ch.title||'')+'". '+narrativa+'. Warm light, magazine quality. No text, no faces.';
-      const imgUrl = await genImgDirectGlobal(imgPrompt);
-      chapterImages.push(imgUrl);
-    }
-    S.chapterImages = chapterImages;
-    S.coverUrl = coverUrl;
-
-    // PASO 4: Construir PDF en español y mostrar preview
+    // PASO 3: Construir PDF en español y mostrar preview
     document.getElementById('eb-load-txt').textContent='Construyendo PDF...';
     S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), coverUrl, chapterImages);
 
@@ -749,11 +742,104 @@ async function goEbook(){
     var preview = document.getElementById('eb-draft-preview');
     if(preview) preview.innerHTML = S.pdfHtml;
 
+    // Renderizar slots de imágenes
+    renderImgSlots(ebook);
+
     addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista presiona ✅ APROBAR para traducir al idioma del país y descargar.','ferni');
 
   }catch(e){
     hide('eb-loading'); show('eb-empty');
     alert('Error generando PDF: '+e.message);
+  }
+}
+
+// Renderizar slots de imágenes clickeables
+function renderImgSlots(ebook){
+  var slots = document.getElementById('img-slots');
+  if(!slots) return;
+  var chapters = ebook ? (ebook.chapters||[]) : (S.ebookData ? (S.ebookData.chapters||[]) : []);
+  
+  var html = '';
+  // Slot portada
+  var coverHtml = S.coverUrl 
+    ? '<img src="'+S.coverUrl+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+    : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🖼️</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
+  html += '<div class="img-slot" data-slot="cover" data-name="Portada" style="cursor:pointer;border:2px dashed rgba(108,92,231,0.4);border-radius:8px;overflow:hidden;position:relative;">' +
+    coverHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Portada</div></div>';
+  
+  // Slots capítulos
+  chapters.forEach(function(ch, i){
+    var imgHtml = (S.chapterImages && S.chapterImages[i])
+      ? '<img src="'+S.chapterImages[i]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#00b894,#00cec9);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🖼️</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
+    var chName = (ch.title||'Capítulo '+(i+1)).replace(/'/g,'');
+    html += '<div class="img-slot" data-slot="'+i+'" data-name="Cap '+(i+1)+': '+chName.slice(0,15)+'" style="cursor:pointer;border:2px dashed rgba(0,184,148,0.4);border-radius:8px;overflow:hidden;">' +
+      imgHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Cap. '+(i+1)+': '+chName.slice(0,20)+'</div></div>';
+  });
+  
+  slots.innerHTML = html;
+  // Event delegation para los slots
+  slots.onclick = function(e){
+    var slot = e.target.closest('.img-slot');
+    if(!slot) return;
+    var slotId = slot.dataset.slot;
+    var slotName = slot.dataset.name || 'imagen';
+    var idx = slotId === 'cover' ? 'cover' : parseInt(slotId);
+    openImgDialog(idx, slotName);
+  };
+}
+
+// Abrir diálogo para describir imagen
+function openImgDialog(slotIndex, slotName){
+  var desc = prompt('Describe la imagen para "' + slotName + '":\n\nEj: manicura francesa perfecta con uñas brillantes sobre fondo neutro elegante\n\nO deja vacío para generación automática basada en el contenido del capítulo.');
+  if(desc === null) return; // canceló
+  generateSlotImage(slotIndex, slotName, desc);
+}
+
+// Generar imagen para un slot específico
+async function generateSlotImage(slotIndex, slotName, description){
+  var o = S.selOpp || {};
+  var countryName = getCountryNameFront(o.pais||o.country||'France');
+  var ebook = S.finalEbook || S.ebookData;
+  
+  // Construir prompt
+  var baseContext = 'Professional editorial photography for ebook about "' + (o.problema||o.problem||'') + '" in ' + countryName + '. ';
+  var userDesc = description || (slotIndex === 'cover' 
+    ? 'Beautiful aspirational result the reader will achieve. Warm golden light, magazine quality.'
+    : 'Chapter "' + slotName + '" — practical action being performed, hands-on, warm light, magazine quality.');
+  var prompt = baseContext + userDesc + ' No text, no watermarks, no faces, ultra high quality photography.';
+  
+  // Mostrar loading en el slot
+  var slots = document.getElementById('img-slots');
+  if(slots){
+    var allSlots = slots.querySelectorAll('.img-slot');
+    var targetSlot = slotIndex === 'cover' ? allSlots[0] : allSlots[slotIndex+1];
+    if(targetSlot) targetSlot.style.opacity = '0.5';
+  }
+  
+  addMsg('chat-ebook', '🎨 Generando imagen para "' + slotName + '"...', 'ferni');
+  
+  var url = await genImgDirectGlobal(prompt);
+  
+  if(url){
+    if(slotIndex === 'cover'){
+      S.coverUrl = url;
+    } else {
+      if(!S.chapterImages) S.chapterImages = [];
+      S.chapterImages[slotIndex] = url;
+    }
+    // Actualizar PDF con nueva imagen
+    S.pdfHtml = buildFinalPdfHtml(ebook||{}, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
+    var preview = document.getElementById('eb-draft-preview');
+    var previewFinal = document.getElementById('eb-final-preview');
+    if(preview) preview.innerHTML = S.pdfHtml;
+    if(previewFinal && previewFinal.innerHTML) previewFinal.innerHTML = S.pdfHtml;
+    renderImgSlots(ebook);
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    addMsg('chat-ebook', '✅ Imagen insertada en el PDF. ¿Quieres cambiarla o generar otra?', 'ferni');
+  } else {
+    addMsg('chat-ebook', '❌ No pude generar la imagen. Verifica tu saldo de OpenAI e intenta de nuevo.', 'ferni');
+    renderImgSlots(ebook);
   }
 }
 
@@ -1616,5 +1702,6 @@ function safeStr(v) {
 </script>
 </body>
 </html>
+
 
 
