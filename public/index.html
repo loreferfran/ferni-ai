@@ -476,7 +476,7 @@ function setMode(m){
 function pickChip(n,el){ document.getElementById('inp-niche').value=n; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); setMode('niche'); }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
-function regenEbook(){ hide('eb-content'); goEbook(); }
+function regenEbook(){ S.ebookData=null; S.finalEbook=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[]; hide('eb-content'); hide('eb-approved'); goEbook(); }
 
 function addMsg(cid,txt,type){ const c=document.getElementById(cid); const d=document.createElement('div'); d.className='msg '+type; d.textContent=txt; c.appendChild(d); c.scrollTop=c.scrollHeight; return d; }
 
@@ -739,6 +739,9 @@ async function goEbook(){
     S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), coverUrl, chapterImages);
 
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
+
+    // Construir PDF en español con imágenes
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, coverUrl, chapterImages);
 
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
 
@@ -1592,7 +1595,6 @@ function safeStr(v) {
 </script>
 </body>
 </html>
-
 
 
 
