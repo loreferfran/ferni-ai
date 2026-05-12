@@ -527,10 +527,17 @@ app.post('/api/generate-ebook-p1', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var schema = JSON.stringify({title:'titulo impactante max 10 palabras',subtitle:'subtitulo vendedor max 12 palabras',tagline:'tagline max 8 palabras',intro:'introduccion emotiva 250 palabras - gancho emocional + historia + promesa + que lograra el lector + por que este metodo funciona',chapter1:{number:1,title:'titulo max 8 palabras',opening:'apertura 80 palabras - frase impactante que engancha al lector',content:'contenido practico 400 palabras - datos especificos numeros medidas pasos concretos - incluye lista de materiales con cantidades y costos - incluye tabla o checklist',keyPoints:['punto clave especifico con dato numerico','punto clave especifico con dato numerico','punto clave especifico con dato numerico','punto clave especifico con dato numerico'],exercise:{title:'nombre del ejercicio practico',description:'descripcion 80 palabras del ejercicio y resultado esperado',steps:['paso 1 detallado con accion concreta','paso 2 detallado con accion concreta','paso 3 detallado con accion concreta','paso 4 detallado con resultado verificable']}},chapter2:{number:2,title:'titulo max 8 palabras',opening:'apertura 80 palabras',content:'contenido 400 palabras con datos especificos - incluye comparativa de opciones - incluye errores comunes y como evitarlos',keyPoints:['punto especifico con dato','punto especifico con dato','punto especifico con dato','punto especifico con dato'],exercise:{title:'nombre ejercicio practico',description:'descripcion 80 palabras',steps:['paso 1 concreto','paso 2 concreto','paso 3 concreto','paso 4 con resultado medible']}}});
-    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 1 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
-    var p1 = extractJSON(txt);
-    res.json({ success: true, part: p1 });
+    // Intro + capitulo 1 (llamada separada para evitar truncamiento)
+    var schema1 = JSON.stringify({title:'titulo impactante max 10 palabras',subtitle:'subtitulo vendedor max 12 palabras',tagline:'tagline max 8 palabras',intro:'introduccion emotiva 250 palabras - gancho + historia real + promesa clara + por que este metodo funciona',chapter1:{number:1,title:'titulo max 8 palabras',opening:'apertura 80 palabras impactante',content:'contenido 400 palabras - datos especificos con numeros reales - lista de materiales con cantidades y costos aproximados - checklist o tabla incluida',keyPoints:['punto clave con dato numerico especifico','punto clave con dato numerico especifico','punto clave con dato numerico especifico','punto clave con dato numerico especifico'],exercise:{title:'ejercicio practico capitulo 1',description:'descripcion 80 palabras y resultado esperado',steps:['paso 1 con accion concreta','paso 2 con accion concreta','paso 3 con accion concreta','paso 4 resultado verificable']}}});
+    var txt1 = await claudeCall(sys, ctx + '\n\nEscribe la introduccion y capitulo 1. SOLO JSON valido sin markdown:\n' + schema1, 3500);
+    var part1 = extractJSON(txt1);
+
+    // Capitulo 2 (llamada separada)
+    var schema2 = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'apertura 80 palabras',content:'contenido 400 palabras - comparativa de opciones A vs B - errores comunes y como evitarlos - estadistica real del sector',keyPoints:['punto con dato especifico','punto con dato especifico','punto con dato especifico','punto con dato especifico'],exercise:{title:'ejercicio practico capitulo 2',description:'descripcion 80 palabras',steps:['paso 1 concreto','paso 2 concreto','paso 3 concreto','paso 4 resultado medible']}}});
+    var txt2 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 2. SOLO JSON valido sin markdown:\n' + schema2, 3000);
+    var part2 = extractJSON(txt2);
+
+    res.json({ success: true, part: { title: part1.title, subtitle: part1.subtitle, tagline: part1.tagline, intro: part1.intro, chapter1: part1.chapter1, chapter2: part2.chapter2 } });
   } catch (e) {
     console.error('p1 error:', e.message);
     res.status(500).json({ success: false, error: e.message });
@@ -545,10 +552,17 @@ app.post('/api/generate-ebook-p2', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   try {
-    var schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras',opening:'apertura 80 palabras',content:'contenido 400 palabras con datos especificos - incluye plan paso a paso con tiempos - incluye mapa de decision o cronograma - incluye tip experto que no se encuentra en internet',keyPoints:['punto especifico con dato numerico','punto especifico con dato numerico','punto especifico con dato numerico','punto especifico con dato numerico'],exercise:{title:'nombre ejercicio practico - Plan de 60 minutos',description:'descripcion 80 palabras - el lector puede hacer esto hoy y ver resultado inmediato',steps:['paso 1 con tiempo estimado','paso 2 con tiempo estimado','paso 3 con tiempo estimado','paso 4 resultado visible al terminar']}},chapter4:{number:4,title:'titulo max 8 palabras - el resultado final profesional',opening:'apertura 80 palabras - vision inspiradora del resultado logrado',content:'contenido 400 palabras - describe el resultado final con detalle - como verificar que quedo bien - como mantener y mejorar - errores de ultimo momento y como evitarlos - siguiente nivel',keyPoints:['logro especifico verificable con dato','logro especifico verificable con dato','logro especifico verificable con dato','logro especifico verificable con dato'],exercise:{title:'checklist final de verificacion',description:'descripcion 80 palabras - como saber que el resultado es profesional',steps:['verificacion 1 con criterio objetivo','verificacion 2 con criterio objetivo','verificacion 3 con criterio objetivo','ajuste final si algo no esta perfecto']}}});
-    var txt = await claudeCall(sys, ctx + '\n\nEscribe PARTE 2 del ebook. Responde SOLO con JSON valido (sin texto previo, sin markdown):\n' + schema, 5000);
-    var p2 = extractJSON(txt);
-    res.json({ success: true, part: p2 });
+    // Solo capítulo 3 para evitar truncamiento
+    var schema3 = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras',opening:'apertura 80 palabras',content:'contenido 400 palabras con datos especificos - plan paso a paso con tiempos - tip experto unico',keyPoints:['punto con dato numerico','punto con dato numerico','punto con dato numerico','punto con dato numerico'],exercise:{title:'Plan de 60 minutos - ejercicio practico hoy',description:'descripcion 80 palabras resultado inmediato',steps:['paso 1 con tiempo','paso 2 con tiempo','paso 3 con tiempo','paso 4 resultado visible']}}});
+    var txt3 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 3. JSON valido sin markdown:\n' + schema3, 3000);
+    var ch3 = extractJSON(txt3);
+
+    // Solo capítulo 4
+    var schema4 = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras - resultado final profesional',opening:'apertura 80 palabras vision inspiradora',content:'contenido 400 palabras - resultado final detallado - como verificar - como mantener - errores finales - siguiente nivel',keyPoints:['logro verificable con dato','logro verificable con dato','logro verificable con dato','logro verificable con dato'],exercise:{title:'checklist final de verificacion profesional',description:'descripcion 80 palabras como saber que quedo perfecto',steps:['verificacion 1 criterio objetivo','verificacion 2 criterio objetivo','verificacion 3 criterio objetivo','ajuste final perfeccionamiento']}}});
+    var txt4 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 4 (el resultado final). JSON valido sin markdown:\n' + schema4, 3000);
+    var ch4 = extractJSON(txt4);
+
+    res.json({ success: true, part: { chapter3: ch3.chapter3, chapter4: ch4.chapter4 } });
   } catch (e) {
     console.error('p2 error:', e.message);
     res.status(500).json({ success: false, error: e.message });
