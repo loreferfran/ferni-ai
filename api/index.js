@@ -606,7 +606,7 @@ app.post('/api/generate-image', async function(req, res) {
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
-      body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'hd', style: 'natural' })
+      body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard', style: 'natural' })
     });
     var d = await resp.json();
     if (d.data && d.data[0]) res.json({ success: true, url: d.data[0].url });
@@ -851,6 +851,28 @@ app.post('/api/generate-pdf-html', async function(req, res) {
 
 
 
+app.post('/api/correct-ebook', async function(req, res) {
+  var ebook = req.body.ebook;
+  var correction = req.body.correction;
+  var language = req.body.language || 'French';
+  try {
+    var sys = 'Eres editor experto de ebooks en ' + language + '. Recibes un ebook en JSON y una instruccion de correccion.' +
+      ' Aplica la correccion solicitada de forma precisa.' +
+      ' Devuelve SOLO el JSON completo corregido con exactamente la misma estructura. Sin markdown. Sin explicaciones.';
+    var msg = 'INSTRUCCION DE CORRECCION: ' + correction +
+      '\n\nEBOOK EN JSON (aplica la correccion y devuelve el JSON completo):\n' + JSON.stringify(ebook);
+    var txt = await claudeCall(sys, msg, 6000);
+    var clean = txt.replace(/```json|```/g, '').trim();
+    var start = clean.indexOf('{');
+    var end = clean.lastIndexOf('}');
+    if (start !== -1 && end !== -1) clean = clean.slice(start, end + 1);
+    var corrected = JSON.parse(clean);
+    res.json({ success: true, ebook: corrected });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/chat-raw', async function(req, res) {
   var system = req.body.system || '';
   var message = req.body.message || '';
@@ -863,10 +885,11 @@ app.post('/api/chat-raw', async function(req, res) {
   }
 });
 
-// Endpoint de config - NO expone keys sensibles
+// Endpoint de config - expone solo la key de OpenAI para generacion de imagenes en frontend
 app.get('/api/config', function(req, res) {
   res.json({ 
-    ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY)
+    ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY),
+    openaiKey: process.env.OPENAI_API_KEY || ''
   });
 });
 
@@ -877,6 +900,3 @@ app.get('*', function(req, res) {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, function() { console.log('FERNI AI Pro running on port ' + PORT); });
 module.exports = app;
-
-
-
