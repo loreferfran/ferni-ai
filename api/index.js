@@ -868,21 +868,59 @@ app.post('/api/generate-pdf-html', async function(req, res) {
 app.post('/api/correct-ebook', async function(req, res) {
   var ebook = req.body.ebook;
   var correction = req.body.correction;
-  var language = req.body.language || 'French';
+  var language = req.body.language || 'Spanish';
   try {
-    var sys = 'Eres editor experto de ebooks en ' + language + '. Recibes un ebook en JSON y una instruccion de correccion.' +
-      ' Aplica la correccion solicitada de forma precisa.' +
-      ' Devuelve SOLO el JSON completo corregido con exactamente la misma estructura. Sin markdown. Sin explicaciones.';
-    var msg = 'INSTRUCCION DE CORRECCION: ' + correction +
-      '\n\nEBOOK EN JSON (aplica la correccion y devuelve el JSON completo):\n' + JSON.stringify(ebook);
-    var txt = await claudeCall(sys, msg, 6000);
-    var clean = txt.replace(/```json|```/g, '').trim();
-    var start = clean.indexOf('{');
-    var end = clean.lastIndexOf('}');
-    if (start !== -1 && end !== -1) clean = clean.slice(start, end + 1);
-    var corrected = JSON.parse(clean);
-    res.json({ success: true, ebook: corrected });
+    // Estrategia: aplicar la correccion directamente en el texto del ebook
+    // sin devolver el JSON completo (evita truncamiento)
+    var sys = 'Eres editor experto. El usuario te indica una correccion a aplicar en un ebook.' +
+      ' Busca el texto mencionado y devuelve SOLO un JSON con los campos que cambiaron.' +
+      ' Formato de respuesta: {"field": "nombre_del_campo", "chapter": numero_o_null, "oldText": "texto original", "newText": "texto corregido"}' +
+      ' Si son multiples cambios, devuelve array. SOLO JSON sin markdown.';
+
+    // Enviar resumen del ebook (titulos y primeras palabras) para que Claude identifique donde esta el problema
+    var summary = {
+      title: ebook.title,
+      subtitle: ebook.subtitle,
+      intro_preview: (ebook.intro||'').slice(0,200),
+      chapters: (ebook.chapters||[]).map(function(ch,i){ return {
+        number: i+1,
+        title: ch.title,
+        content_preview: (ch.content||'').slice(0,300),
+        opening_preview: (ch.opening||'').slice(0,100)
+      };}),
+      conclusion_preview: (ebook.conclusion||'').slice(0,200)
+    };
+
+    var msg = 'CORRECCION: ' + correction +
+      '\n\nESTRUCTURA DEL EBOOK:\n' + JSON.stringify(summary);
+
+    var txt = await claudeCall(sys, msg, 1000);
+    var changes = extractJSON(txt);
+    if (!Array.isArray(changes)) changes = [changes];
+
+    // Aplicar cambios directamente en el ebook
+    var updated = JSON.parse(JSON.stringify(ebook));
+    changes.forEach(function(change) {
+      if (!change || !change.oldText || !change.newText) return;
+      var old = change.oldText;
+      var neu = change.newText;
+      // Buscar y reemplazar en todos los campos de texto
+      function replaceInObj(obj) {
+        if (!obj) return;
+        Object.keys(obj).forEach(function(k) {
+          if (typeof obj[k] === 'string') {
+            obj[k] = obj[k].replace(old, neu);
+          } else if (typeof obj[k] === 'object') {
+            replaceInObj(obj[k]);
+          }
+        });
+      }
+      replaceInObj(updated);
+    });
+
+    res.json({ success: true, ebook: updated });
   } catch(e) {
+    console.error('correct-ebook error:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
