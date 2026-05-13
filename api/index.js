@@ -584,11 +584,19 @@ function buildEbookSystem(countryName, regs) {
     ' (4) TONO: experto cercano e impersonal. NUNCA primera persona. "Los expertos", "Se recomienda", "Los profesionales de ' + countryName + '".' +
     ' (5) RESULTADO: el lector DEBE poder ejecutar SIN ayuda y ver resultado visible en 7 dias o menos.' +
     ' (6) LOCALIZACION: ejemplos, precios, medidas, referencias TODAS para ' + countryName + ' en ' + (regs.currency || 'EUR') + '.' +
+    '\n\nNORMAS DE FORMATO OBLIGATORIAS (el PDF usa estas normas de escritura profesional):' +
+    ' USA SIEMPRE estos formatos en el campo content:' +
+    '\n  LISTAS: cuando enumeres materiales, pasos, errores, recursos o cualquier lista, usa viñetas asi (una por linea):\n  • Elemento 1\n  • Elemento 2\n  • Elemento 3' +
+    '\n  TABLAS: cuando compares opciones, precios, caracteristicas o datos, usa formato de tabla markdown asi:\n  | Columna A | Columna B | Columna C |\n  |-----------|-----------|------------|\n  | dato 1    | dato 2    | dato 3    |' +
+    '\n  SUBTITULOS: usa ## para subtitulos de seccion dentro del capitulo' +
+    '\n  NUNCA pongas listas como texto corrido separado por comas. SIEMPRE viñetas verticales.' +
+    '\n  NUNCA pongas tablas comparativas como parrafo. SIEMPRE formato tabla con pipes |.' +
     '\n\nESTRUCTURA OBLIGATORIA DE CADA CAPITULO (2500+ palabras):' +
     ' - APERTURA: 150-200 palabras impactante + por que es critico.' +
     ' - CONTEXTO: 300-400 palabras explicacion profunda + datos + estadisticas de ' + countryName + '.' +
-    ' - RECURSOS: materiales con costos EXACTOS en ' + (regs.currency || 'EUR') + ' + equivalencia internacional.' +
-    ' - PASOS DETALLADOS: minimo 6-8 pasos, CADA UNO 150-200 palabras (no resumido) + error comun de este paso.' +
+    ' - RECURSOS: lista de materiales con viñetas • y costos EXACTOS en ' + (regs.currency || 'EUR') + '.' +
+    ' - TABLA COMPARATIVA: obligatoria con formato | col | col | col |.' +
+    ' - PASOS DETALLADOS: minimo 6-8 pasos con ## Paso 1: titulo, CADA UNO 150-200 palabras + error comun.' +
     ' - PARA CADA PASO: qué, por qué, resultado, tiempo, error, solucion.' +
     ' - TIP EXPERTO: consejo NO publicado en internet, basado en experiencia real.' +
     ' - ERRORES: minimo 4 errores comunes + solucion rapida (2 minutos).' +

@@ -989,6 +989,62 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var year = new Date().getFullYear();
   var pageNum = 0;
 
+  // Parser de formato: convierte markdown (tablas, listas, subtítulos) a HTML profesional
+  function formatContent(txt) {
+    if (!txt) return '';
+    var lines = txt.split('\n');
+    var out = '';
+    var inList = false;
+    var inTable = false;
+    var tableRows = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      // Subtítulos ##
+      if (line.startsWith('## ')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += renderTable(tableRows); tableRows = []; inTable = false; }
+        out += '<h3>' + line.slice(3) + '</h3>';
+      // Viñetas • o - o *
+      } else if (/^[•\-\*]\s/.test(line)) {
+        if (inTable) { out += renderTable(tableRows); tableRows = []; inTable = false; }
+        if (!inList) { out += '<ul class="fmt-list">'; inList = true; }
+        out += '<li>' + line.slice(2).trim() + '</li>';
+      // Filas de tabla |
+      } else if (line.startsWith('|') && line.endsWith('|')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (!/^[\|\s\-]+$/.test(line)) { // ignorar linea separadora |---|
+          tableRows.push(line);
+          inTable = true;
+        }
+      // Párrafo normal
+      } else if (line.length > 0) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += renderTable(tableRows); tableRows = []; inTable = false; }
+        out += '<p>' + line + '</p>';
+      } else {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += renderTable(tableRows); tableRows = []; inTable = false; }
+      }
+    }
+    if (inList) out += '</ul>';
+    if (inTable) out += renderTable(tableRows);
+    return out || '<p>' + txt + '</p>';
+  }
+
+  function renderTable(rows) {
+    if (!rows.length) return '';
+    var html = '<table class="fmt-table"><thead>';
+    rows.forEach(function(row, idx) {
+      var cells = row.split('|').filter(function(c){ return c.trim() !== ''; });
+      if (idx === 0) {
+        html += '<tr>' + cells.map(function(c){ return '<th>' + c.trim() + '</th>'; }).join('') + '</tr></thead><tbody>';
+      } else {
+        html += '<tr>' + cells.map(function(c){ return '<td>' + c.trim() + '</td>'; }).join('') + '</tr>';
+      }
+    });
+    return html + '</tbody></table>';
+  }
+
   var html = '<!DOCTYPE html><html lang="' + lang.toLowerCase().slice(0,2) + '"><head><meta charset="UTF-8">' +
     '<style>' +
     '@page{size:A4;margin:2cm;}' +
@@ -1013,6 +1069,14 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '.chapter-img{width:100%;height:220px;object-fit:cover;border-radius:10px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.15);}' +
     '.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:16px 20px;font-style:italic;color:#5a4a2a;margin:20px 0;border-radius:0 8px 8px 0;}' +
     'p{margin-bottom:16px;text-align:justify;}' +
+    '.fmt-list{margin:12px 0 16px 0;padding-left:20px;list-style:none;}' +
+    '.fmt-list li{padding:5px 0 5px 20px;border-bottom:1px solid #f0f0f0;position:relative;line-height:1.6;}' +
+    '.fmt-list li::before{content:"•";color:#6c5ce7;font-weight:bold;position:absolute;left:0;}' +
+    '.fmt-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;}' +
+    '.fmt-table th{background:#2d3180;color:white;padding:8px 10px;text-align:left;font-size:11px;letter-spacing:0.5px;}' +
+    '.fmt-table td{padding:7px 10px;border-bottom:1px solid #e8e8e8;vertical-align:top;}' +
+    '.fmt-table tr:nth-child(even) td{background:#f8f9ff;}' +
+    '.fmt-table tr:hover td{background:#eef0ff;}' +
     '.key-points{background:#f0fff4;border:1px solid #00b894;border-radius:8px;padding:16px 20px;margin:20px 0;}' +
     '.key-points h3{color:#00b894;margin-bottom:10px;font-size:14px;}' +
     '.kp{padding:4px 0;color:#2d3436;}' +
@@ -1076,7 +1140,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   // INTRODUCCIÓN
   html += '<div class="chapter page-break">';
   html += '<div class="chapter-header"><div class="chapter-num">Introduction</div><div class="chapter-title">' + (eb.title||'') + '</div></div>';
-  html += '<p>' + (eb.intro||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+  html += formatContent(eb.intro||'');
   html += '</div>';
 
   // CAPÍTULOS
@@ -1090,7 +1154,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
       html += '<div style="width:100%;height:160px;background:linear-gradient(135deg,'+colors[i%4]+','+colors[(i+1)%4]+');border-radius:10px;margin:16px 0;display:flex;align-items:center;justify-content:center;"><span style="color:white;font-size:13px;opacity:0.8;">📸 ' + (ch.title||'Capítulo '+(i+1)) + '</span></div>';
     }
     if(ch.opening) html += '<div class="opening">' + ch.opening + '</div>';
-    html += '<p>' + (ch.content||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+    html += formatContent(ch.content||'');
     if(ch.keyPoints&&ch.keyPoints.length){
       var lblKP = isEs?'Puntos clave':isFr?'Points clés':isDe?'Schlüsselpunkte':isIt?'Punti chiave':isPt?'Pontos-chave':'Key Points';
       html += '<div class="key-points"><h3>' + lblKP + '</h3>';
@@ -1116,7 +1180,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   if(visualNiche && chapterImages[nChaps]){
     html += '<img class="chapter-img" src="' + chapterImages[nChaps] + '" alt="resultado final" onerror="this.style.display=\'none\'">';
   }
-  html += '<p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
+  html += formatContent(eb.conclusion||'');
   if(eb.actionPlan&&eb.actionPlan.length){
     html += '<div class="action-plan"><h2>' + lblPlan + '</h2>';
     eb.actionPlan.forEach(function(a,i){ html += '<div class="action-item"><div class="anum">'+(i+1)+'</div><div>'+a+'</div></div>'; });
