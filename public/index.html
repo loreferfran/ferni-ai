@@ -301,6 +301,7 @@ select option { background: #1e2d52; }
               <div class="lstep" id="ebst-ending"><span class="ldot"></span><span>Conclusión y sección legal</span></div>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:10px;" id="eb-load-txt"></div>
+            <button onclick="cancelEbook()" style="margin-top:16px;padding:7px 20px;border-radius:8px;border:1px solid rgba(255,80,80,0.4);background:rgba(255,80,80,0.08);color:#ff6b6b;font-size:12px;cursor:pointer;font-family:inherit;">⏹ Cancelar generación</button>
           </div>
           <div id="eb-content" class="hidden">
             <div class="row-hd">
@@ -839,6 +840,10 @@ async function claudeDirect(system, userMsg, maxTokens) {
   return d.reply;
 }
 
+function cancelEbook(){
+  if(S.ebookAbort) S.ebookAbort.abort();
+}
+
 async function goEbook(){
   const o=S.selOpp; if(!o) return;
   showTab('ebook',document.querySelectorAll('.tab')[1]);
@@ -846,6 +851,8 @@ async function goEbook(){
   S.author='Ferni Guides';
   const payload = { opportunity: o, author: S.author };
   const loadEl = document.getElementById('eb-load-txt');
+  const abort = new AbortController();
+  S.ebookAbort = abort;
 
   // Marcar paso: 'active' = en progreso (teal), 'done' = completado (verde), '' = pendiente (gris)
   function ebStep(id, state){
@@ -877,7 +884,7 @@ async function goEbook(){
       var step = steps[si];
       ebStep(step.section, 'active');
       loadEl.textContent = 'Escribiendo... (' + (si+1) + ' de 6)';
-      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},payload,{section:step.section}))});
+      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},payload,{section:step.section})),signal:abort.signal});
       var sd = await sr.json();
       if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
       parts[step.section] = sd.data;
@@ -892,6 +899,7 @@ async function goEbook(){
       resources:parts.ending.resources, legalSection:parts.ending.legalSection
     };
     S.ebookData = ebook;
+    S.ebookAbort = null;
 
     // PASO 2: Preparar slots de imágenes vacíos (extendidos si nicho visual)
     const countryName = getCountryNameFront(o.pais||o.country||'France');
@@ -926,8 +934,15 @@ async function goEbook(){
     addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista elige el idioma abajo y presiona ✅ APROBAR.','ferni');
 
   }catch(e){
+    S.ebookAbort = null;
     hide('eb-loading'); show('eb-empty');
-    alert('Error generando PDF: '+e.message);
+    if(e.name === 'AbortError'){
+      loadEl.textContent = '';
+      ['header','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ var el=document.getElementById('ebst-'+id); if(el) el.className='lstep'; });
+      addMsg('chat-ebook','⏹ Generación cancelada. Presiona "Generar PDF" cuando quieras reintentar.','ferni');
+    } else {
+      alert('Error generando PDF: '+e.message);
+    }
   }
 }
 
