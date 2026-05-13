@@ -503,8 +503,9 @@ app.post('/api/chat', async function(req, res) {
 
 function buildEbookSystem(countryName, regs) {
   return 'Eres simultaneamente: experto mundial en el tema + escritor bestseller + especialista en adaptacion local.' +
-    ' Tu mision: crear en espanol una guia practica nivel profesional que resuelva el problema del lector COMPLETAMENTE.' +
-    ' PAIS DESTINO: ' + countryName + '. EDITORIAL: Ferni Guides.' +
+    ' Tu mision: crear en CASTELLANO (ESPANOL) una guia practica nivel profesional que resuelva el problema del lector COMPLETAMENTE.' +
+    ' REGLA ABSOLUTA E INNEGOCIABLE: TODO el texto debe estar en ESPANOL CASTELLANO. CERO palabras en frances, ingles u otro idioma. Ni titulos, ni subtitulos, ni palabras sueltas. SOLO ESPANOL.' +
+    ' PAIS DESTINO (solo para contexto de ejemplos y precios): ' + countryName + '. EDITORIAL: Ferni Guides.' +
     ' USA TU CONOCIMIENTO EXPERTO REAL con datos verificables DE ' + countryName + '.' +
     '\n\nCONDICIONES OBLIGATORIAS NO NEGOCIABLES:' +
     ' (1) EXTENSION MINIMA: MINIMO 2500 PALABRAS POR CAPITULO. Esto garantiza 25-30 paginas en PDF final.' +
@@ -554,7 +555,8 @@ function buildEbookContext(o, author, countryName, regs) {
     '\nAUTOR: ' + author +
     '\nPAIS: ' + countryName +
     '\nMONEDA: ' + regs.currency +
-    '\nIDIOMA OFICIAL: ' + (o.idioma || o.language || 'Español') +
+    '\nIDIOMA DE ESCRITURA: ESPANOL CASTELLANO (el borrador siempre en español; la traduccion al idioma del pais se hace en paso separado posterior)' +
+    '\nIDIOMA DEL PAIS DESTINO (solo para contexto cultural): ' + (o.idioma || o.language || 'Español') +
     '\n\nADAPTACION LOCAL OBLIGATORIA:' +
     '\n- TODOS los precios deben estar en ' + regs.currency + ' con equivalencia a otras monedas si aplica' +
     '\n- Las medidas deben ser del sistema usado en ' + countryName + ' (metrico si Europa, imperial si USA/UK)' +
@@ -617,12 +619,12 @@ app.post('/api/generate-ebook-p1', async function(req, res) {
   try {
     // Intro + capitulo 1 (llamada separada para evitar truncamiento)
     var schema1 = JSON.stringify({title:'titulo impactante max 10 palabras',subtitle:'subtitulo vendedor max 12 palabras',tagline:'tagline max 8 palabras',intro:'introduccion 400-500 palabras - gancho emocional profundo + historia real de ' + countryName + ' + promesa clara + por que ESTE metodo funciona + dato del problema',chapter1:{number:1,title:'titulo max 8 palabras',opening:'apertura 200-250 palabras impactante + contexto + por que es critico',content:'contenido 2500+ PALABRAS MINIMO - explicacion profunda 6-7 subsecciones minimo 350 p/c - datos numericos reales de ' + countryName + ' - lista detallada recursos con precios en ' + regs.currency + ' - tabla comparativa - checklist - 3+ errores comunes + solucion',keyPoints:['punto clave: dato numerico especifico de ' + countryName,'punto clave: medida tiempo o costo exacto','punto clave: criterio verificable','punto clave: conexion al metodo','punto clave: ejemplo real de ' + countryName,'punto clave: dato sorprendente'],exercise:{title:'Plan 60 minutos - ejercicio practico HOY',description:'descripcion 150+ palabras con pasos concretos, tiempo por paso, resultado esperado al final',steps:['paso 1 con tiempo - accion concreta - resultado esperado','paso 2 con tiempo - accion concreta - resultado esperado','paso 3 con tiempo - accion concreta - resultado esperado','paso 4 con tiempo - verificacion objetiva - resultado final medible']}}});
-    var txt1 = await claudeCall(sys, ctx + '\n\nEscribe SOLO la introduccion y capitulo 1. MINIMO 2500 palabras en Cap1. Todo en JSON valido sin markdown:\n' + schema1, 8000);
+    var txt1 = await claudeCall(sys, ctx + '\n\nEscribe SOLO la introduccion y capitulo 1. MINIMO 2500 palabras en Cap1. OBLIGATORIO: TODO en ESPANOL CASTELLANO, cero palabras en frances o ingles. JSON valido sin markdown:\n' + schema1, 8000);
     var part1 = extractJSON(txt1);
 
     // Capitulo 2 (llamada separada)
     var schema2 = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'apertura 200-250 palabras profunda',content:'contenido 2500+ PALABRAS MINIMO - 6-7 subsecciones minimo 350 p/c - tabla comparativa A vs B vs C - 4+ errores comunes con solucion - estadistica real del sector en ' + countryName + ' - ejemplos concretos de ' + countryName + ' - todos los precios en ' + regs.currency,keyPoints:['punto: dato numerico verificable','punto: medida o tiempo concreto','punto: criterio de seleccion','punto: conexion al metodo principal','punto: ejemplo de ' + countryName,'punto: resultado medible'],exercise:{title:'ejercicio practico - aplicacion del metodo Cap2',description:'descripcion 150+ palabras con pasos y tiempo',steps:['paso 1 con duracion - accion - resultado observable','paso 2 con duracion - accion - resultado observable','paso 3 con duracion - accion - resultado observable','paso 4 con duracion - verificacion - resultado final']}}});
-    var txt2 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 2. MINIMO 2500 palabras. JSON valido sin markdown:\n' + schema2, 8000);
+    var txt2 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 2. MINIMO 2500 palabras. OBLIGATORIO: TODO en ESPANOL CASTELLANO, cero palabras en frances o ingles. JSON valido sin markdown:\n' + schema2, 8000);
     var part2 = extractJSON(txt2);
 
     res.json({ success: true, part: { title: part1.title, subtitle: part1.subtitle, tagline: part1.tagline, intro: part1.intro, chapter1: part1.chapter1, chapter2: part2.chapter2 } });
@@ -642,12 +644,12 @@ app.post('/api/generate-ebook-p2', async function(req, res) {
   try {
     // Solo capítulo 3 para evitar truncamiento
     var schema3 = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras - aplicacion avanzada',opening:'apertura 200-250 palabras profunda',content:'contenido 2500+ PALABRAS MINIMO - 6-7 subsecciones minimo 350 p/c - plan paso a paso detallado con tiempos exactos - 5+ tips expertos unicos no en internet - tabla comparativa - checklist avanzado - ejemplos de ' + countryName + ' - precios en ' + regs.currency,keyPoints:['punto: dato numerico con contexto','punto: tiempo o medida exacta','punto: tip experto no publicado','punto: conexion con metodo','punto: ejemplo avanzado','punto: resultado observable'],exercise:{title:'Aplicacion avanzada - cronograma 8 semanas',description:'descripcion 150+ palabras - cronograma real con hitos medibles - tiempo estimado total - resultado esperado final',steps:['Semana 1-2: preparacion - que hacer exactamente - resultado esperado','Semana 3-4: implementacion basica - tareas concretas - verificacion','Semana 5-6: optimizacion - ajustes - medicion resultados','Semana 7-8: resultados finales - verificacion profesional - siguiente nivel']}}});
-    var txt3 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 3. MINIMO 2500 palabras. JSON valido sin markdown:\n' + schema3, 8000);
+    var txt3 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 3. MINIMO 2500 palabras. OBLIGATORIO: TODO en ESPANOL CASTELLANO, cero palabras en frances o ingles. JSON valido sin markdown:\n' + schema3, 8000);
     var ch3 = extractJSON(txt3);
 
     // Solo capítulo 4
     var schema4 = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras - dominio profesional',opening:'apertura 200-250 palabras vision inspiradora + resultados reales de ' + countryName,content:'contenido 2500+ PALABRAS MINIMO - resultado final detallado con datos - como verificar (5-7 criterios concretos) - como mantener a largo plazo - 3+ errores finales evitar - siguiente nivel avanzado - tabla resumen antes/despues - precios en ' + regs.currency,keyPoints:['logro verificable: dato numerico concreto','logro verificable: medida o indicador','logro verificable: tiempo alcanzado','logro verificable: comparacion antes/despues','logro verificable: ejemplo real','logro verificable: impacto en vida'],exercise:{title:'Checklist de verificacion profesional + mantenimiento',description:'descripcion 150+ palabras con criterios objetivos y plan de mantenimiento a perpetuidad',steps:['Verificacion 1: criterio objetivo medible - como checkearlo','Verificacion 2: criterio objetivo medible - como checkearlo','Verificacion 3: criterio objetivo medible - como checkearlo','Mantenimiento mensual: que hacer para mantener resultados 12+ meses']}}});
-    var txt4 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 4 (resultado final). MINIMO 2500 palabras. JSON valido sin markdown:\n' + schema4, 8000);
+    var txt4 = await claudeCall(sys, ctx + '\n\nEscribe SOLO el capitulo 4 (resultado final). MINIMO 2500 palabras. OBLIGATORIO: TODO en ESPANOL CASTELLANO, cero palabras en frances o ingles. JSON valido sin markdown:\n' + schema4, 8000);
     var ch4 = extractJSON(txt4);
 
     res.json({ success: true, part: { chapter3: ch3.chapter3, chapter4: ch4.chapter4 } });
