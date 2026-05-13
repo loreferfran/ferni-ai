@@ -291,9 +291,16 @@ select option { background: #1e2d52; }
           <div id="eb-empty" class="state-c"><div class="big-icon">📖</div><div class="state-title">Sin ebook activo</div><div class="state-sub">Ejecuta un análisis, selecciona una oportunidad<br>y presiona "Generar borrador ebook".</div></div>
           <div id="eb-loading" class="state-c hidden">
             <div class="spinner"></div>
-            <div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">FERNI está escribiendo tu ebook...</div>
-            <div class="prog-bar" style="width:260px;margin-top:12px;"><div class="prog-fill"></div></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="eb-load-txt">Generando introducción...</div>
+            <div style="font-size:14px;color:var(--text);margin-top:14px;font-weight:600;">FERNI está escribiendo tu ebook...</div>
+            <div style="margin-top:18px;text-align:left;min-width:270px;">
+              <div class="lstep" id="ebst-header"><span class="ldot"></span><span>Portada e introducción</span></div>
+              <div class="lstep" id="ebst-ch1"><span class="ldot"></span><span>Capítulo 1</span></div>
+              <div class="lstep" id="ebst-ch2"><span class="ldot"></span><span>Capítulo 2</span></div>
+              <div class="lstep" id="ebst-ch3"><span class="ldot"></span><span>Capítulo 3</span></div>
+              <div class="lstep" id="ebst-ch4"><span class="ldot"></span><span>Capítulo 4</span></div>
+              <div class="lstep" id="ebst-ending"><span class="ldot"></span><span>Conclusión y sección legal</span></div>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:10px;" id="eb-load-txt"></div>
           </div>
           <div id="eb-content" class="hidden">
             <div class="row-hd">
@@ -840,26 +847,43 @@ async function goEbook(){
   const payload = { opportunity: o, author: S.author };
   const loadEl = document.getElementById('eb-load-txt');
 
+  // Marcar paso: 'active' = en progreso (teal), 'done' = completado (verde), '' = pendiente (gris)
+  function ebStep(id, state){
+    var el = document.getElementById('ebst-'+id);
+    if(!el) return;
+    el.className = 'lstep' + (state ? ' '+state : '');
+    var dot = el.querySelector('.ldot');
+    if(state === 'done'){
+      if(dot) dot.textContent = '✓';
+      if(dot) dot.style.width = 'auto';
+    } else if(state === 'active'){
+      if(dot) dot.textContent = '';
+      if(dot) dot.style.width = '6px';
+    }
+  }
+
   try{
     // Generacion capitulo a capitulo — 1 llamada Claude por seccion, sin timeout
     const steps = [
-      { section:'header', label:'✍️ Escribiendo portada e introducción... (1/6)' },
-      { section:'ch1',    label:'📖 Escribiendo Capítulo 1... (2/6)' },
-      { section:'ch2',    label:'📖 Escribiendo Capítulo 2... (3/6)' },
-      { section:'ch3',    label:'📖 Escribiendo Capítulo 3... (4/6)' },
-      { section:'ch4',    label:'📖 Escribiendo Capítulo 4... (5/6)' },
-      { section:'ending', label:'🎯 Finalizando conclusión y sección legal... (6/6)' }
+      { section:'header' },
+      { section:'ch1' },
+      { section:'ch2' },
+      { section:'ch3' },
+      { section:'ch4' },
+      { section:'ending' }
     ];
     var parts = {};
     for(var si=0; si<steps.length; si++){
       var step = steps[si];
-      loadEl.textContent = step.label;
+      ebStep(step.section, 'active');
+      loadEl.textContent = 'Escribiendo... (' + (si+1) + ' de 6)';
       var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},payload,{section:step.section}))});
       var sd = await sr.json();
       if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
       parts[step.section] = sd.data;
-      loadEl.textContent = '✓ ' + step.label.replace(/^[^ ]+ /,'').replace(/\(\d\/6\)/,'').trim();
+      ebStep(step.section, 'done');
     }
+    loadEl.textContent = 'Construyendo PDF...';
 
     const ebook={
       title:parts.header.title, subtitle:parts.header.subtitle, tagline:parts.header.tagline, intro:parts.header.intro,
