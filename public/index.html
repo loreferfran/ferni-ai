@@ -816,11 +816,9 @@ function dlSingleExcel(i){
   
   html += '</table></body></html>';
   
-  const blob = new Blob([html], {type:'application/vnd.ms-excel;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'FERNI_' + pais + '_' + (o.problema||'opp').replace(/[^a-z0-9]/gi,'_').substring(0,25) + '.xls';
-  a.click();
+  var win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 async function claudeDirect(system, userMsg, maxTokens) {
