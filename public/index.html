@@ -507,7 +507,7 @@ select option { background: #1e2d52; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
@@ -1069,6 +1069,7 @@ async function approveEbook(){
     const td = await tr.json();
     if(!td.success) throw new Error(td.error || 'Error');
     S.finalEbook = td.ebook;
+    S.approvedLang = lang;
 
     S.pdfHtml = buildFinalPdfHtml(td.ebook, o, lang, lang, S.coverUrl, S.chapterImages);
 
@@ -1206,25 +1207,28 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '}' +
     '</style></head><body>';
 
-  // PORTADA
-  html += '<div class="cover page-break">';
-  if(coverUrl){ 
-    html += '<img class="cover-img" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\"none\"">';
-  }
-  html += '<h1>' + (eb.title||'') + '</h1>';
-  html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
-  if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
-  var authorPrefix = lang==='French'?'par':lang==='German'?'von':lang==='Italian'?'di':lang==='Portuguese'?'por':lang==='Spanish'?'por':'by';
-  html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
-  html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; Tous droits r&eacute;serv&eacute;s</div>';
-  html += '</div>';
-
-  // ÍNDICE
+  // Variables de idioma — deben estar ANTES de cualquier uso
   var isEs = (lang===’Español’||lang===’Spanish’||lang===’español’);
   var isFr = lang===’French’||lang===’Français’;
   var isDe = lang===’German’||lang===’Deutsch’;
   var isIt = lang===’Italian’||lang===’Italiano’;
   var isPt = lang===’Portuguese’||lang===’Português’;
+
+  // PORTADA
+  html += ‘<div class="cover page-break">’;
+  if(coverUrl){
+    html += ‘<img class="cover-img" src="’ + coverUrl + ‘" alt="portada" onerror="this.style.display=\"none\"">’;
+  }
+  html += ‘<h1>’ + (eb.title||’’) + ‘</h1>’;
+  html += ‘<div class="subtitle">’ + (eb.subtitle||’’) + ‘</div>’;
+  if(eb.tagline) html += ‘<div class="tagline">’ + eb.tagline + ‘</div>’;
+  var authorPrefix = isEs?’por’:isFr?’par’:isDe?’von’:isIt?’di’:isPt?’por’:’by’;
+  html += ‘<div class="author-line">’ + authorPrefix + ‘ ‘ + author + ‘</div>’;
+  var lblRights = isEs?’Todos los derechos reservados’:isFr?’Tous droits réservés’:isDe?’Alle Rechte vorbehalten’:isIt?’Tutti i diritti riservati’:isPt?’Todos os direitos reservados’:’All rights reserved’;
+  html += ‘<div class="copyright">&copy; ‘ + year + ‘ ‘ + author + ‘ &middot; ‘ + lblRights + ‘</div>’;
+  html += ‘</div>’;
+
+  // ÍNDICE
   var lblToc = isEs?’Índice de contenidos’:isFr?’Table des matières’:isDe?’Inhaltsverzeichnis’:isIt?’Indice dei contenuti’:isPt?’Índice’:’Table of Contents’;
   var lblIntro = isEs?’Introducción’:isFr?’Introduction’:isDe?’Einleitung’:isIt?’Introduzione’:isPt?’Introdução’:’Introduction’;
   var lblChap = isEs?’Capítulo’:isFr?’Chapitre’:isDe?’Kapitel’:isIt?’Capitolo’:isPt?’Capítulo’:’Chapter’;
@@ -1358,7 +1362,7 @@ async function sendCorrectionChat(){
   document.getElementById('ci-ebook').value = '';
 
   const o = S.selOpp || {};
-  const lang = S.finalEbook ? (o.idioma||o.language||'French') : 'Español';
+  const lang = S.finalEbook ? (S.approvedLang || o.idioma || o.language || 'Español') : 'Español';
   const countryName = getCountryNameFront(o.pais||o.country||'France');
 
   // Detectar si pide regenerar una imagen
@@ -1456,7 +1460,7 @@ async function applyFinalCorrection(){
   if(!msg){ addMsg('chat-ebook', 'Escríbeme primero qué quieres cambiar del PDF final.', 'ferni'); return; }
   if(!S.finalEbook){ addMsg('chat-ebook', 'Genera el PDF final primero presionando APROBAR.', 'ferni'); return; }
   const o = S.selOpp || {};
-  const lang = o.idioma || o.language || 'French';
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
   addMsg('chat-ebook', msg, 'user');
   document.getElementById('ci-ebook').value = '';
   addMsg('chat-ebook', '✏️ Aplicando tu corrección al PDF... espera un momento.', 'ferni');
@@ -1469,7 +1473,8 @@ async function applyFinalCorrection(){
     const d = await resp.json();
     if(d.success && d.ebook){
       S.finalEbook = d.ebook;
-      S.pdfHtml = buildPdfHtml();
+      var fLang = S.approvedLang || o.idioma || o.language || 'Español';
+      S.pdfHtml = buildFinalPdfHtml(d.ebook, o, fLang, fLang, S.coverUrl, S.chapterImages||[]);
       const preview = document.getElementById('eb-final-preview');
       if(preview) preview.srcdoc = S.pdfHtml;
       if(S.currentHistId) saveFullDataToHist(S.currentHistId);
@@ -1486,7 +1491,7 @@ function buildPdfHtml(){
   var eb = S.finalEbook || S.ebookData;
   if(!eb) return null;
   var o = S.selOpp || {};
-  var lang = S.finalEbook ? (o.idioma || o.language || ‘French’) : ‘Español’;
+  var lang = S.finalEbook ? (S.approvedLang || o.idioma || o.language || ‘Español’) : ‘Español’;
   var countryName = getCountryNameFront(o.pais || o.country || ‘France’);
   return buildFinalPdfHtml(eb, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
 }
