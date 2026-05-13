@@ -1321,6 +1321,40 @@ app.post('/api/chat-raw', async function(req, res) {
   }
 });
 
+// Bonus Pack — genera 4 mini infoproductos complementarios al ebook
+app.post('/api/generate-extras', async function(req, res) {
+  var ebook = req.body.ebook;
+  var o = req.body.opportunity;
+  var language = req.body.language || 'Español';
+  var countryName = getCountryName((o && (o.pais || o.country)) || 'France');
+  try {
+    var chapsSummary = (ebook.chapters || []).map(function(c, i) {
+      return 'Cap' + (i+1) + ': ' + (c.title||'') + ' — ' + (c.content||'').substring(0,250);
+    }).join(' | ');
+    var sys = 'Eres un diseñador experto en infoproductos digitales premium complementarios. Creas productos que amplifican el valor del ebook principal, se venden en bundle o por separado a precio bajo (3-9 EUR), y son 100% accionables e imprimibles. Todo en ' + language + '. Devuelve SOLO JSON array con exactamente 4 objetos.';
+    var userMsg = 'Ebook: "' + (ebook.title||'') + '" — ' + (ebook.subtitle||'') +
+      '\nTema central: ' + ((o && (o.problema||o.problem)) || '') +
+      '\nCapítulos: ' + chapsSummary +
+      '\nPaís: ' + countryName + ' | Idioma: ' + language +
+      '\n\nCrea exactamente estos 4 productos en orden:' +
+      '\n1. CHECKLIST: lista de verificación de 25 pasos concretos y accionables' +
+      '\n2. POSTER: póster motivacional A4 con frase poderosa + 6 claves visuales' +
+      '\n3. PLANTILLA: hoja de seguimiento semanal con 4 semanas y objetivos' +
+      '\n4. PLAN30: plan de 30 días dividido en 4 semanas con tareas diarias específicas' +
+      '\n\nJSON requerido (array de 4 objetos):' +
+      '\n[{"type":"checklist","title":"título atractivo","subtitle":"propuesta de valor","precio":"4.90","items":["paso 1 concreto",...25 items...]},' +
+      '\n{"type":"poster","title":"título del poster","subtitle":"subtítulo","precio":"3.90","quote":"frase poderosa de máx 15 palabras","claves":["clave visual 1",...6 claves...]},' +
+      '\n{"type":"plantilla","title":"título de la plantilla","subtitle":"propuesta de valor","precio":"4.90","semanas":[{"num":1,"objetivo":"objetivo semana 1","dias":[{"dia":"Lunes","tarea":"tarea concreta"},...5 días...]},...4 semanas...]},' +
+      '\n{"type":"plan30","title":"título del plan","subtitle":"propuesta de valor","precio":"6.90","semanas":[{"num":1,"titulo":"Semana 1: nombre","dias":[{"num":1,"tarea":"acción específica del día 1"},...7 días...]},...4 semanas...]}]' +
+      '\nIMPORTANTE: items/claves/tareas deben ser MUY ESPECÍFICOS al tema del ebook, no genéricos. En ' + language + '.';
+    var txt = await claudeCall(sys, userMsg, 5000);
+    var extras = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    res.json({ success: true, extras: extras });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Endpoint de config - expone solo la key de OpenAI para generacion de imagenes en frontend
 app.get('/api/config', function(req, res) {
   res.json({ 
