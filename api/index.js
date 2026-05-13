@@ -593,47 +593,96 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
   const pop = POPULATION[country] || '50 millones total, 40 millones adultos';
   const isGeneral = !niche || niche === 'general' || niche === 'salud bienestar';
 
-  const sys = 'Eres el mejor motor de investigacion de demanda digital del mundo. Detectas exactamente lo que la gente quiere comprar antes de que lo sepa el mercado.' +
-    ' Pais: ' + country + ' (poblacion: ' + pop + '). Idioma: ' + language + '.' +
-    ' RESPONDE TODO EN ESPANOL excepto campos que requieren el idioma local.' +
+  const sys = 'Eres un sistema avanzado de inteligencia de mercado y analisis de demanda real. Tu mision: detectar oportunidades REALES de productos digitales basadas en comportamiento de busqueda humano.' +
+    ' NO inventas ideas — solo detectas lo que la gente ya esta buscando, repitiendo, comprando y pagando.' +
+    ' Pais objetivo: ' + country + ' (poblacion: ' + pop + '). Idioma de busqueda: ' + language + '.' +
+    ' RESPONDE TODO EN ESPANOL excepto los campos que requieren el idioma local del pais.' +
 
-    '\n\n=== LO QUE DEBES DETECTAR ===' +
-    '\nAnaliza los datos y encuentra lo que la gente de ' + country + (isGeneral ? '' : ' sobre "' + niche + '"') + ' busca repetidamente en internet. La gente paga cuando:' +
-    '\n1. AHORRA TIEMPO: buscan la forma rapida, el atajo, el metodo que les evita horas de prueba y error.' +
-    '\n2. APRENDEN UNA HABILIDAD: quieren dominar algo (hacer collares, hablar un idioma, usar una herramienta, cocinar, programar, tocar guitarra, hacer videos, etc.).' +
-    '\n3. RESUELVEN UN PROBLEMA QUE SE REPITE: algo que les frustra constantemente y nadie explica bien.' +
-    '\n4. ALGO ESTA VIRAL O EN TENDENCIA: lo que aparece en TikTok, YouTube, Reddit con millones de vistas y gente pidiendo "donde aprendo esto".' +
-    '\n5. ORGANIZAN O SIMPLIFICAN su vida, negocio, hogar, salud, finanzas o crianza.' +
+    '\n\n=== PASO 1: CLUSTERING SEMANTICO (OBLIGATORIO) ===' +
+    '\nAntes de analizar, AGRUPA las busquedas con intencion similar en clusters. Ejemplo:' +
+    '\n"como bajar de peso" + "quemar grasa rapido" + "perder grasa abdominal" + "deficit calorico" + "adelgazar sin dieta"' +
+    '\n→ CLUSTER: "Perdida de peso" — 5 variaciones = señal FUERTE de demanda real.' +
+    '\nREGLA: Un cluster con 3+ variaciones en multiples fuentes = demanda confirmada.' +
+    '\nUn resultado aislado en 1 sola fuente = señal DEBIL — no lo priorices.' +
+    '\nUsa el campo clusterKeywords para listar las variaciones que conforman cada cluster.' +
+
+    '\n\n=== PASO 2: DETECCION DE DEMANDA REAL ===' +
+    '\nAnaliza y detecta patrones de intencion recurrente de la gente de ' + country + (isGeneral ? '' : ' sobre "' + niche + '"') + ':' +
+    '\n• Intencion dominante y frecuencia de repeticion entre fuentes' +
+    '\n• Problemas que reaparecen en Google + Reddit + YouTube + Amazon' +
+    '\n• Metas de aprendizaje recurrentes (quiero aprender, como hacer, tutorial)' +
+    '\n• Deseos y necesidades practicas con alta intensidad emocional' +
+    '\n• Intencion de busqueda: informacional (aprender) / comercial (comprar) / transaccional (resolver ya)' +
+    '\n\nLa gente PAGA cuando:' +
+    '\n1. AHORRA TIEMPO: el metodo rapido, el atajo, el sistema que evita horas de prueba y error.' +
+    '\n2. APRENDEN UNA HABILIDAD: dominar algo practico (manualidades, idioma, herramienta, cocina, musica, video, IA, etc.).' +
+    '\n3. RESUELVEN UN PROBLEMA RECURRENTE: algo que les frustra y nadie explica bien en su idioma.' +
+    '\n4. ALGO VIRAL O EN TENDENCIA: explota en TikTok, YouTube, Reddit — millones de vistas y gente pidiendo "donde aprendo esto".' +
+    '\n5. ORGANIZAN O SIMPLIFICAN: vida, negocio, hogar, salud, finanzas, crianza.' +
 
     '\n\n=== SEÑALES DE QUE LA GENTE PAGARA ===' +
-    '\nBusca estas señales en los datos: misma pregunta en multiples fuentes, videos con 100k+ vistas sobre el tema, comentarios tipo "alguien sabe donde aprendo X", productos similares vendiendose en Amazon/Hotmart/Udemy, busquedas en alza en Google Trends (especialmente Breakout +5000%), foros con muchos "yo tambien tengo ese problema", tutoriales de YouTube con muchos likes pero la gente pide mas detalle.' +
+    '\nBusca estas señales de compra en los datos recibidos:' +
+    '\n• Misma pregunta en multiples fuentes (Reddit + YouTube + Google = señal FUERTE)' +
+    '\n• Videos con 100k+ vistas sobre el tema' +
+    '\n• Comentarios tipo "alguien sabe donde aprendo X" o "me pasa lo mismo"' +
+    '\n• Productos similares vendiendose en Amazon/Hotmart/Udemy (demanda validada)' +
+    '\n• Busquedas en alza en Google Trends (especialmente Breakout +5000%)' +
+    '\n• Foros con muchos "yo tambien tengo ese problema"' +
+    '\n• Tutoriales con muchos likes pero la gente pide mas detalle' +
+
+    '\n\n=== REGLAS ANTI-ALUCINACION (CRITICO) ===' +
+    '\nNO ESTA PERMITIDO:' +
+    '\n✗ Inventar oportunidades sin evidencia directa en los datos recibidos' +
+    '\n✗ Priorizar busquedas aisladas (1 sola fuente = señal debil, no es oportunidad top)' +
+    '\n✗ Confundir curiosidad pasiva con intencion de compra real' +
+    '\n✗ Confundir contenido SEO antiguo indexado con demanda activa ACTUAL' +
+    '\n  → Ejemplo: busquedas de "adornos navidenos" en mayo pueden ser SEO viejo, NO demanda actual.' +
+    '\n✗ Generar oportunidades ficticias para completar 10 si los datos no las soportan' +
+    '\nSI ESTA PERMITIDO: extrapolar razonablemente si los datos son escasos pero el patron de mercado es conocido — indicando que es extrapolacion.' +
 
     '\n\n=== TIPOS DE DEMANDA A DETECTAR ===' +
-    '\nNO solo problemas. Detecta tambien:' +
-    '\n- APRENDIZAJE: "aprender a hacer X", "como aprender X facilmente", "tutorial X para principiantes"' +
+    '\n- APRENDIZAJE: "aprender a hacer X", "como aprender X facilmente", "tutorial X para principiantes", "curso gratis"' +
     '\n- HABILIDAD PRACTICA: manualidades, cocina, jardineria, costura, carpinteria, ceramica, pintura, instrumentos' +
     '\n- TECNOLOGIA NUEVA: usar IA, apps, herramientas digitales que estan en tendencia' +
-    '\n- AHORRO DE TIEMPO: plantillas, checklists, sistemas, metodos rapidos' +
-    '\n- NEGOCIO DESDE CASA: como vender, como ganar dinero con X habilidad' +
-    '\n- BIENESTAR: recetas, ejercicios, mindfulness, sueno, energia' +
-    '\n- CRIANZA Y FAMILIA: educacion hijos, organizacion hogar, relaciones' +
-    '\n- CUALQUIER COSA QUE ESTE VIRAL y que la gente quiera aprender o resolver YA' +
+    '\n- AHORRO DE TIEMPO: plantillas, checklists, sistemas, metodos rapidos, resultados en 7 dias' +
+    '\n- NEGOCIO DESDE CASA: como vender, como ganar dinero con X habilidad, sin experiencia' +
+    '\n- BIENESTAR: recetas saludables, ejercicios, mindfulness, sueno, energia, desde casa' +
+    '\n- CRIANZA Y FAMILIA: educacion hijos, organizacion hogar, relaciones de pareja' +
+    '\n- VIRAL: cualquier cosa que explote en redes y que la gente quiera aprender o resolver YA' +
 
-    '\n\n=== TEMPORADA ACTUAL ===' +
-    '\nHoy es ' + new Date().toLocaleDateString('es-ES', {month:'long', year:'numeric'}) + '. Ten en cuenta la estacionalidad:' +
-    '\n- Si un tema es MUY estacional (ej: adornos navidad en mayo, ropa de baño en enero), baja su scoreMonetizacion 20-30 puntos y marca tendencia como "estacional-fuera-de-temporada".' +
-    '\n- Prioriza temas con demanda PERENNE o que esten en temporada alta AHORA.' +
+    '\n\n=== ANALISIS DE ESTACIONALIDAD (OBLIGATORIO) ===' +
+    '\nHoy es ' + new Date().toLocaleDateString('es-ES', {month:'long', year:'numeric'}) + '. Para CADA oportunidad clasifica su ciclo de demanda:' +
+    '\n• EVERGREEN: demanda constante todo el ano (finanzas personales, aprender idiomas, recetas, fitness, productividad)' +
+    '\n• ESTACIONAL: picos predecibles en meses concretos (Navidad, verano, vuelta al cole, San Valentin). Especifica mesesPico.' +
+    '\n• TENDENCIA-TEMPORAL: crecimiento reciente pero incierto a largo plazo. Puede durar meses o un año.' +
+    '\n• VIRAL: explosion subita por redes sociales, puede desaparecer en semanas.' +
+    '\nREGLA PENALIZACION: si es muy estacional Y esta fuera de temporada ahora, baja scoreMonetizacion 20-30 puntos.' +
+    '\nREGLA SEO VIEJO: no confundas contenido historico indexado con demanda real ACTUAL — analiza con criterio.' +
+
+    '\n\n=== CRITERIOS DE OPORTUNIDAD VALIDA ===' +
+    '\nUna oportunidad debe cumplir AL MENOS 2 de estos criterios para ser incluida:' +
+    '\n✓ Señales repetidas en 2+ fuentes distintas (Google + Reddit, YouTube + Amazon, etc.)' +
+    '\n✓ Intencion de busqueda clara: informacional (quiero aprender) o comercial (quiero comprar/resolver)' +
+    '\n✓ Resolucion posible con producto digital: PDF, ebook, guia, checklist, plantilla, mini-curso, pack digital' +
+    '\n✓ Potencial de monetizacion realista en ' + country + ' al precio de mercado local' +
 
     '\n\n=== REGLAS DE INCLUSION ===' +
-    '\nSIEMPRE devuelve exactamente 10 oportunidades. Si los datos tienen señales fuertes para algunas y debiles para otras, incluye todas igual pero refleja la diferencia en el scoreMonetizacion. Nunca devuelvas menos de 10. Si el nicho es especifico y los datos son escasos, extrapola razonablemente basandote en patrones de mercados similares en Europa.' +
+    '\nSIEMPRE devuelve exactamente 10 oportunidades ordenadas por scoreMonetizacion descendente.' +
+    ' Refleja la diferencia de calidad de señal en el score: señal fuerte = score alto, señal debil = score bajo.' +
+    ' Si los datos son escasos, extrapola razonablemente con patrones de mercados similares e indicalo en porQueEstaOportunidad.' +
 
-    '\n\nDevuelve SOLO JSON array con 10 oportunidades ordenadas por scoreMonetizacion descendente.' +
-    ' scoreMonetizacion = viralidad(0-25) + volumen repeticion(0-25) + intencion pago(0-25) + oportunidad nicho(0-25).' +
+    '\n\nDevuelve SOLO JSON array con 10 oportunidades. NINGUN texto fuera del JSON.' +
+    ' scoreMonetizacion = viralidad(0-25) + repeticion-multifuente(0-25) + intencion-pago(0-25) + oportunidad-nicho(0-25).' +
     '\n\nCampos obligatorios por oportunidad:' +
     ' problema, problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como busca la gente real),' +
     ' necesidad, tipoDemanda (problema/aprendizaje/habilidad/viral/ahorro-tiempo/negocio/bienestar/crianza/tecnologia/otro),' +
-    ' porQueViral (que señal de viralidad o repeticion se detecto en los datos),' +
+    ' tipoCiclo (evergreen/estacional/tendencia-temporal/viral),' +
+    ' mesesPico (array de meses, solo si tipoCiclo es estacional — ejemplo: ["diciembre","enero"]),' +
+    ' clusterKeywords (array con 3-6 variaciones de busqueda reales que conforman el cluster detectado),' +
+    ' repeticionFuentes (numero de fuentes distintas donde aparecio este patron: 1=debil, 2=medio, 3+=fuerte),' +
+    ' porQueViral (señal concreta de viralidad o repeticion detectada en los datos),' +
     ' ahorroTiempo (como este producto ahorra tiempo al comprador),' +
+    ' motivacionProfunda (por que buscan esto realmente: deseo oculto, miedo, aspiracion, frustracion),' +
     ' emocion, intencionCompra (alta/media/baja), rangoEdad, genero, distribucionGenero,' +
     ' claseSocial, pais, idioma, volumenBusqueda (alto/medio/bajo), volumenEstimado,' +
     ' tendencia (creciendo/estable/bajando), competencia (alta/media/baja), nivelCompetenciaDetalle,' +
@@ -641,10 +690,10 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
     ' tituloEbook, promesaEbook, precioHotmart (en ' + (REGS[country] ? REGS[country].currency : 'EUR') + '),' +
     ' scoreMonetizacion (1-100), urlFuente, keyword (en ' + language + '), keywordES,' +
     ' dolorODeseo, urgencia (alta/media/baja), prioridad (ALTA/MEDIA/BAJA),' +
-    ' porQueEstaOportunidad (evidencia concreta de los datos recibidos),' +
+    ' porQueEstaOportunidad (evidencia concreta de los datos recibidos — cita las fuentes),' +
     ' recomendacion (CREAR/VALIDAR MAS/DESCARTAR),' +
     ' fuentesConsultadas,' +
-    ' datosDetallados (keywordsEncontradas, competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesViralidad array, señalesDeValidas array).';
+    ' datosDetallados (keywordsEncontradas, competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesViralidad array, señalesValidas array).';
 
   // Separar resultados por fuente para dar contexto mas rico a GPT-4o
   var googleResults = results.filter(function(r){ return r.source === 'google' || r.source === 'people_also_ask' || r.source === 'related_search'; });
@@ -690,6 +739,13 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
     googleResults.slice(0, 40).map(function(r) {
       return '[' + (r.source||'google').toUpperCase() + '] ' + r.query + '\n  ' + r.title + '\n  ' + r.snippet;
     }).join('\n---\n');
+
+  userMsg += '\n\n=== INSTRUCCION FINAL ===' +
+    '\n1. Aplica clustering semantico: agrupa busquedas similares antes de evaluar.' +
+    '\n2. Solo oportunidades con evidencia en los datos anteriores (minimo 2 fuentes o señal muy fuerte en 1).' +
+    '\n3. Evalua estacionalidad: clasifica cada oportunidad como evergreen/estacional/tendencia-temporal/viral.' +
+    '\n4. No confundas contenido SEO viejo con demanda actual — usa criterio.' +
+    '\n5. Devuelve SOLO el JSON array, sin texto introductorio ni explicaciones fuera del JSON.';
 
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
