@@ -792,6 +792,35 @@ app.post('/api/translate-ebook', async function(req, res) {
   }
 });
 
+// Traducción libre a cualquier idioma (sin adaptación cultural específica)
+app.post('/api/translate-custom', async function(req, res) {
+  var ebook = req.body.ebook;
+  var language = req.body.language;
+  var author = req.body.author || 'Ferni Guides';
+  var sys = 'Eres un traductor literario profesional experto en ' + language + '.' +
+    ' Tu trabajo es traducir el siguiente JSON de ebook al ' + language + ' de forma natural y fluida.' +
+    '\nREGLAS:' +
+    ' 1. Traduce al ' + language + ' mas natural — el lector debe sentir que fue escrito originalmente en ' + language + '.' +
+    ' 2. Conserva EXACTAMENTE todos los numeros, medidas y cantidades.' +
+    ' 3. Conserva el nombre del autor: ' + author + ' — NO traducir.' +
+    ' 4. Conserva toda la estructura JSON y los keys identicos.' +
+    ' 5. Devuelve SOLO JSON valido, sin markdown, sin texto extra.' +
+    ' 6. Si el idioma usa escritura de derecha a izquierda (arabe, hebreo), traduce igualmente pero mantén los keys en ingles.';
+  try {
+    var part1 = JSON.parse((await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro, chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 7000)).replace(/```json|```/g, '').trim());
+    var part2 = JSON.parse((await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3], conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, resources: ebook.resources, disclaimer: ebook.disclaimer }), 7000)).replace(/```json|```/g, '').trim());
+    res.json({ success: true, ebook: {
+      title: part1.title, subtitle: part1.subtitle, tagline: part1.tagline,
+      intro: part1.intro,
+      chapters: [part1.chapter1, part1.chapter2, part2.chapter3, part2.chapter4],
+      conclusion: part2.conclusion, actionPlan: part2.actionPlan,
+      resources: part2.resources, disclaimer: part2.disclaimer
+    }});
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/generate-image', async function(req, res) {
   try {
     var resp = await fetch('https://api.openai.com/v1/images/generations', {

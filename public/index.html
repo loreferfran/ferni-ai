@@ -184,6 +184,7 @@ select option { background: #1e2d52; }
       <button class="tab" onclick="showTab('ebook',this)">📖 Ebook</button>
       <button class="tab" onclick="showTab('hotmart',this)">🛒 Hotmart</button>
       <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
+      <button class="tab" onclick="showTab('translate',this)">🌍 Traducción</button>
       <button class="tab" onclick="showTab('hist',this)">🕐 Historial</button>
     </div>
   </div>
@@ -402,6 +403,62 @@ select option { background: #1e2d52; }
         </div>
       </div>
 
+      <!-- TRADUCCIÓN -->
+      <div id="panel-translate" class="panel">
+        <div class="panel-scroll">
+          <div id="tr-empty" class="state-c"><div class="big-icon">🌍</div><div class="state-title">Módulo Traducción</div><div class="state-sub">Genera primero el borrador del ebook en español,<br>luego tradúcelo a cualquier idioma aquí.</div></div>
+          <div id="tr-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Traduciendo ebook...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="tr-load-txt">Enviando a Claude...</div></div>
+          <div id="tr-content" class="hidden">
+            <div class="row-hd">
+              <div class="sec-lbl">🌍 Traducción a cualquier idioma</div>
+              <span class="badge bg2" id="tr-badge"></span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">El ebook se genera siempre en español. Aquí puedes traducirlo a cualquier idioma para venderlo en otro mercado.</div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+              <select id="tr-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;flex:1;min-width:220px;">
+                <option value="">-- Selecciona idioma destino --</option>
+                <option value="English">🇬🇧 Inglés (English)</option>
+                <option value="French">🇫🇷 Francés (Français)</option>
+                <option value="Italian">🇮🇹 Italiano (Italiano)</option>
+                <option value="German">🇩🇪 Alemán (Deutsch)</option>
+                <option value="Portuguese">🇧🇷 Portugués (Português)</option>
+                <option value="Spanish">🇪🇸 Español de España</option>
+                <option value="Dutch">🇳🇱 Holandés (Nederlands)</option>
+                <option value="Polish">🇵🇱 Polaco (Polski)</option>
+                <option value="Swedish">🇸🇪 Sueco (Svenska)</option>
+                <option value="Norwegian">🇳🇴 Noruego (Norsk)</option>
+                <option value="Danish">🇩🇰 Danés (Dansk)</option>
+                <option value="Finnish">🇫🇮 Finlandés (Suomi)</option>
+                <option value="Greek">🇬🇷 Griego (Ελληνικά)</option>
+                <option value="Romanian">🇷🇴 Rumano (Română)</option>
+                <option value="Hungarian">🇭🇺 Húngaro (Magyar)</option>
+                <option value="Czech">🇨🇿 Checo (Čeština)</option>
+                <option value="Turkish">🇹🇷 Turco (Türkçe)</option>
+                <option value="Russian">🇷🇺 Ruso (Русский)</option>
+                <option value="Arabic">🇸🇦 Árabe (العربية)</option>
+                <option value="Hebrew">🇮🇱 Hebreo (עברית)</option>
+                <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                <option value="Chinese Simplified">🇨🇳 Chino Simplificado (中文简体)</option>
+                <option value="Chinese Traditional">🇹🇼 Chino Tradicional (中文繁體)</option>
+                <option value="Japanese">🇯🇵 Japonés (日本語)</option>
+                <option value="Korean">🇰🇷 Coreano (한국어)</option>
+                <option value="Thai">🇹🇭 Tailandés (ภาษาไทย)</option>
+                <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
+                <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
+              </select>
+              <button class="btn btn-p" style="font-size:14px;padding:10px 20px;" onclick="translateCustom()">🌍 Traducir ebook</button>
+            </div>
+            <div id="tr-preview-wrap" class="hidden">
+              <div class="row-hd" style="margin-bottom:8px;">
+                <div class="sec-lbl" id="tr-preview-lbl">PDF traducido</div>
+                <button class="btn btn-gold" onclick="dlTranslated()">⬇ Descargar PDF</button>
+              </div>
+              <iframe id="tr-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- HISTORIAL -->
       <div id="panel-hist" class="panel">
         <div class="panel-scroll">
@@ -415,7 +472,7 @@ select option { background: #1e2d52; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[] };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
@@ -441,8 +498,9 @@ function showTab(id,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
   document.getElementById('panel-'+id).classList.add('active'); 
   if(el)el.classList.add('active'); 
-  if(id==='hist') renderHist(); 
+  if(id==='hist') renderHist();
   if(id==='ebook') restoreEbookTab();
+  if(id==='translate') restoreTranslateTab();
 }
 
 function restoreEbookTab(){
@@ -453,6 +511,15 @@ function restoreEbookTab(){
     renderDraft(S.selOpp, S.ebookData);
   } else {
     hide('eb-loading'); hide('eb-content'); hide('eb-approved'); show('eb-empty');
+  }
+}
+function restoreTranslateTab(){
+  if(S.ebookData){
+    hide('tr-empty'); hide('tr-loading'); show('tr-content');
+    if(S.translatedPdfHtml){ show('tr-preview-wrap'); }
+    else { hide('tr-preview-wrap'); }
+  } else {
+    hide('tr-loading'); hide('tr-content'); show('tr-empty');
   }
 }
 function show(id){document.getElementById(id).classList.remove('hidden');}
@@ -1139,7 +1206,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
 
   // INTRODUCCIÓN
   html += '<div class="chapter page-break">';
-  html += '<div class="chapter-header"><div class="chapter-num">Introduction</div><div class="chapter-title">' + (eb.title||'') + '</div></div>';
+  html += '<div class="chapter-header"><div class="chapter-num">' + lblIntro + '</div><div class="chapter-title">' + (eb.title||'') + '</div></div>';
   html += formatContent(eb.intro||'');
   html += '</div>';
 
@@ -1381,68 +1448,9 @@ function buildPdfHtml(){
   var eb = S.finalEbook || S.ebookData;
   if(!eb) return null;
   var o = S.selOpp || {};
-  var author = S.author || 'Antonieta';
-  var year = new Date().getFullYear();
-  var lang = o.idioma || o.language || 'French';
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
-    'body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}' +
-    '.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:60px 40px;text-align:center;page-break-after:always;}' +
-    '.cover h1{color:white;font-size:32px;margin-bottom:12px;line-height:1.3;}' +
-    '.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;font-size:16px;margin-bottom:20px;}' +
-    '.cover .author{color:#fdcb6e;font-size:15px;font-weight:bold;}' +
-    '.cover .copy{color:rgba(255,255,255,0.4);font-size:11px;margin-top:10px;}' +
-    'h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;font-size:18px;}' +
-    'h3{color:#6c5ce7;font-size:14px;margin-top:18px;}' +
-    'p{margin-bottom:14px;}' +
-    '.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;color:#5a4a2a;margin:14px 0;border-radius:0 8px 8px 0;}' +
-    '.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin:16px 0;}' +
-    '.kp{color:#00b894;padding:3px 0;}' +
-    '.step{display:flex;gap:10px;margin:8px 0;}' +
-    '.snum{background:#6c5ce7;color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;}' +
-    '.toc{background:#f9f9f9;padding:20px;border-radius:8px;margin-bottom:30px;}' +
-    '.toc-t{font-weight:bold;color:#2d3180;margin-bottom:10px;}' +
-    'hr{border:1px solid #eee;margin:24px 0;}' +
-    '.disc{font-size:11px;color:#999;text-align:center;font-style:italic;}' +
-    '@media print{.cover{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}' +
-    '</style></head><body>' +
-    '<div class="cover"><h1>' + (eb.title||o.tituloEbook||o.ebookTitle||'Ebook') + '</h1>' +
-    '<div class="sub">' + (eb.subtitle||o.promesaEbook||o.ebookPromise||'') + '</div>' +
-    (eb.tagline?'<div style="color:rgba(255,255,255,0.7);font-size:13px;margin-bottom:16px;">'+eb.tagline+'</div>':'') +
-    '<div class="author">par ' + author + '</div>' +
-    '<div class="copy">&copy; ' + year + ' ' + author + ' &middot; Tous droits r&eacute;serv&eacute;s</div></div>' +
-    '<div class="toc"><div class="toc-t">Table des mati&egrave;res</div>Introduction<br>' +
-    (eb.chapters||[]).map(function(c){return c.title||'';}).join('<br>') +
-    '<br>Conclusion<br>Plan d’action</div>' +
-    '<h2>Introduction</h2><p>' + (eb.intro||'').replace(/\n\n/g,'</p><p>') + '</p>';
-  (eb.chapters||[]).forEach(function(c){
-    html += '<h2>' + (c.number?'Chapitre '+c.number+': ':'') + (c.title||'') + '</h2>';
-    if(c.opening) html += '<div class="opening">' + c.opening + '</div>';
-    html += '<p>' + (c.content||'').replace(/\n\n/g,'</p><p>') + '</p>';
-    if(c.keyPoints&&c.keyPoints.length){
-      html += '<h3>Points cl&eacute;s</h3>';
-      c.keyPoints.forEach(function(k){ html += '<div class="kp">&#10003; ' + k + '</div>'; });
-    }
-    if(c.exercise){
-      html += '<div class="exercise"><strong>&#9999;&#65039; ' + (c.exercise.title||'Exercice') + '</strong><p>' + (c.exercise.description||'') + '</p>';
-      (c.exercise.steps||[]).forEach(function(st,i){ html += '<div class="step"><div class="snum">'+(i+1)+'</div><div>'+st+'</div></div>'; });
-      html += '</div>';
-    }
-  });
-  html += '<h2>Conclusion</h2><p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>') + '</p>';
-  if(eb.actionPlan&&eb.actionPlan.length){
-    html += '<h2>Plan d’action</h2>';
-    eb.actionPlan.forEach(function(a,i){ html += '<p><strong>'+(i+1)+'.</strong> '+a+'</p>'; });
-  }
-  if(eb.resources&&eb.resources.length){
-    html += '<h2>' + lblResources + '</h2>';
-    eb.resources.forEach(function(r){ html += '<p>&rarr; '+r+'</p>'; });
-  }
-  if(eb.authorNote) html += '<h2>Note de l’auteur</h2><p style="font-style:italic;">'+eb.authorNote+'</p>';
-  if(eb.legalSection){
-    html += '<hr><div class="disc">'+(eb.legalSection.healthDisclaimer||'')+'<br>'+(eb.legalSection.copyright||'&copy; '+year+' '+author)+'</div>';
-  }
-  html += '</body></html>';
-  return html;
+  var lang = S.finalEbook ? (o.idioma || o.language || ‘French’) : ‘Español’;
+  var countryName = getCountryNameFront(o.pais || o.country || ‘France’);
+  return buildFinalPdfHtml(eb, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
 }
 
 function dlPDF(){
@@ -1463,6 +1471,48 @@ function dlPDF(){
     window.open(URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),'_blank');
   }, 800);
 }
+
+// ─── MÓDULO TRADUCCIÓN ──────────────────────────────────────────────────────
+async function translateCustom(){
+  var sel = document.getElementById('tr-lang-sel');
+  var lang = sel ? sel.value : '';
+  if(!lang){ alert('Selecciona un idioma destino.'); return; }
+  var eb = S.ebookData;
+  if(!eb){ alert('Primero genera el borrador del ebook en la pestaña Ebook.'); return; }
+  hide('tr-content'); show('tr-loading');
+  document.getElementById('tr-load-txt').textContent = 'Traduciendo al ' + lang + '...';
+  try {
+    var r = await fetch('/api/translate-custom', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ ebook: eb, language: lang, author: 'Ferni Guides' })
+    });
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error||'Error');
+    S.translatedEbook = d.ebook;
+    S.translatedLang = lang;
+    var o = S.selOpp || {};
+    var pdfHtml = buildFinalPdfHtml(d.ebook, o, lang, lang, S.coverUrl, S.chapterImages||[]);
+    S.translatedPdfHtml = pdfHtml;
+    hide('tr-loading'); show('tr-content'); show('tr-preview-wrap');
+    document.getElementById('tr-badge').textContent = '✓ ' + lang;
+    document.getElementById('tr-preview-lbl').textContent = 'PDF en ' + lang;
+    document.getElementById('tr-preview').srcdoc = pdfHtml;
+  } catch(e) {
+    hide('tr-loading'); show('tr-content');
+    alert('Error traduciendo: ' + e.message);
+  }
+}
+
+function dlTranslated(){
+  if(!S.translatedPdfHtml){ alert('Primero traduce el ebook.'); return; }
+  var lang = S.translatedLang || 'translated';
+  var author = 'Ferni Guides'; var year = new Date().getFullYear();
+  var blob = new Blob([S.translatedPdfHtml],{type:'text/html;charset=utf-8'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'FERNI_' + lang.replace(/\s/g,'_') + '_' + author + '_' + year + '.html'; a.click();
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function dlFinalEbook(){
   const o=S.selOpp; if(!o) return;
