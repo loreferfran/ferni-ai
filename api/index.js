@@ -184,12 +184,14 @@ function buildSmartQueries(country, niche, language) {
     lpfx.slice(0, 4).forEach(function(p) {
       queries.push(p + ' ' + topic + ' ' + country);
     });
-    // Busquedas en foros y plataformas
-    queries.push(topic + ' forum ' + country);
+    // Viralidad y repetición
+    queries.push(topic + ' viral tiktok youtube ' + country + ' 2025');
+    queries.push(topic + ' tendencia 2025 ' + country + ' que busca la gente');
+    queries.push('como ahorrar tiempo ' + topic + ' ' + country);
+    // Foros y plataformas
     queries.push(topic + ' reddit ' + country);
     queries.push('amazon bestseller ' + topic + ' ' + country);
-    queries.push(topic + ' youtube ' + country);
-    queries.push(topic + ' preguntas frecuentes ' + country);
+    queries.push(topic + ' youtube tutorial mas visto ' + country);
   } else {
     // Modo general - busca tendencias de alta demanda en el pais
     const generalQueries = {
@@ -452,56 +454,53 @@ async function analyzeWithGPT4(results, country, niche, language) {
   const pop = POPULATION[country] || '50 millones total, 40 millones adultos';
   const isGeneral = !niche || niche === 'general' || niche === 'salud bienestar';
 
-  const sys = 'Eres un motor de investigacion de demanda digital especializado en detectar oportunidades de productos digitales vendibles.' +
-    ' Pais: ' + country + ' (poblacion: ' + pop + '). Idioma del pais: ' + language + '.' +
-    ' IMPORTANTE: Responde TODO en ESPANOL excepto los campos que deben estar en ' + language + '.' +
-    '\n\nTu tarea es analizar los resultados de busqueda reales y detectar que necesitan APRENDER, RESOLVER, MEJORAR, FABRICAR, REPARAR, ORGANIZAR, CUIDAR, VENDER, CREAR o ENTENDER las personas de ' + country + (isGeneral ? ' en cualquier tema' : ' sobre el tema: ' + niche) + '.' +
-    '\n\nNO te limites solo a problemas emocionales o de salud. Detecta tambien:' +
-    ' intereses de alta demanda, aprendizajes practicos, habilidades, manualidades, oficios, hogar, cocina, plantas, mascotas, tecnologia, negocios, belleza, crianza, finanzas, productividad, deportes, arte, construccion, reparaciones, costura, jardineria, o cualquier tema que pueda convertirse en un PDF, ebook, guia, checklist, plantilla o mini curso digital.' +
-    '\n\nPara considerar una oportunidad VALIDA debe cumplir al menos 3 de estas señales:' +
-    ' muchas personas preguntan lo mismo, aparece en varias fuentes distintas, hay videos con muchas visualizaciones, hay cursos o ebooks vendiendose, hay preguntas repetidas en foros o Reddit, hay busquedas tipo como hacer guia paso a paso, hay comentarios pidiendo ayuda, hay productos similares en Amazon Hotmart Udemy.' +
-    '\n\nREGLAS IMPORTANTES:' +
-    ' No entregues ideas inventadas sin señales de demanda.' +
-    ' No confundas curiosidad con intencion de compra.' +
-    ' Prioriza temas donde la gente quiera una solucion clara rapida y ordenada que pueda venderse como producto digital.' +
-    ' Si hay mucha demanda y poca oferta clara es una OPORTUNIDAD FUERTE.' +
-    '\n\nDevuelve SOLO un JSON array valido con 6 oportunidades ordenadas por scoreMonetizacion descendente.' +
-    ' scoreMonetizacion: urgencia del tema (0-25) + volumen estimado (0-25) + intencion de compra (0-25) + baja competencia o nicho claro (0-25).' +
-    '\n\nCada oportunidad DEBE tener TODOS estos campos:' +
-    ' problema (en espanol - puede ser problema deseo habilidad o interes),' +
-    ' problemaEnIdioma (en ' + language + '),' +
-    ' busquedaExacta (frase exacta como busca la gente en ' + language + '),' +
-    ' necesidad (que quiere lograr la gente en espanol),' +
-    ' tipoDemanda (problema / aprendizaje / deseo / habilidad / oficio / manualidad / salud / negocio / crianza / hogar / belleza / tecnologia / otro),' +
-    ' emocion (emocion o motivacion principal),' +
-    ' intencionCompra (alta/media/baja),' +
-    ' rangoEdad,' +
-    ' genero,' +
-    ' distribucionGenero (con porcentajes estimados),' +
-    ' claseSocial,' +
-    ' pais,' +
-    ' idioma,' +
-    ' volumenBusqueda (alto/medio/bajo),' +
-    ' volumenEstimado (numero mensual estimado para ' + country + '),' +
-    ' tendencia (creciendo/estable/bajando),' +
-    ' competencia (alta/media/baja),' +
-    ' nivelCompetenciaDetalle,' +
-    ' oportunidadMonetizacion,' +
-    ' tipoProductoDigital (PDF / ebook / guia / checklist / plantilla / mini curso / pack),' +
-    ' tituloEbook (titulo comercial atractivo en espanol),' +
-    ' promesaEbook (que lograra el lector),' +
-    ' precioHotmart (precio realista en ' + (REGS[country] ? REGS[country].currency : 'EUR') + '),' +
-    ' scoreMonetizacion (1-100),' +
-    ' urlFuente,' +
-    ' keyword (en ' + language + '),' +
-    ' keywordES (en espanol),' +
-    ' dolorODeseo (dolor o deseo principal en espanol),' +
-    ' urgencia (alta/media/baja),' +
-    ' prioridad (ALTA/MEDIA/BAJA),' +
-    ' porQueEstaOportunidad (evidencia de los resultados de busqueda),' +
-    ' recomendacion (CREAR / VALIDAR MAS / DESCARTAR),' +
-    ' fuentesConsultadas (array de fuentes donde se detecto),' +
-    ' datosDetallados (objeto con busquedasPorGenero, busquedasPorEdad, busquedasPorClase, keywordsEncontradas array en ' + language + ', competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesDeValidas array).';
+  const sys = 'Eres el mejor motor de investigacion de demanda digital del mundo. Detectas exactamente lo que la gente quiere comprar antes de que lo sepa el mercado.' +
+    ' Pais: ' + country + ' (poblacion: ' + pop + '). Idioma: ' + language + '.' +
+    ' RESPONDE TODO EN ESPANOL excepto campos que requieren el idioma local.' +
+
+    '\n\n=== LO QUE DEBES DETECTAR ===' +
+    '\nAnaliza los datos y encuentra lo que la gente de ' + country + (isGeneral ? '' : ' sobre "' + niche + '"') + ' busca repetidamente en internet. La gente paga cuando:' +
+    '\n1. AHORRA TIEMPO: buscan la forma rapida, el atajo, el metodo que les evita horas de prueba y error.' +
+    '\n2. APRENDEN UNA HABILIDAD: quieren dominar algo (hacer collares, hablar un idioma, usar una herramienta, cocinar, programar, tocar guitarra, hacer videos, etc.).' +
+    '\n3. RESUELVEN UN PROBLEMA QUE SE REPITE: algo que les frustra constantemente y nadie explica bien.' +
+    '\n4. ALGO ESTA VIRAL O EN TENDENCIA: lo que aparece en TikTok, YouTube, Reddit con millones de vistas y gente pidiendo "donde aprendo esto".' +
+    '\n5. ORGANIZAN O SIMPLIFICAN su vida, negocio, hogar, salud, finanzas o crianza.' +
+
+    '\n\n=== SEÑALES DE QUE LA GENTE PAGARA ===' +
+    '\nBusca estas señales en los datos: misma pregunta en multiples fuentes, videos con 100k+ vistas sobre el tema, comentarios tipo "alguien sabe donde aprendo X", productos similares vendiendose en Amazon/Hotmart/Udemy, busquedas en alza en Google Trends (especialmente Breakout +5000%), foros con muchos "yo tambien tengo ese problema", tutoriales de YouTube con muchos likes pero la gente pide mas detalle.' +
+
+    '\n\n=== TIPOS DE DEMANDA A DETECTAR ===' +
+    '\nNO solo problemas. Detecta tambien:' +
+    '\n- APRENDIZAJE: "aprender a hacer X", "como aprender X facilmente", "tutorial X para principiantes"' +
+    '\n- HABILIDAD PRACTICA: manualidades, cocina, jardineria, costura, carpinteria, ceramica, pintura, instrumentos' +
+    '\n- TECNOLOGIA NUEVA: usar IA, apps, herramientas digitales que estan en tendencia' +
+    '\n- AHORRO DE TIEMPO: plantillas, checklists, sistemas, metodos rapidos' +
+    '\n- NEGOCIO DESDE CASA: como vender, como ganar dinero con X habilidad' +
+    '\n- BIENESTAR: recetas, ejercicios, mindfulness, sueno, energia' +
+    '\n- CRIANZA Y FAMILIA: educacion hijos, organizacion hogar, relaciones' +
+    '\n- CUALQUIER COSA QUE ESTE VIRAL y que la gente quiera aprender o resolver YA' +
+
+    '\n\n=== REGLAS DE CALIDAD ===' +
+    '\nSolo incluye oportunidades con señales reales en los datos. No inventes. No confundas curiosidad pasajera con intencion de compra. Una oportunidad FUERTE tiene: alto volumen + se repite en varias fuentes + hay gente dispuesta a pagar + el contenido existente no satisface bien la demanda.' +
+
+    '\n\nDevuelve SOLO JSON array con 6 oportunidades ordenadas por scoreMonetizacion descendente.' +
+    ' scoreMonetizacion = viralidad(0-25) + volumen repeticion(0-25) + intencion pago(0-25) + oportunidad nicho(0-25).' +
+    '\n\nCampos obligatorios por oportunidad:' +
+    ' problema, problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como busca la gente real),' +
+    ' necesidad, tipoDemanda (problema/aprendizaje/habilidad/viral/ahorro-tiempo/negocio/bienestar/crianza/tecnologia/otro),' +
+    ' porQueViral (que señal de viralidad o repeticion se detecto en los datos),' +
+    ' ahorroTiempo (como este producto ahorra tiempo al comprador),' +
+    ' emocion, intencionCompra (alta/media/baja), rangoEdad, genero, distribucionGenero,' +
+    ' claseSocial, pais, idioma, volumenBusqueda (alto/medio/bajo), volumenEstimado,' +
+    ' tendencia (creciendo/estable/bajando), competencia (alta/media/baja), nivelCompetenciaDetalle,' +
+    ' oportunidadMonetizacion, tipoProductoDigital (PDF/ebook/guia/checklist/plantilla/mini-curso/pack),' +
+    ' tituloEbook, promesaEbook, precioHotmart (en ' + (REGS[country] ? REGS[country].currency : 'EUR') + '),' +
+    ' scoreMonetizacion (1-100), urlFuente, keyword (en ' + language + '), keywordES,' +
+    ' dolorODeseo, urgencia (alta/media/baja), prioridad (ALTA/MEDIA/BAJA),' +
+    ' porQueEstaOportunidad (evidencia concreta de los datos recibidos),' +
+    ' recomendacion (CREAR/VALIDAR MAS/DESCARTAR),' +
+    ' fuentesConsultadas,' +
+    ' datosDetallados (keywordsEncontradas, competidoresDetectados, precioPromedioMercado, tendenciaMensual, plataformasDetectadas, señalesViralidad array, señalesDeValidas array).';
 
   // Separar resultados por fuente para dar contexto mas rico a GPT-4o
   var googleResults = results.filter(function(r){ return r.source === 'google' || r.source === 'people_also_ask' || r.source === 'related_search'; });
