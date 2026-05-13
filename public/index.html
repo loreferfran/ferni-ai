@@ -36,8 +36,9 @@ select, input, textarea { width: 100%; background: rgba(255,255,255,0.07); borde
 select:focus, input:focus, textarea:focus { border-color: var(--accent); background: rgba(108,92,231,0.1); }
 select option { background: #1e2d52; }
 .mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 13px; }
-.mbtn { padding: 7px; border-radius: 8px; border: 1px solid rgba(100,140,255,0.2); background: rgba(255,255,255,0.04); color: var(--muted); font-size: 11px; cursor: pointer; text-align: center; transition: all 0.2s; font-family: inherit; font-weight: 500; }
-.mbtn.active { border-color: var(--accent); background: rgba(108,92,231,0.2); color: #a29bfe; }
+.mbtn { padding: 7px; border-radius: 8px; border: 2px solid rgba(100,140,255,0.2); background: rgba(255,255,255,0.04); color: var(--muted); font-size: 11px; cursor: pointer; text-align: center; transition: all 0.2s; font-family: inherit; font-weight: 600; }
+.mbtn:hover { border-color: rgba(108,92,231,0.5); color: var(--text2); }
+.mbtn.active { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(108,92,231,0.4); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
 .chip { font-size: 10px; padding: 3px 9px; border-radius: 5px; border: 1px solid rgba(100,140,255,0.2); background: rgba(255,255,255,0.04); color: var(--muted); cursor: pointer; transition: all 0.2s; font-weight: 500; }
 .chip:hover,.chip.active { border-color: var(--accent); color: #a29bfe; background: rgba(108,92,231,0.15); }
@@ -600,21 +601,17 @@ function restoreTranslateTab(){
 function show(id){document.getElementById(id).classList.remove('hidden');}
 function hide(id){document.getElementById(id).classList.add('hidden');}
 function setMode(m){
-  S.mode=m;
-  var bt=document.getElementById('mb-t');
-  var bn=document.getElementById('mb-n');
-  var h=document.getElementById('niche-hint');
-  var inp=document.getElementById('inp-niche');
-  if(m==='niche'){
-    bt.classList.remove('active');
-    bn.classList.add('active');
-    h.textContent='✓ Modo nicho activo — escribe tu nicho abajo';
-    h.style.color='var(--green)';
+  S.mode = m;
+  var isNiche = (m === 'niche');
+  document.getElementById('mb-t').className = 'mbtn' + (isNiche ? '' : ' active');
+  document.getElementById('mb-n').className = 'mbtn' + (isNiche ? ' active' : '');
+  var h = document.getElementById('niche-hint');
+  if(isNiche){
+    h.textContent = '✓ Modo nicho activo';
+    h.style.color = 'var(--green)';
   } else {
-    bn.classList.remove('active');
-    bt.classList.add('active');
-    h.textContent='💡 Modo general activo — FERNI detecta nichos automáticamente';
-    h.style.color='var(--teal)';
+    h.textContent = '💡 Modo general activo — FERNI detecta nichos automáticamente';
+    h.style.color = 'var(--teal)';
   }
 }
 function pickChip(n,el){
