@@ -226,7 +226,7 @@ select option { background: #1e2d52; }
         </div>
         <div class="fg">
           <div class="fl">Nicho <span style="color:var(--teal);font-size:9px;">(escribe o elige)</span></div>
-          <input type="text" id="inp-niche" placeholder="ej: salud, ansiedad..." oninput="if(this.value.trim())setMode('niche')" onfocus="setMode('niche')" />
+          <input type="text" id="inp-niche" placeholder="ej: salud, ansiedad..." oninput="if(this.value.trim())setMode('niche')" onclick="setMode('niche')" />
           <div class="hint" id="niche-hint">💡 Haz clic y escribe tu nicho</div>
           <div class="chips" style="margin-top:8px;">
             <span class="chip" onclick="pickChip('salud',this)">salud</span>
@@ -610,7 +610,6 @@ function setMode(m){
     bn.classList.add('active');
     h.textContent='✓ Modo nicho activo — escribe tu nicho abajo';
     h.style.color='var(--green)';
-    inp.focus();
   } else {
     bn.classList.remove('active');
     bt.classList.add('active');
@@ -618,7 +617,14 @@ function setMode(m){
     h.style.color='var(--teal)';
   }
 }
-function pickChip(n,el){ document.getElementById('inp-niche').value=n; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); setMode('niche'); }
+function pickChip(n,el){
+  var inp=document.getElementById('inp-niche');
+  inp.value=n;
+  document.querySelectorAll('.chip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  setMode('niche');
+  inp.focus();
+}
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
 function regenEbook(){
