@@ -838,29 +838,34 @@ async function goEbook(){
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author='Ferni Guides';
   const payload = { opportunity: o, author: S.author };
+  const loadEl = document.getElementById('eb-load-txt');
 
   try{
-    // PASO 1: Generar contenido en español (3 partes)
-    document.getElementById('eb-load-txt').textContent='Escribiendo contenido experto...';
-    const r1=await fetch('/api/generate-ebook-p1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const d1=await r1.json();
-    if(!d1.success) throw new Error('P1: '+d1.error);
-
-    document.getElementById('eb-load-txt').textContent='Desarrollando capítulos 3 y 4...';
-    const r2=await fetch('/api/generate-ebook-p2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const d2=await r2.json();
-    if(!d2.success) throw new Error('P2: '+d2.error);
-
-    document.getElementById('eb-load-txt').textContent='Finalizando conclusión y sección legal...';
-    const r3=await fetch('/api/generate-ebook-p3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const d3=await r3.json();
-    if(!d3.success) throw new Error('P3: '+d3.error);
+    // Generacion capitulo a capitulo — 1 llamada Claude por seccion, sin timeout
+    const steps = [
+      { section:'header', label:'✍️ Escribiendo portada e introducción... (1/6)' },
+      { section:'ch1',    label:'📖 Escribiendo Capítulo 1... (2/6)' },
+      { section:'ch2',    label:'📖 Escribiendo Capítulo 2... (3/6)' },
+      { section:'ch3',    label:'📖 Escribiendo Capítulo 3... (4/6)' },
+      { section:'ch4',    label:'📖 Escribiendo Capítulo 4... (5/6)' },
+      { section:'ending', label:'🎯 Finalizando conclusión y sección legal... (6/6)' }
+    ];
+    var parts = {};
+    for(var si=0; si<steps.length; si++){
+      var step = steps[si];
+      loadEl.textContent = step.label;
+      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},payload,{section:step.section}))});
+      var sd = await sr.json();
+      if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
+      parts[step.section] = sd.data;
+      loadEl.textContent = '✓ ' + step.label.replace(/^[^ ]+ /,'').replace(/\(\d\/6\)/,'').trim();
+    }
 
     const ebook={
-      title:d1.part.title, subtitle:d1.part.subtitle, tagline:d1.part.tagline, intro:d1.part.intro,
-      chapters:[d1.part.chapter1, d1.part.chapter2, d2.part.chapter3, d2.part.chapter4],
-      conclusion:d3.part.conclusion, actionPlan:d3.part.actionPlan,
-      authorNote:d3.part.authorNote, resources:d3.part.resources, legalSection:d3.part.legalSection
+      title:parts.header.title, subtitle:parts.header.subtitle, tagline:parts.header.tagline, intro:parts.header.intro,
+      chapters:[parts.ch1.chapter1, parts.ch2.chapter2, parts.ch3.chapter3, parts.ch4.chapter4],
+      conclusion:parts.ending.conclusion, actionPlan:parts.ending.actionPlan,
+      resources:parts.ending.resources, legalSection:parts.ending.legalSection
     };
     S.ebookData = ebook;
 
