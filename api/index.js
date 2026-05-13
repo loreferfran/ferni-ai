@@ -555,8 +555,7 @@ function buildEbookContext(o, author, countryName, regs) {
     '\nAUTOR: ' + author +
     '\nPAIS: ' + countryName +
     '\nMONEDA: ' + regs.currency +
-    '\nIDIOMA DE ESCRITURA: ESPANOL CASTELLANO (el borrador siempre en español; la traduccion al idioma del pais se hace en paso separado posterior)' +
-    '\nIDIOMA DEL PAIS DESTINO (solo para contexto cultural): ' + (o.idioma || o.language || 'Español') +
+    '\nIDIOMA DE ESCRITURA: ESPAÑOL CASTELLANO — OBLIGATORIO Y ABSOLUTO. Cada palabra, título, subtítulo, ejercicio, punto clave, tabla y conclusión debe estar en español. Prohibido usar palabras del idioma local del país destino. La traducción ocurre en un paso posterior automático.' +
     '\n\nADAPTACION LOCAL OBLIGATORIA:' +
     '\n- TODOS los precios deben estar en ' + regs.currency + ' con equivalencia a otras monedas si aplica' +
     '\n- Las medidas deben ser del sistema usado en ' + countryName + ' (metrico si Europa, imperial si USA/UK)' +
