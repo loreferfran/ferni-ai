@@ -309,7 +309,7 @@ select option { background: #1e2d52; }
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div class="btn-row">
               <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país</button>
-              <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar texto</button>
+              <button class="btn btn-s" onclick="regenEbook()" title="Regenera todo desde cero — consume créditos completos de Claude">↺ Regenerar todo (costoso)</button>
             </div>
           </div>
           <div id="eb-approved" class="hidden">
@@ -479,7 +479,11 @@ function setMode(m){
 function pickChip(n,el){ document.getElementById('inp-niche').value=n; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); setMode('niche'); }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
-function regenEbook(){ S.ebookData=null; S.finalEbook=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[]; hide('eb-content'); hide('eb-approved'); goEbook(); }
+function regenEbook(){
+  var ok = confirm('⚠️ ATENCIÓN: Regenerar consume los mismos créditos de Claude que la generación inicial (llamadas completas a la API).\n\nPara correcciones puntuales usa el chat "Corregir PDF" — es mucho más económico y rápido.\n\n¿Segura que quieres regenerar TODO desde cero?');
+  if(!ok) return;
+  S.ebookData=null; S.finalEbook=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[]; hide('eb-content'); hide('eb-approved'); goEbook();
+}
 
 function addMsg(cid,txt,type){ const c=document.getElementById(cid); const d=document.createElement('div'); d.className='msg '+type; d.textContent=txt; c.appendChild(d); c.scrollTop=c.scrollHeight; return d; }
 
@@ -1047,18 +1051,19 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   html += '</div>';
 
   // ÍNDICE
-  html += '<div class="toc-page page-break">';
-  html += '<div class="toc-title">Table des mati&egrave;res</div>';
-  var isEs = (lang==='Español'||lang==='Spanish'||lang==='español');
-  var isFr = lang==='French'||lang==='Français';
-  var isDe = lang==='German'||lang==='Deutsch';
-  var isIt = lang==='Italian'||lang==='Italiano';
-  var isPt = lang==='Portuguese'||lang==='Português';
-  var lblIntro = isEs?'Introducción':isFr?'Introduction':isDe?'Einleitung':isIt?'Introduzione':isPt?'Introdução':'Introduction';
-  var lblChap = isEs?'Capítulo':isFr?'Chapitre':isDe?'Kapitel':isIt?'Capitolo':isPt?'Capítulo':'Chapter';
-  var lblConcl = isEs?'Conclusión':isFr?'Conclusion':isDe?'Fazit':isIt?'Conclusione':isPt?'Conclusão':'Conclusion';
-  var lblPlan = isEs?'Plan de acción':isFr?'Plan d’action':isDe?'Aktionsplan':isIt?'Piano d’azione':isPt?'Plano de ação':'Action Plan';
-  var lblResources = isEs?'Recursos':isFr?'Ressources':isDe?'Ressourcen':isIt?'Risorse':isPt?'Recursos':'Resources';
+  var isEs = (lang===’Español’||lang===’Spanish’||lang===’español’);
+  var isFr = lang===’French’||lang===’Français’;
+  var isDe = lang===’German’||lang===’Deutsch’;
+  var isIt = lang===’Italian’||lang===’Italiano’;
+  var isPt = lang===’Portuguese’||lang===’Português’;
+  var lblToc = isEs?’Índice de contenidos’:isFr?’Table des matières’:isDe?’Inhaltsverzeichnis’:isIt?’Indice dei contenuti’:isPt?’Índice’:’Table of Contents’;
+  var lblIntro = isEs?’Introducción’:isFr?’Introduction’:isDe?’Einleitung’:isIt?’Introduzione’:isPt?’Introdução’:’Introduction’;
+  var lblChap = isEs?’Capítulo’:isFr?’Chapitre’:isDe?’Kapitel’:isIt?’Capitolo’:isPt?’Capítulo’:’Chapter’;
+  var lblConcl = isEs?’Conclusión’:isFr?’Conclusion’:isDe?’Fazit’:isIt?’Conclusione’:isPt?’Conclusão’:’Conclusion’;
+  var lblPlan = isEs?’Plan de acción’:isFr?’Plan d\’action’:isDe?’Aktionsplan’:isIt?’Piano d\’azione’:isPt?’Plano de ação’:’Action Plan’;
+  var lblResources = isEs?’Recursos’:isFr?’Ressources’:isDe?’Ressourcen’:isIt?’Risorse’:isPt?’Recursos’:’Resources’;
+  html += ‘<div class="toc-page page-break">’;
+  html += ‘<div class="toc-title">’ + lblToc + ‘</div>’;
   
   html += '<div class="toc-item"><span class="toc-ch">' + lblIntro + '</span><span class="toc-pg">3</span></div>';
   (eb.chapters||[]).forEach(function(ch, i){
@@ -1087,7 +1092,8 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     if(ch.opening) html += '<div class="opening">' + ch.opening + '</div>';
     html += '<p>' + (ch.content||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
     if(ch.keyPoints&&ch.keyPoints.length){
-      html += '<div class="key-points"><h3>Points cl&eacute;s</h3>';
+      var lblKP = isEs?'Puntos clave':isFr?'Points clés':isDe?'Schlüsselpunkte':isIt?'Punti chiave':isPt?'Pontos-chave':'Key Points';
+      html += '<div class="key-points"><h3>' + lblKP + '</h3>';
       ch.keyPoints.forEach(function(k){ html += '<div class="kp">' + k + '</div>'; });
       html += '</div>';
     }
