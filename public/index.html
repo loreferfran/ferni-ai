@@ -308,9 +308,44 @@ select option { background: #1e2d52; }
             </div>
 
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
-            <div class="btn-row">
-              <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país</button>
-              <button class="btn btn-s" onclick="regenEbook()" title="Regenera todo desde cero — consume créditos completos de Claude">↺ Regenerar todo (costoso)</button>
+            <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
+              <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: elige el idioma del PDF</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">El borrador está en español. Al aprobar, Claude lo traduce al idioma que elijas. Puedes cambiar el idioma pre-seleccionado del país.</div>
+              <select id="eb-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;width:100%;margin-bottom:10px;">
+                <option value="">-- Selecciona idioma destino --</option>
+                <option value="English">🇬🇧 Inglés (English)</option>
+                <option value="French">🇫🇷 Francés (Français)</option>
+                <option value="Italian">🇮🇹 Italiano (Italiano)</option>
+                <option value="German">🇩🇪 Alemán (Deutsch)</option>
+                <option value="Portuguese">🇧🇷 Portugués (Português)</option>
+                <option value="Spanish">🇪🇸 Español de España</option>
+                <option value="Dutch">🇳🇱 Holandés (Nederlands)</option>
+                <option value="Polish">🇵🇱 Polaco (Polski)</option>
+                <option value="Swedish">🇸🇪 Sueco (Svenska)</option>
+                <option value="Norwegian">🇳🇴 Noruego (Norsk)</option>
+                <option value="Danish">🇩🇰 Danés (Dansk)</option>
+                <option value="Finnish">🇫🇮 Finlandés (Suomi)</option>
+                <option value="Greek">🇬🇷 Griego (Ελληνικά)</option>
+                <option value="Romanian">🇷🇴 Rumano (Română)</option>
+                <option value="Hungarian">🇭🇺 Húngaro (Magyar)</option>
+                <option value="Czech">🇨🇿 Checo (Čeština)</option>
+                <option value="Turkish">🇹🇷 Turco (Türkçe)</option>
+                <option value="Russian">🇷🇺 Ruso (Русский)</option>
+                <option value="Arabic">🇸🇦 Árabe (العربية)</option>
+                <option value="Hebrew">🇮🇱 Hebreo (עברית)</option>
+                <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
+                <option value="Chinese Simplified">🇨🇳 Chino Simplificado (中文简体)</option>
+                <option value="Chinese Traditional">🇹🇼 Chino Tradicional (中文繁體)</option>
+                <option value="Japanese">🇯🇵 Japonés (日本語)</option>
+                <option value="Korean">🇰🇷 Coreano (한국어)</option>
+                <option value="Thai">🇹🇭 Tailandés (ภาษาไทย)</option>
+                <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
+                <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
+              </select>
+              <div class="btn-row" style="margin:0;">
+                <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR y traducir</button>
+                <button class="btn btn-s" onclick="regenEbook()" title="Regenera todo desde cero — consume créditos completos de Claude">↺ Regenerar todo (costoso)</button>
+              </div>
             </div>
           </div>
           <div id="eb-approved" class="hidden">
@@ -1004,45 +1039,44 @@ function renderDraft(o,eb){
     <div class="divider"></div>
     <div style="font-size:11px;color:var(--muted);line-height:1.6;">${eb.disclaimer||''}</div>
     <div class="divider"></div>
-    <div style="font-size:11px;color:var(--muted);">Al aprobar → se traduce al <strong style="color:var(--teal);">${o.language}</strong> con copyright <strong style="color:var(--gold);">${S.author} ${new Date().getFullYear()}</strong></div>`;
+    <div style="font-size:11px;color:var(--muted);">Borrador en español · Elige el idioma abajo y aprueba para traducir.</div>`;
+  // Pre-seleccionar idioma del país en el selector
+  var langSel = document.getElementById('eb-lang-sel');
+  if(langSel && o.language) langSel.value = o.language;
 }
 
 async function approveEbook(){
   const o = S.selOpp; if(!o || !S.ebookData) return;
-  const lang = o.idioma || o.language || (REGS[getCountryNameFront(o.pais||o.country||'France')] && REGS[getCountryNameFront(o.pais||o.country||'France')].language) || 'French';
-  const countryName = getCountryNameFront(o.pais || o.country || 'France');
+
+  // Leer idioma elegido por el usuario en el selector
+  var selEl = document.getElementById('eb-lang-sel');
+  var lang = selEl ? selEl.value : '';
+  if(!lang){ alert('Elige el idioma destino antes de aprobar.'); return; }
 
   hide('eb-content'); show('eb-loading');
-  document.getElementById('eb-load-txt').textContent = 'Traduciendo texto al ' + lang + '...';
+  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + '...';
 
   try {
-    // Solo traducir el texto — las imágenes ya están generadas
-    const tr = await fetch('/api/translate-ebook', {
+    const tr = await fetch('/api/translate-custom', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ebook: S.ebookData, language: lang, country: countryName, author: 'Ferni Guides'})
+      body: JSON.stringify({ ebook: S.ebookData, language: lang, author: 'Ferni Guides' })
     });
     const td = await tr.json();
-    const translatedEbook = td.success ? td.ebook : S.ebookData;
-    S.finalEbook = translatedEbook;
+    if(!td.success) throw new Error(td.error || 'Error');
+    S.finalEbook = td.ebook;
 
-    // Reusar imágenes ya generadas
-    const coverUrl = S.coverUrl || null;
-    const chapterImages = S.chapterImages || [];
-
-    // Construir PDF final traducido con las mismas imágenes
-    S.pdfHtml = buildFinalPdfHtml(translatedEbook, o, lang, countryName, S.coverUrl, S.chapterImages);
+    S.pdfHtml = buildFinalPdfHtml(td.ebook, o, lang, lang, S.coverUrl, S.chapterImages);
 
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
     document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
 
-    // Mostrar preview del PDF final
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
 
-    addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar. Revísalo arriba — si quieres algún ajuste escríbelo en el chat y presiona "Aplicar corrección". Cuando estés lista, descárgalo.', 'ferni');
+    addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar. Revísalo arriba — si quieres algún ajuste escríbelo en el chat y presiona "Aplicar corrección".', 'ferni');
 
   } catch(e) {
     hide('eb-loading'); show('eb-content');
