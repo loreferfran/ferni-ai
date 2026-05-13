@@ -140,9 +140,46 @@ async function getRealTrends(keyword, country) {
   return results;
 }
 
+// Traducción de nichos del español al idioma del país de búsqueda
+const NICHE_TRANSLATIONS = {
+  'manualidades':    { German:'Basteln DIY Handarbeit', French:'bricolage artisanat DIY', Italian:'fai da te artigianato', Portuguese:'artesanato DIY', Dutch:'knutselen handwerk', Swedish:'pyssel hantverk', Polish:'rękodzieło DIY', English:'crafts DIY handmade' },
+  'jardinería':      { German:'Gartenarbeit Gärtnern', French:'jardinage', Italian:'giardinaggio', Portuguese:'jardinagem', Dutch:'tuinieren', Swedish:'trädgårdsarbete', Polish:'ogrodnictwo', English:'gardening' },
+  'cocina':          { German:'Kochen Rezepte', French:'cuisine recettes', Italian:'cucina ricette', Portuguese:'culinária receitas', Dutch:'koken recepten', Swedish:'matlagning recept', Polish:'gotowanie przepisy', English:'cooking recipes' },
+  'fitness':         { German:'Fitness Sport Training', French:'fitness sport', Italian:'fitness allenamento', Portuguese:'fitness treino', Dutch:'fitness sport', Swedish:'fitness träning', Polish:'fitness trening', English:'fitness workout' },
+  'finanzas':        { German:'Finanzen Geld sparen', French:'finances argent', Italian:'finanze soldi', Portuguese:'finanças dinheiro', Dutch:'financiën geld', Swedish:'ekonomi pengar', Polish:'finanse oszczędzanie', English:'personal finance money' },
+  'idiomas':         { German:'Sprachen lernen', French:'apprendre langues', Italian:'imparare lingue', Portuguese:'aprender idiomas', Dutch:'talen leren', Swedish:'lära språk', Polish:'nauka języków', English:'learn languages' },
+  'programación':    { German:'Programmieren lernen', French:'apprendre programmation', Italian:'imparare programmazione', Portuguese:'aprender programação', Dutch:'programmeren leren', Swedish:'lära programmering', Polish:'programowanie nauka', English:'learn programming coding' },
+  'decoración':      { German:'Wohnen Einrichten Dekoration', French:'décoration intérieur', Italian:'arredamento decorazione', Portuguese:'decoração casa', Dutch:'wonen inrichten', Swedish:'inredning dekoration', Polish:'dekoracja wnętrz', English:'home decor interior design' },
+  'belleza':         { German:'Beauty Schönheit Pflege', French:'beauté soins', Italian:'bellezza cura', Portuguese:'beleza cuidados', Dutch:'beauty schoonheid', Swedish:'skönhet vård', Polish:'uroda pielęgnacja', English:'beauty skincare' },
+  'salud':           { German:'Gesundheit Wohlbefinden', French:'santé bien-être', Italian:'salute benessere', Portuguese:'saúde bem-estar', Dutch:'gezondheid welzijn', Swedish:'hälsa välmående', Polish:'zdrowie dobre samopoczucie', English:'health wellness' },
+  'meditación':      { German:'Meditation Achtsamkeit', French:'méditation pleine conscience', Italian:'meditazione mindfulness', Portuguese:'meditação mindfulness', Dutch:'meditatie mindfulness', Swedish:'meditation mindfulness', Polish:'medytacja uważność', English:'meditation mindfulness' },
+  'yoga':            { German:'Yoga Übungen', French:'yoga exercices', Italian:'yoga esercizi', Portuguese:'yoga exercícios', Dutch:'yoga oefeningen', Swedish:'yoga övningar', Polish:'joga ćwiczenia', English:'yoga exercises' },
+  'crianza':         { German:'Kindererziehung Eltern', French:'parentalité enfants', Italian:'genitorialità bambini', Portuguese:'parentalidade filhos', Dutch:'opvoeding kinderen', Swedish:'föräldraskap barn', Polish:'wychowanie dzieci', English:'parenting children' },
+  'negocios':        { German:'Online Business verdienen', French:'business en ligne gagner', Italian:'business online guadagnare', Portuguese:'negócio online ganhar', Dutch:'online business verdienen', Swedish:'online business tjäna', Polish:'biznes online zarabianie', English:'online business make money' },
+  'fotografía':      { German:'Fotografie lernen', French:'photographie apprendre', Italian:'fotografia imparare', Portuguese:'fotografia aprender', Dutch:'fotografie leren', Swedish:'fotografi lära', Polish:'fotografia nauka', English:'photography learn' },
+  'maquillaje':      { German:'Make-up Schminken', French:'maquillage beauté', Italian:'trucco makeup', Portuguese:'maquiagem beleza', Dutch:'make-up schminken', Swedish:'smink makeup', Polish:'makijaż uroda', English:'makeup beauty tutorials' },
+  'costura':         { German:'Nähen Schneidern', French:'couture coudre', Italian:'cucito sartoria', Portuguese:'costura', Dutch:'naaien', Swedish:'sömnad', Polish:'szycie krawiectwo', English:'sewing tutorials' },
+  'dibujo':          { German:'Zeichnen lernen', French:'dessin apprendre', Italian:'disegno imparare', Portuguese:'desenho aprender', Dutch:'tekenen leren', Swedish:'rita lära', Polish:'rysowanie nauka', English:'drawing learn' },
+  'pintura':         { German:'Malen lernen', French:'peinture apprendre', Italian:'pittura imparare', Portuguese:'pintura aprender', Dutch:'schilderen leren', Swedish:'målning lära', Polish:'malarstwo nauka', English:'painting learn' },
+  'música':          { German:'Musik Instrument lernen', French:'musique instrument apprendre', Italian:'musica strumento', Portuguese:'música instrumento', Dutch:'muziek instrument leren', Swedish:'musik instrument', Polish:'muzyka instrument nauka', English:'music instrument learn' },
+};
+
+function translateNiche(niche, language) {
+  if (!niche) return '';
+  var lower = niche.toLowerCase().trim();
+  // Buscar coincidencia exacta o parcial
+  for (var key in NICHE_TRANSLATIONS) {
+    if (lower === key || lower.indexOf(key) !== -1 || key.indexOf(lower) !== -1) {
+      return NICHE_TRANSLATIONS[key][language] || NICHE_TRANSLATIONS[key]['English'] || niche;
+    }
+  }
+  return niche; // Si no hay traducción, usar tal cual (muchos términos funcionan en inglés)
+}
+
 function buildSmartQueries(country, niche, language) {
   const isGeneral = !niche || niche.trim() === '' || niche === 'general' || niche === 'salud bienestar';
-  const topic = isGeneral ? '' : niche;
+  // Traducir el nicho al idioma del país para que las búsquedas sean efectivas
+  const topic = isGeneral ? '' : translateNiche(niche, language);
 
   // Prefijos en el idioma del pais para buscar como busca la gente real
   const prefixes = {
@@ -480,10 +517,15 @@ async function analyzeWithGPT4(results, country, niche, language) {
     '\n- CRIANZA Y FAMILIA: educacion hijos, organizacion hogar, relaciones' +
     '\n- CUALQUIER COSA QUE ESTE VIRAL y que la gente quiera aprender o resolver YA' +
 
-    '\n\n=== REGLAS DE CALIDAD ===' +
-    '\nSolo incluye oportunidades con señales reales en los datos. No inventes. No confundas curiosidad pasajera con intencion de compra. Una oportunidad FUERTE tiene: alto volumen + se repite en varias fuentes + hay gente dispuesta a pagar + el contenido existente no satisface bien la demanda.' +
+    '\n\n=== TEMPORADA ACTUAL ===' +
+    '\nHoy es ' + new Date().toLocaleDateString('es-ES', {month:'long', year:'numeric'}) + '. Ten en cuenta la estacionalidad:' +
+    '\n- Si un tema es MUY estacional (ej: adornos navidad en mayo, ropa de baño en enero), baja su scoreMonetizacion 20-30 puntos y marca tendencia como "estacional-fuera-de-temporada".' +
+    '\n- Prioriza temas con demanda PERENNE o que esten en temporada alta AHORA.' +
 
-    '\n\nDevuelve SOLO JSON array con 6 oportunidades ordenadas por scoreMonetizacion descendente.' +
+    '\n\n=== REGLAS DE INCLUSION ===' +
+    '\nSIEMPRE devuelve exactamente 10 oportunidades. Si los datos tienen señales fuertes para algunas y debiles para otras, incluye todas igual pero refleja la diferencia en el scoreMonetizacion. Nunca devuelvas menos de 10. Si el nicho es especifico y los datos son escasos, extrapola razonablemente basandote en patrones de mercados similares en Europa.' +
+
+    '\n\nDevuelve SOLO JSON array con 10 oportunidades ordenadas por scoreMonetizacion descendente.' +
     ' scoreMonetizacion = viralidad(0-25) + volumen repeticion(0-25) + intencion pago(0-25) + oportunidad nicho(0-25).' +
     '\n\nCampos obligatorios por oportunidad:' +
     ' problema, problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como busca la gente real),' +
@@ -540,7 +582,7 @@ async function analyzeWithGPT4(results, country, niche, language) {
     body: JSON.stringify({
       model: 'gpt-4o',
       messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }],
-      temperature: 0.2,
+      temperature: 0.5,
       max_tokens: 8000
     })
   });
