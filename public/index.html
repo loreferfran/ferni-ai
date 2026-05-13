@@ -365,8 +365,7 @@ select option { background: #1e2d52; }
           <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">✏️ Correcciones al PDF</div></div>
           <div class="chat-msgs" id="chat-ebook"><div class="msg ferni">Escribe aquí qué quieres cambiar en el PDF y presiona Enviar. Claude aplicará los cambios directamente en pantalla. Ejemplo: "simplifica el capítulo 2", "agrega una tabla de plantas en el cap 1", "el título no me convence, cámbialo a algo más impactante".</div></div>
           <div class="chat-inp-row">
-            <textarea class="chat-inp" id="ci-ebook" placeholder="¿Qué quieres cambiar? Ej: 'el cap 2 está muy técnico, simplifícalo', 'cambia el título a algo más vendedor'..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCorrectionChat();}"></textarea>
-            <button class="chat-send" onclick="sendCorrectionChat()">Corregir PDF</button>
+            <textarea class="chat-inp" id="ci-ebook" placeholder="¿Qué quieres cambiar? Ej: 'el cap 2 está muy técnico, simplifícalo', 'cambia el título a algo más vendedor'... (Enter para enviar)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCorrectionChat();}"></textarea>
           </div>
         </div>
       </div>
