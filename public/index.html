@@ -373,7 +373,7 @@ select option { background: #1e2d52; }
       <!-- HOTMART -->
       <div id="panel-hotmart" class="panel">
         <div class="panel-scroll">
-          <div id="hm-empty" class="state-c"><div class="big-icon">🛒</div><div class="state-title">Módulo Hotmart</div><div class="state-sub">Aprueba el ebook para generar el kit completo<br>de ventas en el idioma del país objetivo.</div></div>
+          <div id="hm-empty" class="state-c"><div class="big-icon">🛒</div><div class="state-title">Módulo Hotmart</div><div class="state-sub">Genera el kit completo de ventas en el idioma elegido:<br>copy de página, emails, bullets, bonos y más.</div><button class="btn btn-p" style="margin-top:16px;font-size:14px;padding:10px 24px;" onclick="genHotmart()">✦ Generar Kit Hotmart</button></div>
           <div id="hm-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Generando kit Hotmart...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="hm-load-txt">Escribiendo copy de ventas...</div></div>
           <div id="hm-content" class="hidden">
             <div class="row-hd">
@@ -414,7 +414,7 @@ select option { background: #1e2d52; }
       <!-- META ADS -->
       <div id="panel-meta" class="panel">
         <div class="panel-scroll">
-          <div id="ma-empty" class="state-c"><div class="big-icon">📣</div><div class="state-title">Módulo Meta Ads</div><div class="state-sub">Genera 5 anuncios completos con imágenes DALL-E<br>en el idioma del país objetivo.</div></div>
+          <div id="ma-empty" class="state-c"><div class="big-icon">📣</div><div class="state-title">Módulo Meta Ads</div><div class="state-sub">Genera 5 anuncios completos para Facebook e Instagram<br>con segmentación, copies e imágenes DALL-E.</div><button class="btn btn-p" style="margin-top:16px;font-size:14px;padding:10px 24px;" onclick="genMeta()">✦ Generar Kit Meta Ads</button></div>
           <div id="ma-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Generando kit Meta Ads...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="ma-load-txt">Escribiendo copies...</div></div>
           <div id="ma-content" class="hidden">
             <div class="row-hd">
@@ -1578,17 +1578,19 @@ function dlFinalEbook(){
 
 async function genHotmart(o){
   o=o||S.selOpp; if(!o) return;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
   show('hm-loading');
   try{
-    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:o.language})});
+    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang})});
     const d=await resp.json();
-    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit); addMsg('chat-hotmart',`🛒 Kit Hotmart listo en ${o.language}. Revisa cada sección y dime si cambio algo.`,'ferni'); }
-    else{ hide('hm-loading'); show('hm-empty'); }
-  }catch(e){ hide('hm-loading'); show('hm-empty'); }
+    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit); addMsg('chat-hotmart',`🛒 Kit Hotmart listo en ${lang}. Revisa cada sección y dime si cambio algo.`,'ferni'); }
+    else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit Hotmart: '+d.error); }
+  }catch(e){ hide('hm-loading'); show('hm-empty'); alert('Error: '+e.message); }
 }
 
 function renderHotmart(o,kit){
-  document.getElementById('hm-lang').textContent=`${o.language} · ${o.country}`;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
+  document.getElementById('hm-lang').textContent=`${lang} · ${o.pais||o.country}`;
   const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v}</div></div>`;
   document.getElementById('hm-body').innerHTML=
     f('📌','Nombre del producto',kit.productName||o.tituloEbook||o.ebookTitle)+
@@ -1647,17 +1649,19 @@ async function genHotmartImg(idx){
 
 async function genMeta(o){
   o=o||S.selOpp; if(!o) return;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
   show('ma-loading');
   try{
-    const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,language:o.language})});
+    const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,language:lang})});
     const d=await resp.json();
-    if(d.success){ S.maKit=d.kit; hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${o.language}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
-    else{ hide('ma-loading'); show('ma-empty'); }
-  }catch(e){ hide('ma-loading'); show('ma-empty'); }
+    if(d.success){ S.maKit=d.kit; hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
+    else{ hide('ma-loading'); show('ma-empty'); alert('Error generando kit Meta Ads: '+d.error); }
+  }catch(e){ hide('ma-loading'); show('ma-empty'); alert('Error: '+e.message); }
 }
 
 function renderMeta(o,kit){
-  document.getElementById('ma-badge').textContent=`${o.language} · ${o.country}`;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
+  document.getElementById('ma-badge').textContent=`${lang} · ${o.pais||o.country}`;
   const seg=kit.segmentation||{};
   document.getElementById('ma-seg').innerHTML=`
     <div class="fc-label">Segmentación recomendada — ${o.country}</div>
@@ -1704,11 +1708,12 @@ async function genAdImg(idx,encodedPrompt){
 }
 
 function dlHotmart(){
-  if(!S.hmKit||!S.selOpp){alert('Genera el kit Hotmart primero aprobando el ebook.');return;}
+  if(!S.hmKit||!S.selOpp){alert('Genera el kit Hotmart primero.');return;}
   const kit=S.hmKit; const o=S.selOpp; const author=S.author;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;margin-bottom:20px;}h2{color:#6c5ce7;font-size:16px;margin-top:24px;margin-bottom:8px;}p,div{margin-bottom:8px;}.section{background:#f8f9ff;border-left:4px solid #6c5ce7;padding:12px 16px;margin:12px 0;border-radius:0 8px 8px 0;}.label{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;font-weight:bold;}</style></head><body>`;
   html+=`<h1>KIT HOTMART — ${kit.productName||o.tituloEbook||o.ebookTitle}</h1>`;
-  html+=`<p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country} · <strong>Precio:</strong> ${o.precioHotmart||o.hotmartPrice} · <strong>Autor:</strong> ${author}</p>`;
+  html+=`<p><strong>Idioma:</strong> ${lang} · <strong>País:</strong> ${o.pais||o.country} · <strong>Precio:</strong> ${o.precioHotmart||o.hotmartPrice} · <strong>Autor:</strong> ${author}</p>`;
   const s=(label,val)=>`<div class="section"><div class="label">${label}</div><div>${val}</div></div>`;
   html+=s('Nombre del producto',kit.productName||'');
   html+=s('Headline',kit.headline||'');
@@ -1732,14 +1737,15 @@ function dlHotmart(){
   html+=`</body></html>`;
   const blob=new Blob([html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`FERNI_HOTMART_${o.country}_${o.language}_${new Date().getFullYear()}.doc`; a.click();
+  a.download=`FERNI_HOTMART_${o.pais||o.country}_${lang}_${new Date().getFullYear()}.doc`; a.click();
 }
 
 function dlMeta(){
-  if(!S.maKit||!S.selOpp){alert('Genera el kit Meta Ads primero aprobando el ebook.');return;}
+  if(!S.maKit||!S.selOpp){alert('Genera el kit Meta Ads primero.');return;}
   const kit=S.maKit; const o=S.selOpp;
+  const lang = S.approvedLang || o.idioma || o.language || 'Español';
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;}h2{color:#6c5ce7;font-size:16px;margin-top:24px;}.ad{background:#f8f9ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin:12px 0;}.label{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}.field{margin-bottom:10px;}</style></head><body>`;
-  html+=`<h1>KIT META ADS — ${o.tituloEbook||o.ebookTitle}</h1><p><strong>Idioma:</strong> ${o.language} · <strong>País:</strong> ${o.country}</p>`;
+  html+=`<h1>KIT META ADS — ${o.tituloEbook||o.ebookTitle}</h1><p><strong>Idioma:</strong> ${lang} · <strong>País:</strong> ${o.pais||o.country}</p>`;
   html+=`<h2>SEGMENTACIÓN</h2><p><strong>Edad:</strong> ${kit.segmentation?.age||o.rangoEdad||o.ageRange}<br><strong>Género:</strong> ${kit.segmentation?.gender||o.genero||o.gender}<br><strong>Intereses:</strong> ${(kit.segmentation?.interests||[]).join(', ')}<br><strong>Dolores:</strong> ${(kit.segmentation?.painPoints||[]).join(', ')}</p>`;
   html+=`<h2>5 ANUNCIOS</h2>`;
   (kit.ads||[]).forEach((ad,i)=>{ html+=`<div class="ad"><h3>Anuncio ${i+1}: ${ad.angle||''}</h3><div class="field"><div class="label">Headline</div>${ad.headline||''}</div><div class="field"><div class="label">Texto principal</div>${ad.primaryText||ad.copy||''}</div><div class="field"><div class="label">Descripción</div>${ad.description||''}</div><div class="field"><div class="label">CTA</div>${ad.cta||''}</div><div class="field"><div class="label">Prompt imagen DALL-E</div><em>${ad.dallePrompt||''}</em></div></div>`; });
@@ -1748,7 +1754,7 @@ function dlMeta(){
   html+=`</body></html>`;
   const blob=new Blob([html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`FERNI_META_ADS_${o.country}_${o.language}_${new Date().getFullYear()}.doc`; a.click();
+  a.download=`FERNI_META_ADS_${o.pais||o.country}_${lang}_${new Date().getFullYear()}.doc`; a.click();
 }
 
 function dlExcel(){if(S.results)genCSV(S.results,S.country,S.niche);}
