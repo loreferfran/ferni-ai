@@ -1559,11 +1559,16 @@ function dlTranslated(){
 function dlFinalEbook(){
   const o=S.selOpp; if(!o) return;
   const eb=S.finalEbook||S.ebookData; const author=S.author||'Ferni Guides'; const year=new Date().getFullYear();
+  const lang=S.approvedLang||o.idioma||o.language||'Español';
+  const isEs=lang==='Español'||lang==='Spanish'; const isFr=lang==='Français'||lang==='French'; const isDe=lang==='Deutsch'||lang==='German'; const isIt=lang==='Italiano'||lang==='Italian'; const isPt=lang==='Português'||lang==='Portuguese';
+  const byAuthor=isEs?'por':isFr?'par':isDe?'von':isIt?'di':isPt?'por':'by';
+  const lblIntro=isEs?'Introducción':isFr?'Introduction':isDe?'Einleitung':isIt?'Introduzione':isPt?'Introdução':'Introduction';
+  const lblConcl=isEs?'Conclusión':isFr?'Conclusion':isDe?'Fazit':isIt?'Conclusione':isPt?'Conclusão':'Conclusion';
   let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.9;font-size:14px;}.cover{background:linear-gradient(135deg,#1a1a6e,#6c5ce7);color:white;padding:50px 40px;text-align:center;margin-bottom:30px;page-break-after:always;border-radius:8px;}.cover h1{color:white;font-size:28px;margin-bottom:10px;}.cover .sub{color:rgba(255,255,255,0.85);font-style:italic;margin-bottom:16px;font-size:15px;}.cover .author{color:#fdcb6e;font-size:14px;font-weight:bold;}.cover .copyright{color:rgba(255,255,255,0.4);font-size:11px;margin-top:8px;}h2{color:#2d3180;border-left:4px solid #6c5ce7;padding-left:12px;margin-top:32px;}h3{color:#6c5ce7;margin-top:20px;}p{margin-bottom:14px;}.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:14px;font-style:italic;margin:14px 0;border-radius:0 8px 8px 0;}.exercise{background:#f0f8ff;border:1px solid #6c5ce7;border-radius:8px;padding:16px;margin-top:16px;}hr{border:1px solid #eee;margin:24px 0;}.disclaimer{font-size:11px;color:#999;font-style:italic;text-align:center;}</style></head><body>`;
-  html+=`<div class="cover"><h1>${eb.title||o.tituloEbook||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div><div class="author">par/by/von ${author}</div><div class="copyright">© ${year} ${author}</div></div>`;
-  html+=`<h2>Introduction</h2><p>${(eb.intro||'').replace(/\n\n/g,'</p><p>')}</p>`;
+  html+=`<div class="cover"><h1>${eb.title||o.tituloEbook||o.ebookTitle}</h1><div class="sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div><div class="author">${byAuthor} ${author}</div><div class="copyright">© ${year} ${author}</div></div>`;
+  html+=`<h2>${lblIntro}</h2><p>${(eb.intro||'').replace(/\n\n/g,'</p><p>')}</p>`;
   (eb.chapters||[]).forEach(c=>{ html+=`<h2>${c.title||''}</h2>`; if(c.opening)html+=`<div class="opening">${c.opening}</div>`; html+=`<p>${(c.content||'').replace(/\n\n/g,'</p><p>')}</p>`; if(c.exercise){html+=`<div class="exercise"><strong>${c.exercise.title||''}</strong><p>${c.exercise.description||''}</p>${(c.exercise.steps||[]).map((s,i)=>`<p>${i+1}. ${s}</p>`).join('')}</div>`;} });
-  html+=`<h2>Conclusion</h2><p>${(eb.conclusion||'').replace(/\n\n/g,'</p><p>')}</p>`;
+  html+=`<h2>${lblConcl}</h2><p>${(eb.conclusion||'').replace(/\n\n/g,'</p><p>')}</p>`;
   html+=`<hr><div class="disclaimer">${eb.disclaimer||''}</div></body></html>`;
   const blob=new Blob([html],{type:'application/msword'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
