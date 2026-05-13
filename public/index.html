@@ -842,6 +842,10 @@ async function goEbook(){
 
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
 
+    // Pre-seleccionar idioma del país en el selector
+    var langSel = document.getElementById('eb-lang-sel');
+    if(langSel && o.language) langSel.value = o.language;
+
     // Mostrar preview del PDF en pantalla
     var preview = document.getElementById('eb-draft-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
@@ -849,7 +853,7 @@ async function goEbook(){
     // Renderizar slots de imágenes
     renderImgSlots(ebook);
 
-    addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista presiona ✅ APROBAR para traducir al idioma del país y descargar.','ferni');
+    addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista elige el idioma abajo y presiona ✅ APROBAR.','ferni');
 
   }catch(e){
     hide('eb-loading'); show('eb-empty');
