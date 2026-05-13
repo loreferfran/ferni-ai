@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1251,35 +1251,35 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '</style></head><body>';
 
   // Variables de idioma — deben estar ANTES de cualquier uso
-  var isEs = (lang===’Español’||lang===’Spanish’||lang===’español’);
-  var isFr = lang===’French’||lang===’Français’;
-  var isDe = lang===’German’||lang===’Deutsch’;
-  var isIt = lang===’Italian’||lang===’Italiano’;
-  var isPt = lang===’Portuguese’||lang===’Português’;
+  var isEs = (lang==='Español'||lang==='Spanish'||lang==='español');
+  var isFr = lang==='French'||lang==='Français';
+  var isDe = lang==='German'||lang==='Deutsch';
+  var isIt = lang==='Italian'||lang==='Italiano';
+  var isPt = lang==='Portuguese'||lang==='Português';
 
   // PORTADA
-  html += ‘<div class="cover page-break">’;
+  html += '<div class="cover page-break">';
   if(coverUrl){
-    html += ‘<img class="cover-img" src="’ + coverUrl + ‘" alt="portada" onerror="this.style.display=\"none\"">’;
+    html += '<img class="cover-img" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\"none\"">';
   }
-  html += ‘<h1>’ + (eb.title||’’) + ‘</h1>’;
-  html += ‘<div class="subtitle">’ + (eb.subtitle||’’) + ‘</div>’;
-  if(eb.tagline) html += ‘<div class="tagline">’ + eb.tagline + ‘</div>’;
-  var authorPrefix = isEs?’por’:isFr?’par’:isDe?’von’:isIt?’di’:isPt?’por’:’by’;
-  html += ‘<div class="author-line">’ + authorPrefix + ‘ ‘ + author + ‘</div>’;
-  var lblRights = isEs?’Todos los derechos reservados’:isFr?’Tous droits réservés’:isDe?’Alle Rechte vorbehalten’:isIt?’Tutti i diritti riservati’:isPt?’Todos os direitos reservados’:’All rights reserved’;
-  html += ‘<div class="copyright">&copy; ‘ + year + ‘ ‘ + author + ‘ &middot; ‘ + lblRights + ‘</div>’;
-  html += ‘</div>’;
+  html += '<h1>' + (eb.title||'') + '</h1>';
+  html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
+  if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
+  var authorPrefix = isEs?'por':isFr?'par':isDe?'von':isIt?'di':isPt?'por':'by';
+  html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
+  var lblRights = isEs?'Todos los derechos reservados':isFr?'Tous droits réservés':isDe?'Alle Rechte vorbehalten':isIt?'Tutti i diritti riservati':isPt?'Todos os direitos reservados':'All rights reserved';
+  html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; ' + lblRights + '</div>';
+  html += '</div>';
 
   // ÍNDICE
-  var lblToc = isEs?’Índice de contenidos’:isFr?’Table des matières’:isDe?’Inhaltsverzeichnis’:isIt?’Indice dei contenuti’:isPt?’Índice’:’Table of Contents’;
-  var lblIntro = isEs?’Introducción’:isFr?’Introduction’:isDe?’Einleitung’:isIt?’Introduzione’:isPt?’Introdução’:’Introduction’;
-  var lblChap = isEs?’Capítulo’:isFr?’Chapitre’:isDe?’Kapitel’:isIt?’Capitolo’:isPt?’Capítulo’:’Chapter’;
-  var lblConcl = isEs?’Conclusión’:isFr?’Conclusion’:isDe?’Fazit’:isIt?’Conclusione’:isPt?’Conclusão’:’Conclusion’;
-  var lblPlan = isEs?’Plan de acción’:isFr?’Plan d\’action’:isDe?’Aktionsplan’:isIt?’Piano d\’azione’:isPt?’Plano de ação’:’Action Plan’;
-  var lblResources = isEs?’Recursos’:isFr?’Ressources’:isDe?’Ressourcen’:isIt?’Risorse’:isPt?’Recursos’:’Resources’;
-  html += ‘<div class="toc-page page-break">’;
-  html += ‘<div class="toc-title">’ + lblToc + ‘</div>’;
+  var lblToc = isEs?'Índice de contenidos':isFr?'Table des matières':isDe?'Inhaltsverzeichnis':isIt?'Indice dei contenuti':isPt?'Índice':'Table of Contents';
+  var lblIntro = isEs?'Introducción':isFr?'Introduction':isDe?'Einleitung':isIt?'Introduzione':isPt?'Introdução':'Introduction';
+  var lblChap = isEs?'Capítulo':isFr?'Chapitre':isDe?'Kapitel':isIt?'Capitolo':isPt?'Capítulo':'Chapter';
+  var lblConcl = isEs?'Conclusión':isFr?'Conclusion':isDe?'Fazit':isIt?'Conclusione':isPt?'Conclusão':'Conclusion';
+  var lblPlan = isEs?'Plan de acción':isFr?'Plan d\'action':isDe?'Aktionsplan':isIt?'Piano d\'azione':isPt?'Plano de ação':'Action Plan';
+  var lblResources = isEs?'Recursos':isFr?'Ressources':isDe?'Ressourcen':isIt?'Risorse':isPt?'Recursos':'Resources';
+  html += '<div class="toc-page page-break">';
+  html += '<div class="toc-title">' + lblToc + '</div>';
   
   html += '<div class="toc-item"><span class="toc-ch">' + lblIntro + '</span><span class="toc-pg">3</span></div>';
   (eb.chapters||[]).forEach(function(ch, i){
@@ -1534,8 +1534,8 @@ function buildPdfHtml(){
   var eb = S.finalEbook || S.ebookData;
   if(!eb) return null;
   var o = S.selOpp || {};
-  var lang = S.finalEbook ? (S.approvedLang || o.idioma || o.language || ‘Español’) : ‘Español’;
-  var countryName = getCountryNameFront(o.pais || o.country || ‘France’);
+  var lang = S.finalEbook ? (S.approvedLang || o.idioma || o.language || 'Español') : 'Español';
+  var countryName = getCountryNameFront(o.pais || o.country || 'France');
   return buildFinalPdfHtml(eb, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
 }
 
