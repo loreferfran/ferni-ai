@@ -306,7 +306,7 @@ select option { background: #1e2d52; }
               <div style="font-size:11px;color:var(--muted);">Haz clic en un slot para describir la imagen que quieres. DALL-E la generará y la insertará automáticamente en el PDF.</div>
             </div>
 
-            <div id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
+            <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div class="btn-row">
               <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR → Traducir al idioma del país</button>
               <button class="btn btn-s" onclick="regenEbook()">↺ Regenerar texto</button>
@@ -315,7 +315,7 @@ select option { background: #1e2d52; }
           <div id="eb-approved" class="hidden">
             <div class="row-hd"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">👇 Revisa el PDF final aquí. Pide correcciones en el chat de abajo antes de descargar.</div>
-            <div id="eb-final-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;max-height:600px;overflow-y:auto;"></div>
+            <iframe id="eb-final-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div class="btn-row" style="flex-wrap:wrap;gap:8px;">
               <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
               <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
@@ -735,7 +735,7 @@ async function goEbook(){
 
     // Mostrar preview del PDF en pantalla
     var preview = document.getElementById('eb-draft-preview');
-    if(preview) preview.innerHTML = S.pdfHtml;
+    if(preview) preview.srcdoc = S.pdfHtml;
 
     // Renderizar slots de imágenes
     renderImgSlots(ebook);
@@ -827,8 +827,8 @@ async function generateSlotImage(slotIndex, slotName, description){
     S.pdfHtml = buildFinalPdfHtml(ebook||{}, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
     var preview = document.getElementById('eb-draft-preview');
     var previewFinal = document.getElementById('eb-final-preview');
-    if(preview) preview.innerHTML = S.pdfHtml;
-    if(previewFinal && previewFinal.innerHTML) previewFinal.innerHTML = S.pdfHtml;
+    if(preview) preview.srcdoc = S.pdfHtml;
+    if(previewFinal && previewFinal.srcdoc) previewFinal.srcdoc = S.pdfHtml;
     renderImgSlots(ebook);
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     addMsg('chat-ebook', '✅ Imagen insertada en el PDF. ¿Quieres cambiarla o generar otra?', 'ferni');
@@ -938,7 +938,7 @@ async function approveEbook(){
 
     // Mostrar preview del PDF final
     var preview = document.getElementById('eb-final-preview');
-    if(preview) preview.innerHTML = S.pdfHtml;
+    if(preview) preview.srcdoc = S.pdfHtml;
 
     addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar. Revísalo arriba — si quieres algún ajuste escríbelo en el chat y presiona "Aplicar corrección". Cuando estés lista, descárgalo.', 'ferni');
 
@@ -1184,8 +1184,8 @@ async function sendCorrectionChat(){
       S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages);
       const previewDraft = document.getElementById('eb-draft-preview');
       const previewFinal = document.getElementById('eb-final-preview');
-      if(previewDraft) previewDraft.innerHTML = S.pdfHtml;
-      if(previewFinal) previewFinal.innerHTML = S.pdfHtml;
+      if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
+      if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
       if(S.currentHistId) saveFullDataToHist(S.currentHistId);
       addMsg('chat-ebook', '✅ PDF actualizado con la nueva imagen. ¿Algo más?', 'ferni');
 
@@ -1215,8 +1215,8 @@ async function sendCorrectionChat(){
       // Actualizar AMBOS previews
       const previewDraft = document.getElementById('eb-draft-preview');
       const previewFinal = document.getElementById('eb-final-preview');
-      if(previewDraft && previewDraft.innerHTML) previewDraft.innerHTML = S.pdfHtml;
-      if(previewFinal && previewFinal.innerHTML) previewFinal.innerHTML = S.pdfHtml;
+      if(previewDraft && previewDraft.srcdoc) previewDraft.srcdoc = S.pdfHtml;
+      if(previewFinal && previewFinal.srcdoc) previewFinal.srcdoc = S.pdfHtml;
       // Forzar refresh del preview visible
       var activePreview = document.querySelector('#eb-content:not(.hidden) #eb-draft-preview, #eb-approved:not(.hidden) #eb-final-preview');
       if(activePreview) activePreview.innerHTML = S.pdfHtml;
@@ -1251,7 +1251,7 @@ async function applyFinalCorrection(){
       S.finalEbook = d.ebook;
       S.pdfHtml = buildPdfHtml();
       const preview = document.getElementById('eb-final-preview');
-      if(preview) preview.innerHTML = S.pdfHtml;
+      if(preview) preview.srcdoc = S.pdfHtml;
       if(S.currentHistId) saveFullDataToHist(S.currentHistId);
       addMsg('chat-ebook', '✅ ¡Listo! Corrección aplicada. Revisa el PDF actualizado arriba. ¿Algo más que cambiar?', 'ferni');
     } else {
