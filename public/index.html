@@ -717,10 +717,13 @@ async function goEbook(){
     };
     S.ebookData = ebook;
 
-    // PASO 2: Preparar slots de imágenes vacíos
+    // PASO 2: Preparar slots de imágenes vacíos (extendidos si nicho visual)
     const countryName = getCountryNameFront(o.pais||o.country||'France');
     S.coverUrl = null;
-    S.chapterImages = new Array((ebook.chapters||[]).length).fill(null);
+    var numChapters = (ebook.chapters||[]).length;
+    var visual = isVisualNiche(o);
+    // visual: portada + 4 caps + conclusión + antes/después = 6 extras (índices 4=conclusión, 5=antes/después)
+    S.chapterImages = new Array(visual ? numChapters + 2 : numChapters).fill(null);
 
     // PASO 3: Construir PDF en español y mostrar preview
     document.getElementById('eb-load-txt').textContent='Construyendo PDF...';
@@ -748,6 +751,17 @@ async function goEbook(){
   }
 }
 
+// Detecta si el nicho es visual/práctico (jardín, cocina, fitness...) o teórico (idiomas, finanzas...)
+function isVisualNiche(o){
+  var text = ((o.problema||'')+(o.problem||'')+(o.niche||'')+(o.nicho||'')).toLowerCase();
+  var theoretical = ['idioma','language','lengua','ingles','frances','aleman','italiano','japones','chino','programacion','codigo','finanza','inversion','trading','bolsa','cripto','psicolog','filosofia','historia','matematica','contabilidad','marketing digital','copywriting','seo','email'];
+  for(var i=0;i<theoretical.length;i++){ if(text.indexOf(theoretical[i])!==-1) return false; }
+  var visual = ['jardin','garden','cocin','receta','fitness','yoga','pilates','ejercicio','deporte','deco','manualid','craft','pintura','paint','costura','sew','tejido','knit','huerto','planta','plant','flor','flower','maquilla','makeup','uña','nail','cabello','hair','ropa','fashion','foto','video','arte','art','baile','dance','construc','reform','bricolaje','madera','metal','ceramica','pottery','escultura'];
+  for(var j=0;j<visual.length;j++){ if(text.indexOf(visual[j])!==-1) return true; }
+  var tipoDemanda = (o.tipoDemanda||'').toLowerCase();
+  return tipoDemanda.indexOf('transform')!==-1 || tipoDemanda.indexOf('crear')!==-1 || tipoDemanda.indexOf('hacer')!==-1;
+}
+
 // Renderizar slots de imágenes clickeables
 function renderImgSlots(ebook){
   var slots = document.getElementById('img-slots');
@@ -771,7 +785,24 @@ function renderImgSlots(ebook){
     html += '<div class="img-slot" data-slot="'+i+'" data-name="Cap '+(i+1)+': '+chName.slice(0,15)+'" style="cursor:pointer;border:2px dashed rgba(0,184,148,0.4);border-radius:8px;overflow:hidden;">' +
       imgHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Cap. '+(i+1)+': '+chName.slice(0,20)+'</div></div>';
   });
-  
+
+  // Slots extra para nichos visuales/prácticos
+  var o = S.selOpp || {};
+  if(isVisualNiche(o)){
+    var nChaps = chapters.length;
+    var conclHtml = (S.chapterImages && S.chapterImages[nChaps])
+      ? '<img src="'+S.chapterImages[nChaps]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#e17055,#d63031);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🏆</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
+    html += '<div class="img-slot" data-slot="'+nChaps+'" data-name="Conclusión resultado final" style="cursor:pointer;border:2px dashed rgba(225,112,85,0.4);border-radius:8px;overflow:hidden;">' +
+      conclHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Conclusión / Resultado</div></div>';
+
+    var baHtml = (S.chapterImages && S.chapterImages[nChaps+1])
+      ? '<img src="'+S.chapterImages[nChaps+1]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#fdcb6e,#e67e22);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">✨</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
+    html += '<div class="img-slot" data-slot="'+(nChaps+1)+'" data-name="Antes y Después - transformación" style="cursor:pointer;border:2px dashed rgba(253,203,110,0.6);border-radius:8px;overflow:hidden;">' +
+      baHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Antes → Después</div></div>';
+  }
+
   slots.innerHTML = html;
   // Event delegation para los slots
   slots.onclick = function(e){
@@ -1071,12 +1102,26 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   });
 
   // CONCLUSIÓN Y PLAN DE ACCIÓN
+  var nChaps = (eb.chapters||[]).length;
+  var visualNiche = isVisualNiche(o);
   html += '<div class="conclusion-section page-break">';
   html += '<h2>' + lblConcl + '</h2>';
+  // Imagen de conclusión (slot 4, nichos visuales)
+  if(visualNiche && chapterImages[nChaps]){
+    html += '<img class="chapter-img" src="' + chapterImages[nChaps] + '" alt="resultado final" onerror="this.style.display=\'none\'">';
+  }
   html += '<p>' + (eb.conclusion||'').replace(/\n\n/g,'</p><p>').replace(/\n/g,' ') + '</p>';
   if(eb.actionPlan&&eb.actionPlan.length){
     html += '<div class="action-plan"><h2>' + lblPlan + '</h2>';
     eb.actionPlan.forEach(function(a,i){ html += '<div class="action-item"><div class="anum">'+(i+1)+'</div><div>'+a+'</div></div>'; });
+    html += '</div>';
+  }
+  // Sección Antes / Después (solo nichos visuales, slot 5)
+  if(visualNiche && chapterImages[nChaps+1]){
+    var lblBA = isEs?'Antes y Después: Tu Transformación':isFr?'Avant et Après':isDe?'Vorher und Nachher':isIt?'Prima e Dopo':isPt?'Antes e Depois':'Before & After';
+    html += '<div style="margin:24px 0;border:2px solid #fdcb6e;border-radius:12px;padding:20px;background:#fffbf0;">';
+    html += '<h2 style="color:#e67e22;margin-bottom:12px;">✨ ' + lblBA + '</h2>';
+    html += '<img style="width:100%;max-height:300px;object-fit:cover;border-radius:8px;" src="' + chapterImages[nChaps+1] + '" alt="antes y despues" onerror="this.style.display=\'none\'">';
     html += '</div>';
   }
   if(eb.resources&&eb.resources.length){
