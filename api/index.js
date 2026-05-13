@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const path = require('path');
+let googleTrends; try { googleTrends = require('google-trends-api'); } catch(e) { googleTrends = null; }
 
 const app = express();
 app.use(cors());
@@ -90,6 +91,55 @@ function getCountryContext(country) {
 function getRegs(country) { return REGS[country] || REGS.France; }
 
 // Genera queries de busqueda inteligentes basadas en el pais, nicho e idioma
+const GEO_CODES = {
+  'France':'FR','Germany':'DE','Italy':'IT','Spain':'ES','Portugal':'PT',
+  'United Kingdom':'GB','Netherlands':'NL','Belgium':'BE','Sweden':'SE',
+  'Switzerland':'CH','Austria':'AT','Poland':'PL','USA':'US','Canada':'CA',
+  'Japan':'JP','South Korea':'KR','India':'IN','China':'CN','Singapore':'SG',
+  'Thailand':'TH','South Africa':'ZA','Nigeria':'NG','Kenya':'KE','UAE':'AE',
+  'Australia':'AU','New Zealand':'NZ'
+};
+
+async function getRealTrends(keyword, country) {
+  if (!googleTrends) return [];
+  const geo = GEO_CODES[country] || 'FR';
+  const results = [];
+  try {
+    // Interés a lo largo del tiempo (últimos 3 meses)
+    const raw1 = await googleTrends.interestOverTime({ keyword, startTime: new Date(Date.now() - 90*24*60*60*1000), geo });
+    const d1 = JSON.parse(raw1);
+    const points = (d1.default && d1.default.timelineData) || [];
+    if (points.length) {
+      const values = points.map(function(p){ return p.value[0]; });
+      const avg = Math.round(values.reduce(function(a,b){return a+b;},0)/values.length);
+      const last = values[values.length-1];
+      const trend = last > avg ? 'subiendo' : last < avg ? 'bajando' : 'estable';
+      results.push({ title: 'Google Trends: ' + keyword, snippet: 'Score actual: ' + last + '/100. Promedio 3 meses: ' + avg + '/100. Tendencia: ' + trend + ' en ' + country, source: 'trends_real', query: keyword });
+    }
+  } catch(e) {}
+  try {
+    // Búsquedas relacionadas en alza (las más valiosas — "breakout" = +5000%)
+    const raw2 = await googleTrends.relatedQueries({ keyword, geo });
+    const d2 = JSON.parse(raw2);
+    const rising = (d2.default && d2.default.rankedList && d2.default.rankedList[1] && d2.default.rankedList[1].rankedKeyword) || [];
+    rising.slice(0, 6).forEach(function(item) {
+      var growth = item.value === 'Breakout' ? '+5000% BREAKOUT' : '+' + item.value + '%';
+      results.push({ title: 'Trending: ' + item.query, snippet: 'Búsqueda en alza: ' + growth + ' en ' + country + '. Alta demanda emergente.', source: 'trends_rising', query: item.query });
+    });
+  } catch(e) {}
+  try {
+    // Temas relacionados en alza
+    const raw3 = await googleTrends.relatedTopics({ keyword, geo });
+    const d3 = JSON.parse(raw3);
+    const risingTopics = (d3.default && d3.default.rankedList && d3.default.rankedList[1] && d3.default.rankedList[1].rankedKeyword) || [];
+    risingTopics.slice(0, 4).forEach(function(item) {
+      var growth = item.value === 'Breakout' ? '+5000% BREAKOUT' : '+' + item.value + '%';
+      results.push({ title: 'Tema en alza: ' + item.topic.title, snippet: 'Crecimiento: ' + growth + ' en ' + country + '. Tipo: ' + item.topic.type, source: 'trends_topics', query: item.topic.title });
+    });
+  } catch(e) {}
+  return results;
+}
+
 function buildSmartQueries(country, niche, language) {
   const isGeneral = !niche || niche.trim() === '' || niche === 'general' || niche === 'salud bienestar';
   const topic = isGeneral ? '' : niche;
@@ -111,18 +161,35 @@ function buildSmartQueries(country, niche, language) {
   const pfx = prefixes[lang] || prefixes['English'];
   const queries = [];
 
+  // Queries de intención de aprendizaje por idioma
+  const learnPfx = {
+    French: ['apprendre à faire', 'comment apprendre', 'apprendre facilement', 'tutoriel débutant', 'je veux apprendre', 'formation rapide'],
+    German: ['lernen wie man', 'einfach lernen', 'tutorial für anfänger', 'ich möchte lernen', 'schnell lernen'],
+    Italian: ['imparare a fare', 'come imparare', 'imparare facilmente', 'tutorial principianti', 'voglio imparare'],
+    Spanish: ['aprender a hacer', 'cómo aprender', 'aprender fácilmente', 'tutorial principiantes', 'quiero aprender', 'aprender desde cero'],
+    Portuguese: ['aprender a fazer', 'como aprender', 'aprender facilmente', 'tutorial iniciantes', 'quero aprender'],
+    English: ['learn how to', 'how to learn', 'learn easily', 'beginner tutorial', 'I want to learn', 'learn from scratch'],
+    Dutch: ['leren hoe', 'hoe leer je', 'makkelijk leren', 'tutorial beginners'],
+    Swedish: ['lära sig hur', 'hur lär man sig', 'lätt att lära', 'nybörjare tutorial'],
+    Polish: ['nauczyć się jak', 'jak się nauczyć', 'łatwo się nauczyć', 'kurs dla początkujących']
+  };
+  const lpfx = learnPfx[lang] || learnPfx['English'];
+
   if (topic) {
     // Con nicho especifico - busca como busca la gente real en su idioma
-    pfx.slice(0, 10).forEach(function(p) {
+    pfx.slice(0, 8).forEach(function(p) {
+      queries.push(p + ' ' + topic + ' ' + country);
+    });
+    // Intención de aprendizaje (lo que quiere APRENDER la gente)
+    lpfx.slice(0, 4).forEach(function(p) {
       queries.push(p + ' ' + topic + ' ' + country);
     });
     // Busquedas en foros y plataformas
-    queries.push(topic + ' forum ' + country + ' aide aide');
+    queries.push(topic + ' forum ' + country);
     queries.push(topic + ' reddit ' + country);
     queries.push('amazon bestseller ' + topic + ' ' + country);
-    queries.push(topic + ' youtube ' + country + ' tutoriel');
-    queries.push(topic + ' questions frequentes ' + country);
-    queries.push(topic + ' debutant ' + country + ' conseil');
+    queries.push(topic + ' youtube ' + country);
+    queries.push(topic + ' preguntas frecuentes ' + country);
   } else {
     // Modo general - busca tendencias de alta demanda en el pais
     const generalQueries = {
@@ -355,12 +422,16 @@ async function searchWithSerper(country, niche, language) {
     r.forEach(function(x) { allResults.push(x); });
   }
 
-  // 2. Google Trends PREMIUM (múltiples búsquedas para tendencias reales)
-  const trends1 = await serperTrends(topic, country);
-  const trends2 = await serperTrends(topic + ' futuro 2025', country);
-  const trends3 = await serperTrends(topic + ' tendencias emergentes', country);
-  const allTrends = [...trends1, ...trends2, ...trends3];
-  allTrends.forEach(function(x) { allResults.push(x); });
+  // 2. Google Trends REAL (con fallback a Serper si Google bloquea)
+  const realTrends = await getRealTrends(topic, country);
+  if (realTrends.length > 0) {
+    realTrends.forEach(function(x) { allResults.push(x); });
+  } else {
+    // Fallback: Serper trends si Google Trends no responde
+    const trends1 = await serperTrends(topic, country);
+    const trends2 = await serperTrends(topic + ' tendencias emergentes', country);
+    [...trends1, ...trends2].forEach(function(x) { allResults.push(x); });
+  }
 
   // 3. Reddit (comunidad real, problemas reales)
   var redditResults = await serperReddit(topic, country, language);
