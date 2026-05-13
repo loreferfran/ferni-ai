@@ -12,6 +12,8 @@ app.use(express.static(path.join(__dirname, '../public')));
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const SERPER_KEY = process.env.SERPER_API_KEY;
 const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
+const DATAFORSEO_LOGIN = process.env.DATAFORSEO_LOGIN;
+const DATAFORSEO_PASSWORD = process.env.DATAFORSEO_PASSWORD;
 
 const REGS = {
   France: { legal: 'RGPD, Loi Hamon garantie 14 jours, Directive UE 2011/83', healthDisclaimer: 'Ce guide est fourni a titre informatif uniquement et ne remplace pas lavis dun professionnel de sante.', guarantee: 'Garantie satisfait ou rembourse 14 jours', dataProtection: 'Donnees protegees conformement au RGPD.', forbidden: 'Pas de promesses de resultats garantis en sante.', language: 'French', currency: 'EUR' },
@@ -174,6 +176,68 @@ function translateNiche(niche, language) {
     }
   }
   return niche; // Si no hay traducción, usar tal cual (muchos términos funcionan en inglés)
+}
+
+// DataForSEO — volumen real de búsquedas por país
+const DFS_LOCATION_CODES = {
+  'France':2250,'Germany':2276,'Italy':2380,'Spain':2724,'Portugal':2620,
+  'United Kingdom':2826,'Netherlands':2528,'Belgium':2056,'Sweden':2752,
+  'Switzerland':2756,'Austria':2040,'Poland':2616,'USA':2840,'Canada':2124,
+  'Japan':2392,'South Korea':2410,'India':2356,'China':2156,'Singapore':2702,
+  'Thailand':2764,'South Africa':2710,'Nigeria':2566,'Kenya':2404,'UAE':2784,
+  'Australia':2036,'New Zealand':2554
+};
+
+const DFS_LANG_CODES = {
+  French:'fr',German:'de',Italian:'it',Spanish:'es',Portuguese:'pt',
+  English:'en',Dutch:'nl',Swedish:'sv',Polish:'pl',Japanese:'ja',
+  Korean:'ko',Hindi:'hi',Arabic:'ar',Chinese:'zh-CN',Thai:'th'
+};
+
+function buildSeedKeywords(niche, language) {
+  if (!niche || niche === 'general') return [];
+  var topic = translateNiche(niche, language);
+  var seeds = [topic];
+  // Palabras individuales del tema si es multi-palabra
+  topic.split(' ').forEach(function(w){ if (w.length > 3) seeds.push(w); });
+  // Variantes de intención
+  var pfxMap = { French:'comment apprendre ',German:'wie lernt man ',Italian:'come imparare ',
+    Spanish:'como aprender ',Portuguese:'como aprender ',English:'how to learn ',
+    Dutch:'hoe leer je ',Swedish:'hur lär man sig ',Polish:'jak nauczyć się ' };
+  var sfxMap = { French:' débutant',German:' für Anfänger',Italian:' per principianti',
+    Spanish:' principiantes',Portuguese:' iniciantes',English:' for beginners',
+    Dutch:' beginners',Swedish:' för nybörjare',Polish:' dla początkujących' };
+  var pfx = pfxMap[language] || pfxMap.English;
+  var sfx = sfxMap[language] || sfxMap.English;
+  seeds.push(pfx + topic);
+  seeds.push(topic + sfx);
+  seeds.push(topic + ' pdf');
+  seeds.push(topic + ' guide');
+  // Deduplicar y limitar
+  return seeds.filter(function(s,i,arr){ return s && arr.indexOf(s)===i; }).slice(0, 15);
+}
+
+async function getDataForSEOVolumes(keywords, country, language) {
+  if (!DATAFORSEO_LOGIN || !DATAFORSEO_PASSWORD || !keywords.length) return [];
+  try {
+    var auth = Buffer.from(DATAFORSEO_LOGIN + ':' + DATAFORSEO_PASSWORD).toString('base64');
+    var locationCode = DFS_LOCATION_CODES[country] || 2250;
+    var languageCode = DFS_LANG_CODES[language] || 'en';
+    var resp = await fetch('https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live', {
+      method: 'POST',
+      headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ keywords: keywords.slice(0,20), location_code: locationCode, language_code: languageCode }])
+    });
+    if (!resp.ok) return [];
+    var data = await resp.json();
+    if (!data.tasks || !data.tasks[0] || !data.tasks[0].result) return [];
+    return data.tasks[0].result.map(function(item) {
+      return { keyword: item.keyword, searchVolume: item.search_volume||0, cpc: item.cpc||0, competition: item.competition||0 };
+    }).filter(function(k){ return k.searchVolume > 0; }).sort(function(a,b){ return b.searchVolume - a.searchVolume; });
+  } catch (e) {
+    console.error('DataForSEO error:', e.message);
+    return [];
+  }
 }
 
 function buildSmartQueries(country, niche, language) {
@@ -487,7 +551,7 @@ async function searchWithSerper(country, niche, language) {
   return allResults;
 }
 
-async function analyzeWithGPT4(results, country, niche, language) {
+async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
   const pop = POPULATION[country] || '50 millones total, 40 millones adultos';
   const isGeneral = !niche || niche === 'general' || niche === 'salud bienestar';
 
@@ -555,6 +619,19 @@ async function analyzeWithGPT4(results, country, niche, language) {
     'NICHO: ' + (niche || 'general') + '\n' +
     'IDIOMA: ' + language + '\n\n';
 
+  // DataForSEO — volumen real de búsquedas (va al principio para que GPT-4o lo priorice)
+  if (dfsVolumes && dfsVolumes.length > 0) {
+    userMsg += '=== VOLUMEN REAL DE BÚSQUEDAS (DataForSEO / Google Ads) ===\n' +
+      'Datos reales mensuales en ' + country + ' (' + language + '):\n' +
+      dfsVolumes.map(function(kw) {
+        var vol = kw.searchVolume.toLocaleString() + ' búsquedas/mes';
+        var cpc = kw.cpc > 0 ? ' | CPC: $' + kw.cpc.toFixed(2) : '';
+        var comp = kw.competition > 0 ? ' | Competencia: ' + Math.round(kw.competition * 100) + '%' : '';
+        return '• "' + kw.keyword + '": ' + vol + cpc + comp;
+      }).join('\n') + '\n' +
+      'REGLA: usa estos números reales en volumenEstimado. >10.000/mes=alto, 1.000-10.000=medio, <1.000=bajo.\n\n';
+  }
+
   if (trendsResults.length) {
     userMsg += '=== TENDENCIAS RECIENTES (ultimo mes) ===\n' +
       trendsResults.map(function(r){ return '- ' + r.title + ': ' + r.snippet; }).join('\n') + '\n\n';
@@ -595,9 +672,15 @@ app.post('/api/search', async function(req, res) {
     var country = req.body.country;
     var niche = req.body.niche;
     var language = req.body.language;
-    var serperResults = await searchWithSerper(country, niche, language);
-    var opportunities = await analyzeWithGPT4(serperResults, country, niche, language);
-    res.json({ success: true, opportunities: opportunities, searchCount: serperResults.length });
+    var seedKws = buildSeedKeywords(niche, language);
+    var results = await Promise.all([
+      searchWithSerper(country, niche, language),
+      getDataForSEOVolumes(seedKws, country, language)
+    ]);
+    var serperResults = results[0];
+    var dfsVolumes = results[1];
+    var opportunities = await analyzeWithGPT4(serperResults, country, niche, language, dfsVolumes);
+    res.json({ success: true, opportunities: opportunities, searchCount: serperResults.length, dfsKeywords: dfsVolumes.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
