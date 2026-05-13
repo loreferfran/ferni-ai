@@ -1131,7 +1131,7 @@ async function approveEbook(){
 
 
 function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
-  var author = S.author || 'Antonieta';
+  var author = S.author || 'Ferni Guides';
   var year = new Date().getFullYear();
   var pageNum = 0;
 
@@ -1542,7 +1542,7 @@ function dlPDF(){
   if(!S.pdfHtml) S.pdfHtml = buildPdfHtml();
   var html = S.pdfHtml;
   var o = S.selOpp || {};
-  var author = S.author || 'Antonieta';
+  var author = S.author || 'Ferni Guides';
   var year = new Date().getFullYear();
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
   var filename = 'FERNI_PDF_'+(o.country||'ebook')+'_'+author+'_'+year+'.html';
