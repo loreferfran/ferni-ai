@@ -242,112 +242,150 @@ async function getDataForSEOVolumes(keywords, country, language) {
 
 function buildSmartQueries(country, niche, language) {
   const isGeneral = !niche || niche.trim() === '' || niche === 'general' || niche === 'salud bienestar';
-  // Traducir el nicho al idioma del país para que las búsquedas sean efectivas
   const topic = isGeneral ? '' : translateNiche(niche, language);
+  const lang = language || 'French';
 
-  // Prefijos en el idioma del pais para buscar como busca la gente real
+  // ── Prefijos de intención principal (cómo busca la gente real en su idioma) ──
   const prefixes = {
-    French: ['comment', 'comment faire', 'comment apprendre', 'guide pour', 'etapes pour', 'cours de', 'manuel de', 'idees de', 'problemes avec', 'erreurs de', 'meilleure facon de', 'debutant', 'depuis zero', 'pdf', 'tutoriel'],
-    German: ['wie', 'wie macht man', 'wie lernt man', 'anleitung fuer', 'schritt fuer schritt', 'kurs fuer', 'handbuch fuer', 'ideen fuer', 'probleme mit', 'fehler bei', 'beste art zu', 'anfaenger', 'von null', 'pdf', 'ratgeber'],
-    Italian: ['come', 'come fare', 'come imparare', 'guida per', 'passo dopo passo', 'corso di', 'manuale di', 'idee per', 'problemi con', 'errori nel', 'modo migliore per', 'principianti', 'da zero', 'pdf', 'tutorial'],
-    Spanish: ['como', 'como hacer', 'como aprender', 'guia para', 'paso a paso', 'curso de', 'manual de', 'ideas de', 'problemas con', 'errores al', 'mejor forma de', 'principiantes', 'desde cero', 'pdf', 'plantilla'],
-    Portuguese: ['como', 'como fazer', 'como aprender', 'guia para', 'passo a passo', 'curso de', 'manual de', 'ideias de', 'problemas com', 'erros ao', 'melhor forma de', 'iniciantes', 'do zero', 'pdf', 'tutorial'],
-    English: ['how to', 'how to make', 'how to learn', 'guide for', 'step by step', 'course for', 'manual for', 'ideas for', 'problems with', 'mistakes when', 'best way to', 'beginners', 'from scratch', 'pdf', 'template'],
-    Dutch: ['hoe', 'hoe maak je', 'hoe leer je', 'gids voor', 'stap voor stap', 'cursus voor', 'handleiding voor', 'ideeen voor', 'problemen met', 'fouten bij', 'beste manier om', 'beginners', 'van nul', 'pdf', 'sjabloon'],
-    Swedish: ['hur', 'hur man gor', 'hur man larer sig', 'guide for', 'steg for steg', 'kurs i', 'handbok for', 'ideer for', 'problem med', 'misstag nar', 'basta sattet att', 'nyborjare', 'fran noll', 'pdf', 'mall'],
-    Polish: ['jak', 'jak zrobic', 'jak nauczyc sie', 'przewodnik po', 'krok po kroku', 'kurs', 'poradnik', 'pomysly na', 'problemy z', 'bledy przy', 'najlepszy sposob', 'dla poczatkujacych', 'od zera', 'pdf', 'szablon']
+    French:     ['comment faire', 'comment apprendre', 'guide pour', 'etapes pour', 'tutoriel', 'erreurs de', 'meilleure facon de', 'aide pour', 'conseils pour', 'debutant', 'methode facile', 'resultats rapides', 'depuis chez soi', 'sans experience', 'checklist', 'pdf', 'modele'],
+    German:     ['wie macht man', 'wie lernt man', 'anleitung fuer', 'schritt fuer schritt', 'tutorial', 'fehler bei', 'beste art zu', 'hilfe bei', 'tipps fuer', 'anfaenger', 'einfache methode', 'schnelle ergebnisse', 'von zu hause', 'ohne erfahrung', 'checkliste', 'pdf', 'ratgeber'],
+    Italian:    ['come fare', 'come imparare', 'guida per', 'passo dopo passo', 'tutorial', 'errori nel', 'modo migliore per', 'aiuto per', 'consigli per', 'principianti', 'metodo facile', 'risultati veloci', 'da casa', 'senza esperienza', 'checklist', 'pdf', 'modello'],
+    Spanish:    ['como hacer', 'como aprender', 'guia para', 'paso a paso', 'tutorial', 'errores al', 'mejor forma de', 'ayuda con', 'consejos para', 'principiantes', 'metodo facil', 'resultados rapidos', 'desde casa', 'sin experiencia', 'checklist', 'pdf', 'plantilla'],
+    Portuguese: ['como fazer', 'como aprender', 'guia para', 'passo a passo', 'tutorial', 'erros ao', 'melhor forma de', 'ajuda com', 'dicas para', 'iniciantes', 'metodo facil', 'resultados rapidos', 'de casa', 'sem experiencia', 'checklist', 'pdf', 'modelo'],
+    English:    ['how to', 'how to learn', 'guide for', 'step by step', 'tutorial', 'mistakes when', 'best way to', 'help with', 'tips for', 'beginners', 'easy method', 'fast results', 'from home', 'without experience', 'checklist', 'pdf', 'template'],
+    Dutch:      ['hoe maak je', 'hoe leer je', 'gids voor', 'stap voor stap', 'tutorial', 'fouten bij', 'beste manier om', 'hulp bij', 'tips voor', 'beginners', 'gemakkelijke methode', 'snelle resultaten', 'thuis', 'zonder ervaring', 'checklist', 'pdf', 'sjabloon'],
+    Swedish:    ['hur man gor', 'hur man larer sig', 'guide for', 'steg for steg', 'tutorial', 'misstag nar', 'basta sattet att', 'hjalp med', 'tips for', 'nyborjare', 'enkel metod', 'snabba resultat', 'hemma', 'utan erfarenhet', 'checklista', 'pdf', 'mall'],
+    Polish:     ['jak zrobic', 'jak nauczyc sie', 'przewodnik po', 'krok po kroku', 'tutorial', 'bledy przy', 'najlepszy sposob', 'pomoc z', 'wskazowki dla', 'dla poczatkujacych', 'prosta metoda', 'szybkie wyniki', 'w domu', 'bez doswiadczenia', 'lista kontrolna', 'pdf', 'szablon']
   };
 
-  const lang = language || 'French';
+  // ── Prefijos de intención de aprendizaje profunda ──
+  const learnPfx = {
+    French:     ['apprendre a faire', 'apprendre facilement', 'tutoriel debutant', 'je veux apprendre', 'formation rapide', 'cours gratuit'],
+    German:     ['lernen wie man', 'einfach lernen', 'tutorial fuer anfaenger', 'ich moechte lernen', 'schnell lernen', 'kostenloser kurs'],
+    Italian:    ['imparare a fare', 'imparare facilmente', 'tutorial principianti', 'voglio imparare', 'corso gratuito'],
+    Spanish:    ['aprender a hacer', 'aprender facilmente', 'tutorial principiantes', 'quiero aprender', 'aprender desde cero', 'curso gratis'],
+    Portuguese: ['aprender a fazer', 'aprender facilmente', 'tutorial iniciantes', 'quero aprender', 'aprender do zero', 'curso gratuito'],
+    English:    ['learn how to', 'learn easily', 'beginner tutorial', 'I want to learn', 'learn from scratch', 'free course'],
+    Dutch:      ['leren hoe', 'makkelijk leren', 'tutorial beginners', 'gratis cursus'],
+    Swedish:    ['lara sig hur', 'latt att lara', 'nybörjare tutorial', 'gratis kurs'],
+    Polish:     ['nauczyc sie jak', 'latwo sie nauczyc', 'kurs dla poczatkujacych', 'darmowy kurs']
+  };
+
+  // ── Sufijos de intención de compra/deseo (se pegan al final del topic) ──
+  const desireSfx = {
+    French:     [' resultats en 7 jours', ' methode efficace', ' sans echouer', ' idees creatives', ' inspiration'],
+    German:     [' Ergebnisse in 7 Tagen', ' effektive Methode', ' ohne Fehler', ' kreative Ideen', ' Inspiration'],
+    Italian:    [' risultati in 7 giorni', ' metodo efficace', ' senza fallire', ' idee creative', ' ispirazione'],
+    Spanish:    [' resultados en 7 dias', ' metodo efectivo', ' sin fallar', ' ideas creativas', ' inspiracion'],
+    Portuguese: [' resultados em 7 dias', ' metodo eficaz', ' sem falhar', ' ideias criativas', ' inspiracao'],
+    English:    [' results in 7 days', ' effective method', ' without failing', ' creative ideas', ' inspiration'],
+    Dutch:      [' resultaten in 7 dagen', ' effectieve methode', ' zonder mislukken', ' creatieve ideeen'],
+    Swedish:    [' resultat pa 7 dagar', ' effektiv metod', ' utan att misslyckas', ' kreativa ideer'],
+    Polish:     [' wyniki w 7 dni', ' skuteczna metoda', ' bez porazki', ' kreatywne pomysly']
+  };
+
   const pfx = prefixes[lang] || prefixes['English'];
+  const lpfx = learnPfx[lang] || learnPfx['English'];
+  const dsfx = desireSfx[lang] || desireSfx['English'];
   const queries = [];
 
-  // Queries de intención de aprendizaje por idioma
-  const learnPfx = {
-    French: ['apprendre à faire', 'comment apprendre', 'apprendre facilement', 'tutoriel débutant', 'je veux apprendre', 'formation rapide'],
-    German: ['lernen wie man', 'einfach lernen', 'tutorial für anfänger', 'ich möchte lernen', 'schnell lernen'],
-    Italian: ['imparare a fare', 'come imparare', 'imparare facilmente', 'tutorial principianti', 'voglio imparare'],
-    Spanish: ['aprender a hacer', 'cómo aprender', 'aprender fácilmente', 'tutorial principiantes', 'quiero aprender', 'aprender desde cero'],
-    Portuguese: ['aprender a fazer', 'como aprender', 'aprender facilmente', 'tutorial iniciantes', 'quero aprender'],
-    English: ['learn how to', 'how to learn', 'learn easily', 'beginner tutorial', 'I want to learn', 'learn from scratch'],
-    Dutch: ['leren hoe', 'hoe leer je', 'makkelijk leren', 'tutorial beginners'],
-    Swedish: ['lära sig hur', 'hur lär man sig', 'lätt att lära', 'nybörjare tutorial'],
-    Polish: ['nauczyć się jak', 'jak się nauczyć', 'łatwo się nauczyć', 'kurs dla początkujących']
-  };
-  const lpfx = learnPfx[lang] || learnPfx['English'];
-
   if (topic) {
-    // Con nicho especifico - busca como busca la gente real en su idioma
-    pfx.slice(0, 8).forEach(function(p) {
-      queries.push(p + ' ' + topic + ' ' + country);
-    });
-    // Intención de aprendizaje (lo que quiere APRENDER la gente)
-    lpfx.slice(0, 4).forEach(function(p) {
-      queries.push(p + ' ' + topic + ' ' + country);
-    });
-    // Viralidad y repetición
-    queries.push(topic + ' viral tiktok youtube ' + country + ' 2025');
-    queries.push(topic + ' tendencia 2025 ' + country + ' que busca la gente');
-    queries.push('como ahorrar tiempo ' + topic + ' ' + country);
-    // Foros y plataformas
-    queries.push(topic + ' reddit ' + country);
+    // BLOQUE 1 — Intención principal (cómo, guía, errores, sin experiencia, checklist...)
+    pfx.slice(0, 10).forEach(function(p) { queries.push(p + ' ' + topic + ' ' + country); });
+
+    // BLOQUE 2 — Intención de aprendizaje (quiero aprender, desde cero, curso...)
+    lpfx.slice(0, 4).forEach(function(p) { queries.push(p + ' ' + topic + ' ' + country); });
+
+    // BLOQUE 3 — Deseos y resultados (resultados en 7 días, ideas creativas...)
+    dsfx.slice(0, 3).forEach(function(sfx) { queries.push(topic + sfx + ' ' + country); });
+
+    // BLOQUE 4 — Plataformas con alta señal de demanda real
+    queries.push('site:reddit.com ' + topic + ' ' + country + ' help question');
+    queries.push('site:quora.com ' + topic + ' ' + country);
+    queries.push(topic + ' tiktok viral ' + country + ' 2025');
+    queries.push(topic + ' pinterest ideas ' + country);
+    queries.push(topic + ' udemy hotmart curso ' + country);
     queries.push('amazon bestseller ' + topic + ' ' + country);
     queries.push(topic + ' youtube tutorial mas visto ' + country);
+    queries.push(topic + ' forum preguntas frecuentes ' + country);
+
   } else {
-    // Modo general - busca tendencias de alta demanda en el pais
+    // MODO GENERAL — busca tendencias de alta demanda en el país
     const generalQueries = {
       French: [
-        'tendances numeriques France 2024 quoi apprendre',
+        'tendances 2025 quoi apprendre en ligne France',
         'site:doctissimo.fr probleme courant solution',
-        'site:aufeminin.com conseil pratique quotidien',
-        'comment resoudre probleme courant France forum',
-        'quoi apprendre en ligne France 2024',
-        'ebook pdf guide pratique France populaire',
-        'amazon.fr bestseller guides pratiques 2024',
+        'site:quora.com questions frequentes France 2025',
+        'amazon.fr bestseller guides pratiques 2025',
         'reddit france probleme solution aide',
-        'formation en ligne France tendance 2024',
-        'tutoriel populaire France youtube 2024',
-        'guide pratique France populaire blog',
-        'cours en ligne populaire France 2024'
+        'youtube tutoriels plus vus France 2025',
+        'tiktok tendances France 2025 apprendre',
+        'pinterest idees populaires France 2025',
+        'hotmart udemy cours populaires France',
+        'formation en ligne France tendance 2025',
+        'ebook pdf guide pratique France populaire',
+        'forum france questions recurrentes aide'
       ],
       German: [
-        'Trends Deutschland 2024 online lernen',
-        'site:gutefrage.net Problem Loesung',
-        'amazon.de Bestseller Ratgeber 2024',
-        'reddit Deutschland Problem Hilfe Loesung',
-        'Online Kurs Deutschland Trend 2024',
-        'Anleitung Deutschland populaer Blog',
-        'Handbuch Deutschland populaer 2024'
+        'Trends Deutschland 2025 online lernen',
+        'site:gutefrage.net haeufige Probleme Loesung',
+        'site:quora.com haeufige Fragen Deutschland',
+        'amazon.de Bestseller Ratgeber 2025',
+        'reddit Deutschland Problem Hilfe',
+        'youtube meistgesehene Tutorials Deutschland 2025',
+        'tiktok Trends Deutschland 2025 lernen',
+        'pinterest Ideen Deutschland populaer',
+        'udemy hotmart Kurse Deutschland',
+        'Online Kurs Deutschland Trend 2025'
       ],
       English: [
-        'most searched how to guides USA 2024',
-        'amazon bestseller practical guides 2024',
-        'reddit most helpful guides 2024',
-        'youtube most viewed tutorial USA 2024',
-        'trending online courses USA 2024',
-        'most popular ebooks USA practical 2024',
-        'site:quora.com most asked questions 2024'
+        'most searched how to guides 2025',
+        'site:quora.com most asked questions 2025',
+        'amazon bestseller practical guides 2025',
+        'reddit most helpful guides problems 2025',
+        'youtube most viewed tutorial 2025',
+        'tiktok trending learning topics 2025',
+        'pinterest most saved ideas 2025',
+        'udemy bestseller courses 2025',
+        'hotmart most sold digital products',
+        'trending online courses 2025'
       ],
       Italian: [
-        'tendenze digitali Italia 2024 cosa imparare',
-        'amazon.it bestseller guide pratiche 2024',
+        'tendenze 2025 cosa imparare online Italia',
+        'site:quora.com domande frequenti Italia',
+        'amazon.it bestseller guide pratiche 2025',
         'reddit italia problema soluzione aiuto',
-        'youtube tutorial piu visti Italia 2024',
-        'corso online popolare Italia 2024'
+        'youtube tutorial piu visti Italia 2025',
+        'tiktok tendenze Italia 2025',
+        'pinterest idee popolari Italia',
+        'udemy hotmart corsi popolari Italia'
       ],
       Spanish: [
-        'tendencias digitales Espana 2024 que aprender',
-        'amazon.es bestseller guias practicas 2024',
+        'tendencias 2025 que aprender online Espana',
+        'site:quora.com preguntas frecuentes Espana',
+        'amazon.es bestseller guias practicas 2025',
         'reddit Espana problema solucion ayuda',
-        'youtube tutorial mas vistos Espana 2024',
-        'curso online popular Espana 2024'
+        'youtube tutorial mas vistos Espana 2025',
+        'tiktok tendencias Espana 2025 aprender',
+        'pinterest ideas populares Espana',
+        'hotmart udemy cursos populares Espana'
+      ],
+      Portuguese: [
+        'tendencias 2025 o que aprender online Portugal Brasil',
+        'site:quora.com perguntas frequentes Portugal',
+        'amazon bestseller guias praticas 2025',
+        'reddit Portugal Brasil problema solucao ajuda',
+        'youtube tutoriais mais vistos 2025',
+        'tiktok tendencias Portugal Brasil 2025',
+        'pinterest ideias populares Portugal',
+        'hotmart udemy cursos populares Portugal Brasil'
       ]
     };
     const gq = generalQueries[lang] || generalQueries['English'];
     gq.forEach(function(q) { queries.push(q); });
   }
 
-  return queries.slice(0, 12);
+  return queries.slice(0, 20);
 }
 
 async function claudeCall(system, userContent, maxTokens) {
