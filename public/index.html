@@ -317,6 +317,9 @@ select option { background: #1e2d52; }
               <div style="font-size:11px;color:var(--muted);">Haz clic en un slot para describir la imagen que quieres. DALL-E la generará y la insertará automáticamente en el PDF.</div>
             </div>
 
+            <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+              <button onclick="refreshDraftPreview()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(108,92,231,0.35);background:rgba(108,92,231,0.1);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">🔄 Actualizar vista previa</button>
+            </div>
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
               <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: elige el idioma del PDF</div>
@@ -632,6 +635,15 @@ function pickChip(n,el){
 }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
+function refreshDraftPreview(){
+  var ebook = S.ebookData; var o = S.selOpp;
+  if(!ebook || !o) return;
+  var countryName = getCountryNameFront(o.pais||o.country||'France');
+  S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
+  var el = document.getElementById('eb-draft-preview');
+  if(el) el.srcdoc = S.pdfHtml;
+}
+
 function regenEbook(){
   var ok = confirm('⚠️ ATENCIÓN: Regenerar consume los mismos créditos de Claude que la generación inicial (llamadas completas a la API).\n\nPara correcciones puntuales usa el chat "Corregir PDF" — es mucho más económico y rápido.\n\n¿Segura que quieres regenerar TODO desde cero?');
   if(!ok) return;
@@ -1513,27 +1525,24 @@ async function sendCorrectionChat(){
       body: JSON.stringify({ebook: ebook, correction: msg, language: lang})
     });
     const d = await resp.json();
-    if(d.success && d.ebook){
+    if(d.clarify){
+      addMsg('chat-ebook', '🤔 ' + d.clarify, 'ferni');
+    } else if(d.success && d.ebook){
       if(S.finalEbook) S.finalEbook = d.ebook;
       else S.ebookData = d.ebook;
-      
-      // Reconstruir PDF con el ebook corregido
       const currentEbook = S.finalEbook || S.ebookData;
       S.pdfHtml = buildFinalPdfHtml(currentEbook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
-      
-      // Actualizar AMBOS previews
       const previewDraft = document.getElementById('eb-draft-preview');
       const previewFinal = document.getElementById('eb-final-preview');
-      if(previewDraft && previewDraft.srcdoc) previewDraft.srcdoc = S.pdfHtml;
-      if(previewFinal && previewFinal.srcdoc) previewFinal.srcdoc = S.pdfHtml;
-      // Forzar refresh del preview visible
-      var activePreview = document.querySelector('#eb-content:not(.hidden) #eb-draft-preview, #eb-approved:not(.hidden) #eb-final-preview');
-      if(activePreview) activePreview.innerHTML = S.pdfHtml;
-      
+      if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
+      if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
       if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-      addMsg('chat-ebook', '✅ Corrección aplicada y PDF actualizado. ¿Algo más?', 'ferni');
+      var sumMsg = '✅ PDF actualizado.';
+      if(d.summaries && d.summaries.length) sumMsg += ' Cambios: ' + d.summaries.join(' · ');
+      sumMsg += ' ¿Algo más?';
+      addMsg('chat-ebook', sumMsg, 'ferni');
     } else {
-      addMsg('chat-ebook', 'No pude aplicar el cambio: ' + (d.error||'intenta con más detalle, por ejemplo: "en la frase X cambia Y por Z"'), 'ferni');
+      addMsg('chat-ebook', '⚠️ No encontré ese texto en el ebook. Intenta siendo más específica, por ejemplo: copia la frase exacta que quieres cambiar y di qué debería decir.', 'ferni');
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');

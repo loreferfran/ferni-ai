@@ -1411,55 +1411,69 @@ app.post('/api/correct-ebook', async function(req, res) {
   var correction = req.body.correction;
   var language = req.body.language || 'Spanish';
   try {
-    // Estrategia: aplicar la correccion directamente en el texto del ebook
-    // sin devolver el JSON completo (evita truncamiento)
-    var sys = 'Eres editor experto. El usuario te indica una correccion a aplicar en un ebook.' +
-      ' Busca el texto mencionado y devuelve SOLO un JSON con los campos que cambiaron.' +
-      ' Formato de respuesta: {"field": "nombre_del_campo", "chapter": numero_o_null, "oldText": "texto original", "newText": "texto corregido"}' +
-      ' Si son multiples cambios, devuelve array. SOLO JSON sin markdown.';
+    var sys = 'Eres un editor experto de ebooks con conocimiento actualizado. El año actual es 2026.' +
+      ' El usuario pide una corrección. Tu trabajo es hacer una corrección INTELIGENTE y COMPLETA.' +
+      ' REGLAS OBLIGATORIAS:' +
+      ' 1) NUNCA dejes newText vacío ni más corto que oldText sin razón — siempre mejora, no borres.' +
+      ' 2) Si hay fechas desactualizadas (2022, 2023, 2024), actualízalas a 2025 o 2026, o reformula la frase sin fecha fija.' +
+      ' 3) Si el usuario dice que algo es incorrecto, usa tu conocimiento para proponer la versión correcta y mejorada.' +
+      ' 4) Mejora la frase completa para que quede natural y precisa, no solo cambies la palabra exacta mencionada.' +
+      ' 5) En oldText pon el fragmento EXACTO tal como aparece en el ebook (para poder buscarlo).' +
+      ' Responde SIEMPRE con JSON puro sin markdown:' +
+      ' {"oldText":"fragmento exacto del ebook","newText":"texto mejorado y correcto","summary":"que cambiaste en una frase corta"}' +
+      ' Si son varios cambios: array de objetos. Si no puedes proceder: {"clarify":"pregunta concreta en español"}.' +
+      ' NUNCA texto libre fuera del JSON.';
 
-    // Enviar resumen del ebook (titulos y primeras palabras) para que Claude identifique donde esta el problema
     var summary = {
       title: ebook.title,
       subtitle: ebook.subtitle,
-      intro_preview: (ebook.intro||'').slice(0,200),
+      intro: (ebook.intro||'').slice(0,600),
       chapters: (ebook.chapters||[]).map(function(ch,i){ return {
         number: i+1,
         title: ch.title,
-        content_preview: (ch.content||'').slice(0,300),
-        opening_preview: (ch.opening||'').slice(0,100)
+        opening: (ch.opening||'').slice(0,300),
+        content: (ch.content||'').slice(0,600)
       };}),
-      conclusion_preview: (ebook.conclusion||'').slice(0,200)
+      conclusion: (ebook.conclusion||'').slice(0,400)
     };
 
-    var msg = 'CORRECCION: ' + correction +
-      '\n\nESTRUCTURA DEL EBOOK:\n' + JSON.stringify(summary);
+    var msg = 'INSTRUCCION DE CORRECCION: ' + correction +
+      '\n\nCONTENIDO DEL EBOOK:\n' + JSON.stringify(summary);
 
     var txt = await claudeCall(sys, msg, 1000);
     var changes = extractJSON(txt);
+
+    // Si Claude pide aclaración, devolverlo como mensaje al usuario
+    if (changes && changes.clarify) {
+      return res.json({ success: false, clarify: changes.clarify });
+    }
+
     if (!Array.isArray(changes)) changes = [changes];
 
     // Aplicar cambios directamente en el ebook
     var updated = JSON.parse(JSON.stringify(ebook));
+    var appliedSummaries = [];
     changes.forEach(function(change) {
       if (!change || !change.oldText || !change.newText) return;
       var old = change.oldText;
       var neu = change.newText;
-      // Buscar y reemplazar en todos los campos de texto
+      var applied = false;
       function replaceInObj(obj) {
         if (!obj) return;
         Object.keys(obj).forEach(function(k) {
-          if (typeof obj[k] === 'string') {
+          if (typeof obj[k] === 'string' && obj[k].includes(old)) {
             obj[k] = obj[k].replace(old, neu);
+            applied = true;
           } else if (typeof obj[k] === 'object') {
             replaceInObj(obj[k]);
           }
         });
       }
       replaceInObj(updated);
+      if (applied && change.summary) appliedSummaries.push(change.summary);
     });
 
-    res.json({ success: true, ebook: updated });
+    res.json({ success: true, ebook: updated, summaries: appliedSummaries });
   } catch(e) {
     console.error('correct-ebook error:', e.message);
     res.status(500).json({ success: false, error: e.message });
