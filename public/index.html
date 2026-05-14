@@ -1110,6 +1110,8 @@ function saveFullDataToHist(histId){
     if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
+    if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
+    if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
     try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){}
   }
 }
@@ -2303,13 +2305,14 @@ function loadAndGenerateDraft(id){
 function loadHistData(e){
   S.results=e.opps; S.country=e.country; S.niche=e.niche;
   S.currentHistId=e.id;
-  // Restaurar oportunidad seleccionada (guardada o primera disponible)
   var opp = e.selOpp || (e.opps && e.opps[0]) || null;
   if(opp){ S.selOpp=opp; document.getElementById('btn-draft').disabled=false; }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
   if(e.hmKit){ S.hmKit=e.hmKit; }
+  if(e.coverUrl){ S.coverUrl=e.coverUrl; }
+  if(e.chapterImages){ S.chapterImages=e.chapterImages; }
   const info=LANGS[e.country]||{lang:'English',flag:e.flag};
   showResults(e.opps,e.country,e.niche,{...info,flag:e.flag});
 }
