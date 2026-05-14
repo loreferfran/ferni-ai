@@ -892,20 +892,26 @@ async function goEbook(){
       { section:'ending' }
     ];
     var parts = {};
+    var ebookDefs = null; // diccionario de nombres fijos generado en el header
     for(var si=0; si<steps.length; si++){
       var step = steps[si];
       ebStep(step.section, 'active');
       loadEl.textContent = 'Escribiendo... (' + (si+1) + ' de 6)';
-      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({},payload,{section:step.section})),signal:abort.signal});
+      var chPayload = Object.assign({}, payload, { section: step.section });
+      if(ebookDefs) chPayload.ebookDefs = ebookDefs;
+      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
       var sd = await sr.json();
       if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
       parts[step.section] = sd.data;
+      // Capture definitions dictionary from header and pass to all subsequent chapters
+      if(step.section === 'header' && sd.data.definitions) ebookDefs = sd.data.definitions;
       ebStep(step.section, 'done');
     }
     loadEl.textContent = 'Construyendo PDF...';
 
     const ebook={
       title:parts.header.title, subtitle:parts.header.subtitle, tagline:parts.header.tagline, intro:parts.header.intro,
+      definitions:parts.header.definitions||null,
       chapters:[parts.ch1.chapter1, parts.ch2.chapter2, parts.ch3.chapter3, parts.ch4.chapter4],
       conclusion:parts.ending.conclusion, actionPlan:parts.ending.actionPlan,
       resources:parts.ending.resources, legalSection:parts.ending.legalSection

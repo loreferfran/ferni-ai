@@ -939,13 +939,19 @@ app.post('/api/generate-chapter', async function(req, res) {
   var o = req.body.opportunity;
   var author = req.body.author;
   var section = req.body.section; // 'header' | 'ch1' | 'ch2' | 'ch3' | 'ch4' | 'ending'
+  var ebookDefs = req.body.ebookDefs || null; // diccionario de nombres fijos del ebook (del step 'definitions')
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   var year = new Date().getFullYear();
+  var defsRule = ebookDefs
+    ? ' DICCIONARIO OBLIGATORIO — usa EXACTAMENTE estos nombres en todo el capitulo, NUNCA los cambies ni inventes alternativas: ' + JSON.stringify(ebookDefs) + '.'
+    : '';
   var espInstruction = 'TODO en ESPANOL CASTELLANO. El pais se llama en espanol (Alemania no Germany, Francia no France).' +
     ' REGLAS DE PRECIOS Y PRODUCTOS: (1) NUNCA uses precios exactos — usa siempre rangos: "entre X y Y ' + regs.currency + '" o "desde X ' + regs.currency + '". (2) Cuando menciones donde conseguir un producto, da SIEMPRE 2 o 3 opciones de lugares (tiendas, farmacias, supermercados, online) propias de ' + countryName + ', no solo uno.' +
+    ' ESTADISTICAS Y DATOS: cuando uses porcentajes o cifras estadisticas escribe SIEMPRE "aproximadamente" antes del numero (ej: "aproximadamente el 60% de las personas..."). NUNCA presentes estadisticas como datos exactos certificados.' +
+    defsRule +
     ' RESPONDE UNICAMENTE CON EL OBJETO JSON. SIN bloques markdown, SIN ``` antes o despues. Empieza con { y termina con }:\n';
 
   try {
@@ -953,13 +959,18 @@ app.post('/api/generate-chapter', async function(req, res) {
 
     if (section === 'header') {
       schema = JSON.stringify({
+        definitions: {
+          methodName: 'nombre unico e inspirador para el metodo/sistema central del ebook (2-4 palabras). Se usara identico en TODOS los capitulos.',
+          procedures: 'array de 2-4 strings: nombres de procedimientos o tecnicas especificas que se mencionaran en el ebook. Cada nombre debe ser coherente y reutilizable en todos los capitulos.',
+          keyTerms: 'objeto con 2-4 pares clave-valor: terminos especificos del nicho que deben llamarse siempre igual en todo el ebook (ej: {"tipo de piel": "clasificacion cutanea"}). Solo incluir si el nicho tiene terminologia especifica que podria escribirse de formas distintas.'
+        },
         title: 'titulo impactante max 10 palabras',
         subtitle: 'subtitulo vendedor max 12 palabras',
         tagline: 'tagline max 8 palabras',
         intro: 'introduccion 350-450 palabras: gancho emocional + dato real de ' + countryName + ' + promesa clara + por que este metodo funciona'
       });
-      prompt = 'Escribe titulo, subtitulo, tagline e introduccion del ebook. ' + espInstruction + schema;
-      maxTokens = 1500;
+      prompt = 'Antes de escribir el ebook, define el diccionario de nombres que usaras en TODOS los capitulos (definitions). Luego escribe titulo, subtitulo, tagline e introduccion. ' + espInstruction + schema;
+      maxTokens = 1800;
 
     } else if (section === 'ch1') {
       schema = JSON.stringify({chapter1:{number:1,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura impactante + dato real de ' + countryName + ' + por que es urgente resolver esto',content:'700-900 palabras: 4 subsecciones practicas con ejemplos reales de ' + countryName + ', datos numericos, lista de recursos con precios en ' + regs.currency + ', 2-3 errores comunes y como evitarlos',keyPoints:['dato numerico real de ' + countryName,'medida o tiempo concreto','consejo practico verificable','ejemplo del metodo','resultado medible'],exercise:{title:'Ejercicio practico — 30 minutos hoy',steps:['Paso 1: accion concreta con tiempo estimado','Paso 2: accion concreta con tiempo estimado','Paso 3: verificacion del resultado']}}});
