@@ -1191,16 +1191,19 @@ app.post('/api/generate-image', async function(req, res) {
   try {
     var imageType = req.body.imageType || 'chapter';
     var size = imageType === 'cover' ? '1024x1536' : '1024x1024';
+    var coverInstructions = imageType === 'cover'
+      ? ' IMPORTANT LAYOUT INSTRUCTIONS: Create in vertical portrait format optimized for a professional PDF ebook cover. The composition must be perfectly centered. Keep all important elements fully visible inside safe margins — do not crop the main subject, do not place important elements too close to the edges, keep all visual elements fully visible. Leave enough empty space around the borders for a clean and balanced layout. Use a complete top-to-bottom composition with professional spacing and strong visual hierarchy. Avoid excessive zoom or framing that cuts off important parts. High resolution, polished composition, professional publishing quality, optimized for digital product sales.'
+      : ' IMPORTANT LAYOUT INSTRUCTIONS: Create a professional internal ebook image designed for the inside pages of a high-quality PDF guide. The composition must be centered, balanced, and easy to place inside a PDF page layout. Keep all important elements fully visible inside safe margins — do not crop the main subject, do not cut off objects, do not place important elements too close to the edges, avoid excessive zoom or close-up framing. Leave enough empty space around the borders to ensure the image fits naturally inside an ebook page. Use professional lighting, realistic details, polished composition, and premium editorial quality. Modern, clean, elegant, suitable for educational content. High resolution, professional publishing quality, no distorted elements, optimized for PDF ebook formatting.';
+    var prompt = req.body.prompt + coverInstructions + ' No text overlays. No watermarks. No faces.';
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
-      body: JSON.stringify({ model: 'gpt-image-1', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: size, quality: 'medium', output_format: 'jpeg' })
+      body: JSON.stringify({ model: 'gpt-image-1', prompt: prompt, n: 1, size: size, quality: 'medium', output_format: 'jpeg' })
     });
     var d = await resp.json();
     if (d.data && d.data[0]) {
       var img = d.data[0];
-      // gpt-image-1 devuelve b64_json, dall-e devolvía url
-      var url = img.url || ('data:image/png;base64,' + img.b64_json);
+      var url = img.url || ('data:image/jpeg;base64,' + img.b64_json);
       res.json({ success: true, url: url });
     } else {
       var errMsg = (d.error && d.error.message) ? d.error.message : JSON.stringify(d);

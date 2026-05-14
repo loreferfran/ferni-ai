@@ -1316,8 +1316,14 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '<style>' +
     '@page{size:A4;margin:2cm;}' +
     'body{font-family:Georgia,serif;color:#1a1a2e;line-height:1.9;font-size:13px;margin:0;padding:0;}' +
+    '@media screen{body{background:#555;padding:36px 0;}' +
+    '.pg{width:794px;background:white;margin:0 auto 36px auto;box-shadow:0 8px 36px rgba(0,0,0,0.6);display:block;}' +
+    '.pg-img{height:1123px;overflow:hidden;padding:0!important;}' +
+    '.cover{min-height:1123px!important;}' +
+    '.toc-page{min-height:600px;}' +
+    '}' +
     '.page-break{page-break-after:always;}' +
-    '.cover-img-only{width:100%;height:100vh;object-fit:cover;display:block;border-radius:0;}' +
+    '.cover-img-only{width:100%;height:100%;object-fit:cover;display:block;border-radius:0;}' +
     '.cover{background:linear-gradient(135deg,#1a1a6e 0%,#6c5ce7 50%,#a29bfe 100%);color:white;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
     '.cover h1{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:16px;text-shadow:0 2px 20px rgba(0,0,0,0.3);}' +
     '.cover .subtitle{font-size:18px;font-style:italic;opacity:0.9;margin-bottom:20px;}' +
@@ -1380,11 +1386,11 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var lblRights = isEs?'Todos los derechos reservados':isFr?'Tous droits réservés':isDe?'Alle Rechte vorbehalten':isIt?'Tutti i diritti riservati':isPt?'Todos os direitos reservados':'All rights reserved';
   if(coverUrl){
     // Página 1: SOLO la imagen de portada, sin ningún texto
-    html += '<div style="width:100%;min-height:100vh;overflow:hidden;page-break-after:always;margin:0;padding:0;">';
+    html += '<div class="pg pg-img page-break">';
     html += '<img class="cover-img-only" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'">';
     html += '</div>';
     // Página 2: título y autor con fondo degradado
-    html += '<div class="cover page-break">';
+    html += '<div class="pg cover page-break">';
     html += '<h1>' + (eb.title||'') + '</h1>';
     html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
     if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
@@ -1393,7 +1399,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     html += '</div>';
   } else {
     // Sin imagen: portada con gradiente y texto
-    html += '<div class="cover page-break">';
+    html += '<div class="pg cover page-break">';
     html += '<h1>' + (eb.title||'') + '</h1>';
     html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
     if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
@@ -1409,7 +1415,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var lblConcl = isEs?'Conclusión':isFr?'Conclusion':isDe?'Fazit':isIt?'Conclusione':isPt?'Conclusão':'Conclusion';
   var lblPlan = isEs?'Plan de acción':isFr?'Plan d\'action':isDe?'Aktionsplan':isIt?'Piano d\'azione':isPt?'Plano de ação':'Action Plan';
   var lblResources = isEs?'Recursos':isFr?'Ressources':isDe?'Ressourcen':isIt?'Risorse':isPt?'Recursos':'Resources';
-  html += '<div class="toc-page page-break">';
+  html += '<div class="pg toc-page page-break">';
   html += '<div class="toc-title">' + lblToc + '</div>';
   
   html += '<div class="toc-item"><span class="toc-ch">' + lblIntro + '</span><span class="toc-pg">3</span></div>';
@@ -1421,14 +1427,14 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   html += '</div>';
 
   // INTRODUCCIÓN
-  html += '<div class="chapter page-break">';
+  html += '<div class="pg chapter page-break">';
   html += '<div class="chapter-header"><div class="chapter-num">' + lblIntro + '</div><div class="chapter-title">' + (eb.title||'') + '</div></div>';
   html += formatContent(eb.intro||'');
   html += '</div>';
 
   // CAPÍTULOS
   (eb.chapters||[]).forEach(function(ch, i){
-    html += '<div class="chapter page-break">';
+    html += '<div class="pg chapter page-break">';
     html += '<div class="chapter-header"><div class="chapter-num">' + lblChap + ' ' + (ch.number||i+1) + '</div><div class="chapter-title">' + (ch.title||'') + '</div></div>';
     if(chapterImages[i]){ 
       html += '<img class="chapter-img" src="' + chapterImages[i] + '" alt="illustration chapitre ' + (i+1) + '" onerror="this.style.display=\"none\"">';
@@ -1457,7 +1463,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   // CONCLUSIÓN Y PLAN DE ACCIÓN
   var nChaps = (eb.chapters||[]).length;
   var visualNiche = isVisualNiche(o);
-  html += '<div class="conclusion-section page-break">';
+  html += '<div class="pg conclusion-section page-break">';
   html += '<h2>' + lblConcl + '</h2>';
   // Imagen de conclusión (slot 4, nichos visuales)
   if(visualNiche && chapterImages[nChaps]){
