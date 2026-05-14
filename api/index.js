@@ -1195,9 +1195,15 @@ app.post('/api/generate-image', async function(req, res) {
       body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard', style: 'natural' })
     });
     var d = await resp.json();
-    if (d.data && d.data[0]) res.json({ success: true, url: d.data[0].url });
-    else res.status(500).json({ success: false, error: 'No image generated' });
+    if (d.data && d.data[0]) {
+      res.json({ success: true, url: d.data[0].url });
+    } else {
+      var errMsg = (d.error && d.error.message) ? d.error.message : JSON.stringify(d);
+      console.error('DALL-E error:', errMsg);
+      res.status(500).json({ success: false, error: errMsg });
+    }
   } catch (e) {
+    console.error('generate-image catch:', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
