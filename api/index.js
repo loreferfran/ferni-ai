@@ -1648,6 +1648,21 @@ app.post('/api/generate-extras', async function(req, res) {
   }
 });
 
+// Endpoint de diagnostico — lista modelos disponibles para la key actual
+app.get('/api/test-openai', async function(req, res) {
+  try {
+    var keyPreview = OPENAI_KEY ? OPENAI_KEY.substring(0, 15) + '...(len:' + OPENAI_KEY.length + ')' : 'NO KEY';
+    var r = await fetch('https://api.openai.com/v1/models', {
+      headers: { 'Authorization': 'Bearer ' + OPENAI_KEY }
+    });
+    var d = await r.json();
+    var imageModels = (d.data || []).filter(function(m){ return m.id.includes('dall') || m.id.includes('image'); }).map(function(m){ return m.id; });
+    res.json({ keyPreview: keyPreview, status: r.status, imageModels: imageModels, error: d.error || null });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
 // Endpoint de config - expone solo la key de OpenAI para generacion de imagenes en frontend
 app.get('/api/config', function(req, res) {
   res.json({ 
