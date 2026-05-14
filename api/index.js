@@ -1190,7 +1190,7 @@ app.post('/api/translate-custom', async function(req, res) {
 app.post('/api/generate-image', async function(req, res) {
   try {
     var imageType = req.body.imageType || 'chapter';
-    var size = imageType === 'cover' ? '1024x1536' : '1536x1024';
+    var size = imageType === 'cover' ? '1024x1536' : '1024x1024';
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
