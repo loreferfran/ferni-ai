@@ -565,12 +565,12 @@ fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.o
 
 // Generacion de imagenes via backend (usa la API key del servidor)
 // Retorna {url, error} en lugar de null para mostrar el error real al usuario
-async function genImgDirectGlobal(prompt){
+async function genImgDirectGlobal(prompt, imageType){
   try {
     const r = await fetch('/api/generate-image',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:prompt})
+      body:JSON.stringify({prompt:prompt, imageType: imageType||'chapter'})
     });
     const d = await r.json();
     if(d.success && d.url) return {url: d.url, error: null};
@@ -1066,7 +1066,7 @@ async function generateSlotImage(slotIndex, slotName, description){
   
   addMsg('chat-ebook', '🎨 Generando imagen para "' + slotName + '"...', 'ferni');
   
-  var imgResult = await genImgDirectGlobal(prompt);
+  var imgResult = await genImgDirectGlobal(prompt, slotIndex === 'cover' ? 'cover' : 'chapter');
   var url = imgResult.url;
 
   if(url){
@@ -1236,9 +1236,10 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '@page{size:A4;margin:2cm;}' +
     'body{font-family:Georgia,serif;color:#1a1a2e;line-height:1.9;font-size:13px;margin:0;padding:0;}' +
     '.page-break{page-break-after:always;}' +
-    '.cover{background:linear-gradient(135deg,#1a1a6e 0%,#6c5ce7 50%,#a29bfe 100%);color:white;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-    '.cover-img{width:100%;max-width:400px;height:280px;object-fit:cover;border-radius:12px;margin-bottom:30px;box-shadow:0 20px 60px rgba(0,0,0,0.4);}' +
-    '.cover h1{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:16px;text-shadow:0 2px 20px rgba(0,0,0,0.3);}' +
+    '.cover{background:linear-gradient(135deg,#1a1a6e 0%,#6c5ce7 50%,#a29bfe 100%);color:white;min-height:100vh;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;text-align:center;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;overflow:hidden;}' +
+    '.cover-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:0;z-index:0;}' +
+    '.cover-content{position:relative;z-index:2;padding:50px 40px 50px;background:linear-gradient(to top,rgba(5,5,40,0.93) 0%,rgba(5,5,40,0.55) 55%,transparent 100%);}' +
+    '.cover h1{font-size:36px;font-weight:900;line-height:1.2;margin-bottom:16px;text-shadow:0 2px 20px rgba(0,0,0,0.5);}' +
     '.cover .subtitle{font-size:18px;font-style:italic;opacity:0.9;margin-bottom:20px;}' +
     '.cover .tagline{font-size:14px;opacity:0.75;margin-bottom:30px;}' +
     '.cover .author-line{font-size:16px;font-weight:bold;color:#fdcb6e;}' +
@@ -1252,7 +1253,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '.chapter-header{background:linear-gradient(135deg,#2d3180,#6c5ce7);color:white;padding:30px;border-radius:12px;margin-bottom:30px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
     '.chapter-num{font-size:12px;text-transform:uppercase;letter-spacing:2px;opacity:0.7;}' +
     '.chapter-title{font-size:24px;font-weight:bold;margin-top:8px;}' +
-    '.chapter-img{width:100%;height:auto;border-radius:10px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.15);}' +
+    '.chapter-img{display:block;width:calc(100% + 80px);margin-left:-40px;margin-right:-40px;height:auto;border-radius:0;margin-top:0;margin-bottom:24px;box-shadow:0 4px 20px rgba(0,0,0,0.12);}' +
     '.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:16px 20px;font-style:italic;color:#5a4a2a;margin:20px 0;border-radius:0 8px 8px 0;}' +
     'p{margin-bottom:16px;text-align:justify;}' +
     '.fmt-list{margin:12px 0 16px 0;padding-left:20px;list-style:none;}' +
@@ -1297,8 +1298,9 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   // PORTADA
   html += '<div class="cover page-break">';
   if(coverUrl){
-    html += '<img class="cover-img" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\"none\"">';
+    html += '<img class="cover-img" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'">';
   }
+  html += '<div class="cover-content">';
   html += '<h1>' + (eb.title||'') + '</h1>';
   html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
   if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
@@ -1306,6 +1308,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
   var lblRights = isEs?'Todos los derechos reservados':isFr?'Tous droits réservés':isDe?'Alle Rechte vorbehalten':isIt?'Tutti i diritti riservati':isPt?'Todos os direitos reservados':'All rights reserved';
   html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; ' + lblRights + '</div>';
+  html += '</div>';
   html += '</div>';
 
   // ÍNDICE
@@ -1460,9 +1463,9 @@ async function sendCorrectionChat(){
       
       if(target === 'portada'){
         imgPrompt = 'Professional lifestyle photography for ebook about "' + (o.problema||o.problem||'') + '" in ' + countryName + '. Aspirational result readers will achieve. Warm golden light, magazine quality. No text, no faces. 8K. ' + extraDetail;
-        const ir = await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt})});
+        const ir = await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:imgPrompt, imageType:'cover'})});
         const id2 = await ir.json();
-        if(id2.success){ 
+        if(id2.success){
           S.coverUrl = id2.url;
           addMsg('chat-ebook', '✅ Nueva portada generada. Actualizando PDF...', 'ferni');
         }
@@ -1473,7 +1476,7 @@ async function sendCorrectionChat(){
           const total = ebook.chapters.length;
           const narrativa = chIdx===0 ? 'beginning, current situation with hope' : chIdx===total-1 ? 'final beautiful result achieved' : 'process step '+(chIdx+1)+', hands-on action and progress';
           imgPrompt = 'Professional editorial photography for chapter '+(chIdx+1)+' about "'+( o.problema||o.problem||'')+'" in '+countryName+'. Chapter: "'+( ch.title||'')+'". '+narrativa+'. Warm light, magazine quality. No text, no faces. 8K. ' + extraDetail;
-          const imgRes2 = await genImgDirectGlobal(imgPrompt);
+          const imgRes2 = await genImgDirectGlobal(imgPrompt, 'chapter');
           if(imgRes2.url){
             if(!S.chapterImages) S.chapterImages = [];
             S.chapterImages[chIdx] = imgRes2.url;
