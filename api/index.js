@@ -1413,65 +1413,81 @@ app.post('/api/correct-ebook', async function(req, res) {
   var correction = req.body.correction;
   var language = req.body.language || 'Spanish';
   try {
-    var sys = 'Eres un editor experto de ebooks con conocimiento actualizado. El año actual es 2026.' +
-      ' El usuario pide una corrección. Tu trabajo es hacer una corrección INTELIGENTE y COMPLETA.' +
-      ' REGLAS OBLIGATORIAS:' +
-      ' 1) NUNCA dejes newText vacío ni más corto que oldText sin razón — siempre mejora, no borres.' +
-      ' 2) Si hay fechas desactualizadas (2022, 2023, 2024), actualízalas a 2025 o 2026, o reformula la frase sin fecha fija.' +
-      ' 3) Si el usuario dice que algo es incorrecto, usa tu conocimiento para proponer la versión correcta y mejorada.' +
-      ' 4) Mejora la frase completa para que quede natural y precisa, no solo cambies la palabra exacta mencionada.' +
-      ' 5) En oldText pon el fragmento EXACTO tal como aparece en el ebook (para poder buscarlo).' +
-      ' Responde SIEMPRE con JSON puro sin markdown:' +
-      ' {"oldText":"fragmento exacto del ebook","newText":"texto mejorado y correcto","summary":"que cambiaste en una frase corta"}' +
-      ' Si son varios cambios: array de objetos. Si no puedes proceder: {"clarify":"pregunta concreta en español"}.' +
-      ' NUNCA texto libre fuera del JSON.';
+    var sys = 'Eres un editor experto de ebooks. El año actual es 2026.' +
+      ' El usuario pide una corrección. Haz cambios INTELIGENTES y COMPLETOS.' +
+      ' REGLAS:' +
+      ' 1) NUNCA dejes newText vacío — siempre reemplaza con algo mejor.' +
+      ' 2) Años desactualizados (2022-2024): actualiza a 2025 o 2026, o reformula sin fecha.' +
+      ' 3) Si el usuario copia un fragmento exacto, ESE es el oldText aunque ya hayas cambiado algo parecido antes — busca y aplica EN ESE FRAGMENTO ESPECÍFICO.' +
+      ' 4) Si dice "elimina/cambia todos los X" o "en todo el ebook": devuelve UN cambio con oldText=la palabra/frase y se aplicará globalmente en todo el ebook.' +
+      ' 5) Mejora la frase completa para que quede natural.' +
+      ' Responde SIEMPRE JSON puro sin markdown:' +
+      ' Un cambio: {"oldText":"fragmento exacto","newText":"texto mejorado","summary":"resumen corto","global":false}' +
+      ' Cambio global (aplica en todo el ebook): {"oldText":"palabra o frase","newText":"reemplazo","summary":"resumen","global":true}' +
+      ' Varios cambios: array de objetos. No puedes proceder: {"clarify":"pregunta en español"}.' +
+      ' NUNCA texto fuera del JSON.';
 
+    // Incluir TODO el contenido: intro, capítulos completos con keyPoints, conclusión
     var summary = {
       title: ebook.title,
       subtitle: ebook.subtitle,
-      intro: (ebook.intro||'').slice(0,600),
+      intro: (ebook.intro||'').slice(0,800),
       chapters: (ebook.chapters||[]).map(function(ch,i){ return {
         number: i+1,
         title: ch.title,
-        opening: (ch.opening||'').slice(0,300),
-        content: (ch.content||'').slice(0,600)
+        opening: (ch.opening||'').slice(0,400),
+        content: (ch.content||'').slice(0,800),
+        keyPoints: (ch.keyPoints||[])
       };}),
-      conclusion: (ebook.conclusion||'').slice(0,400)
+      conclusion: (ebook.conclusion||'').slice(0,500),
+      actionPlan: (ebook.actionPlan||[])
     };
 
-    var msg = 'INSTRUCCION DE CORRECCION: ' + correction +
-      '\n\nCONTENIDO DEL EBOOK:\n' + JSON.stringify(summary);
+    var msg = 'INSTRUCCION: ' + correction +
+      '\n\nCONTENIDO COMPLETO DEL EBOOK:\n' + JSON.stringify(summary);
 
-    var txt = await claudeCall(sys, msg, 1000);
+    var txt = await claudeCall(sys, msg, 1500);
     var changes = extractJSON(txt);
 
-    // Si Claude pide aclaración, devolverlo como mensaje al usuario
     if (changes && changes.clarify) {
       return res.json({ success: false, clarify: changes.clarify });
     }
 
     if (!Array.isArray(changes)) changes = [changes];
 
-    // Aplicar cambios directamente en el ebook
+    // Función recursiva que reemplaza en TODO el objeto (split+join = reemplaza TODAS las ocurrencias)
+    function replaceInObj(obj, oldStr, newStr, globalMode) {
+      if (!obj) return false;
+      var applied = false;
+      Object.keys(obj).forEach(function(k) {
+        if (typeof obj[k] === 'string') {
+          if (obj[k].includes(oldStr)) {
+            // split+join reemplaza TODAS las ocurrencias, no solo la primera
+            obj[k] = obj[k].split(oldStr).join(newStr);
+            applied = true;
+            if (!globalMode) return; // si no es global, con encontrar una vez basta
+          }
+        } else if (Array.isArray(obj[k])) {
+          obj[k] = obj[k].map(function(item) {
+            if (typeof item === 'string' && item.includes(oldStr)) {
+              applied = true;
+              return item.split(oldStr).join(newStr);
+            }
+            if (typeof item === 'object') { replaceInObj(item, oldStr, newStr, globalMode); }
+            return item;
+          });
+        } else if (typeof obj[k] === 'object') {
+          if (replaceInObj(obj[k], oldStr, newStr, globalMode)) applied = true;
+        }
+      });
+      return applied;
+    }
+
     var updated = JSON.parse(JSON.stringify(ebook));
     var appliedSummaries = [];
     changes.forEach(function(change) {
       if (!change || !change.oldText || !change.newText) return;
-      var old = change.oldText;
-      var neu = change.newText;
-      var applied = false;
-      function replaceInObj(obj) {
-        if (!obj) return;
-        Object.keys(obj).forEach(function(k) {
-          if (typeof obj[k] === 'string' && obj[k].includes(old)) {
-            obj[k] = obj[k].replace(old, neu);
-            applied = true;
-          } else if (typeof obj[k] === 'object') {
-            replaceInObj(obj[k]);
-          }
-        });
-      }
-      replaceInObj(updated);
+      var applied = replaceInObj(updated, change.oldText, change.newText, !!change.global);
       if (applied && change.summary) appliedSummaries.push(change.summary);
     });
 
