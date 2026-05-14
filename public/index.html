@@ -563,6 +563,47 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
 
+// --- IndexedDB para imágenes (localStorage tiene límite 5MB, base64 es ~2MB/imagen) ---
+var _idb = null;
+function getIDB(cb) {
+  if (_idb) return cb(_idb);
+  var r = indexedDB.open('ferni_images_v1', 1);
+  r.onupgradeneeded = function(e) { e.target.result.createObjectStore('imgs'); };
+  r.onsuccess = function(e) { _idb = e.target.result; cb(_idb); };
+  r.onerror = function() { cb(null); };
+}
+function idbSet(key, val) {
+  getIDB(function(db) {
+    if (!db) return;
+    try { db.transaction('imgs','readwrite').objectStore('imgs').put(val, key); } catch(e){}
+  });
+}
+function idbGet(key, cb) {
+  getIDB(function(db) {
+    if (!db) return cb(null);
+    try {
+      var req = db.transaction('imgs','readonly').objectStore('imgs').get(key);
+      req.onsuccess = function() { cb(req.result||null); };
+      req.onerror = function() { cb(null); };
+    } catch(e) { cb(null); }
+  });
+}
+function restoreImagesIDB(histId, numChapters, cb) {
+  var keys = ['img_'+histId+'_cover'];
+  for(var i=0;i<numChapters;i++) keys.push('img_'+histId+'_ch'+i);
+  var results = {}, pending = keys.length;
+  if(!pending) return cb({});
+  keys.forEach(function(k){ idbGet(k, function(v){ results[k]=v; if(--pending===0) cb(results); }); });
+}
+function applyIDBImages(histId, ebook, results) {
+  if(results['img_'+histId+'_cover']) S.coverUrl = results['img_'+histId+'_cover'];
+  var n = (ebook&&ebook.chapters||[]).length;
+  for(var i=0;i<n;i++){
+    var v=results['img_'+histId+'_ch'+i];
+    if(v){ if(!S.chapterImages)S.chapterImages=[]; S.chapterImages[i]=v; }
+  }
+}
+
 // Generacion de imagenes via backend (usa la API key del servidor)
 // Retorna {url, error} en lugar de null para mostrar el error real al usuario
 async function genImgDirectGlobal(prompt, imageType){
@@ -1072,9 +1113,11 @@ async function generateSlotImage(slotIndex, slotName, description){
   if(url){
     if(slotIndex === 'cover'){
       S.coverUrl = url;
+      if(S.currentHistId) idbSet('img_'+S.currentHistId+'_cover', url);
     } else {
       if(!S.chapterImages) S.chapterImages = [];
       S.chapterImages[slotIndex] = url;
+      if(S.currentHistId) idbSet('img_'+S.currentHistId+'_ch'+slotIndex, url);
     }
     // Actualizar PDF con nueva imagen
     S.pdfHtml = buildFinalPdfHtml(ebook||{}, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
@@ -1467,6 +1510,7 @@ async function sendCorrectionChat(){
         const id2 = await ir.json();
         if(id2.success){
           S.coverUrl = id2.url;
+          if(S.currentHistId) idbSet('img_'+S.currentHistId+'_cover', id2.url);
           addMsg('chat-ebook', '✅ Nueva portada generada. Actualizando PDF...', 'ferni');
         }
       } else {
@@ -1480,6 +1524,7 @@ async function sendCorrectionChat(){
           if(imgRes2.url){
             if(!S.chapterImages) S.chapterImages = [];
             S.chapterImages[chIdx] = imgRes2.url;
+            if(S.currentHistId) idbSet('img_'+S.currentHistId+'_ch'+chIdx, imgRes2.url);
             addMsg('chat-ebook', '✅ Nueva imagen del capítulo '+(chIdx+1)+' generada. Actualizando PDF...', 'ferni');
           } else {
             addMsg('chat-ebook', '❌ Error imagen: ' + (imgRes2.error||'desconocido'), 'ferni');
@@ -2264,9 +2309,12 @@ function loadAndDraft(id){
   const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
   loadHistData(e);
   S.ebookData = e.ebook;
-  if(e.chapterImages) S.chapterImages = e.chapterImages;
+  var numCh=(e.ebook.chapters||[]).length;
   showTab('ebook', document.querySelectorAll('.tab')[1]);
-  setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0], e.ebook); }, 100);
+  restoreImagesIDB(e.id, numCh, function(imgs){
+    applyIDBImages(e.id, e.ebook, imgs);
+    setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0], e.ebook); }, 100);
+  });
 }
 
 // Cargar historial y mostrar PDF final existente  
@@ -2344,28 +2392,34 @@ initKeys();
 (function autoRestore(){
   var last = S.history[0];
   if(!last) return;
+  var numCh = ((last.finalEbook||last.ebook||{}).chapters||[]).length;
+  loadHistData(last);
   if(last.finalEbook){
-    loadHistData(last);
     S.finalEbook = last.finalEbook;
     if(last.ebook) S.ebookData = last.ebook;
-    if(last.pdfHtml) S.pdfHtml = last.pdfHtml;
-    if(last.chapterImages) S.chapterImages = last.chapterImages;
-    setTimeout(function(){
-      hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
-      var badge = document.getElementById('eb-approved-badge');
-      if(badge && last.selOpp) badge.textContent = '✓ ' + (last.selOpp.idioma||last.selOpp.language||'');
-      var prev = document.getElementById('eb-final-preview');
-      if(prev && last.pdfHtml) prev.srcdoc = last.pdfHtml;
-    }, 200);
+    restoreImagesIDB(last.id, numCh, function(imgs){
+      applyIDBImages(last.id, last.finalEbook||last.ebook, imgs);
+      setTimeout(function(){
+        hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+        var badge = document.getElementById('eb-approved-badge');
+        if(badge && last.selOpp) badge.textContent = '✓ ' + (last.selOpp.idioma||last.selOpp.language||'');
+        var lang = (last.selOpp&&(last.selOpp.idioma||last.selOpp.language))||'Español';
+        var o = last.selOpp||last.opps[0];
+        var eb = last.finalEbook;
+        S.pdfHtml = buildFinalPdfHtml(eb, o, lang, lang, S.coverUrl, S.chapterImages||[]);
+        var prev = document.getElementById('eb-final-preview');
+        if(prev) prev.srcdoc = S.pdfHtml;
+      }, 200);
+    });
   } else if(last.ebook){
-    loadHistData(last);
     S.ebookData = last.ebook;
-    if(last.chapterImages) S.chapterImages = last.chapterImages;
-    if(last.pdfHtml) S.pdfHtml = last.pdfHtml;
-    setTimeout(function(){
-      hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
-      renderDraft(S.selOpp||last.opps[0], last.ebook);
-    }, 200);
+    restoreImagesIDB(last.id, numCh, function(imgs){
+      applyIDBImages(last.id, last.ebook, imgs);
+      setTimeout(function(){
+        hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
+        renderDraft(S.selOpp||last.opps[0], last.ebook);
+      }, 200);
+    });
   }
 })();
 
