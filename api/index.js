@@ -1194,14 +1194,17 @@ app.post('/api/generate-image', async function(req, res) {
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
-      body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard', style: 'natural' })
+      body: JSON.stringify({ model: 'gpt-image-1', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard' })
     });
     var d = await resp.json();
     if (d.data && d.data[0]) {
-      res.json({ success: true, url: d.data[0].url });
+      var img = d.data[0];
+      // gpt-image-1 devuelve b64_json, dall-e devolvía url
+      var url = img.url || ('data:image/png;base64,' + img.b64_json);
+      res.json({ success: true, url: url });
     } else {
       var errMsg = (d.error && d.error.message) ? d.error.message : JSON.stringify(d);
-      console.error('DALL-E error:', errMsg);
+      console.error('Image error:', errMsg);
       res.status(500).json({ success: false, error: errMsg });
     }
   } catch (e) {
