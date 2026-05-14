@@ -2278,6 +2278,8 @@ function renderHist(){
 function loadAndDraft(id){
   const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
   loadHistData(e);
+  S.ebookData = e.ebook;
+  if(e.chapterImages) S.chapterImages = e.chapterImages;
   showTab('ebook', document.querySelectorAll('.tab')[1]);
   setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0], e.ebook); }, 100);
 }
@@ -2351,6 +2353,34 @@ async function initKeys() {
   } catch(e) {}
 }
 initKeys();
+
+// Auto-restaurar el último ebook activo al cargar la página
+(function autoRestore(){
+  var last = S.history[0];
+  if(!last) return;
+  if(last.finalEbook){
+    loadHistData(last);
+    S.finalEbook = last.finalEbook;
+    if(last.ebook) S.ebookData = last.ebook;
+    if(last.pdfHtml) S.pdfHtml = last.pdfHtml;
+    if(last.chapterImages) S.chapterImages = last.chapterImages;
+    setTimeout(function(){
+      hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+      var badge = document.getElementById('eb-approved-badge');
+      if(badge && last.selOpp) badge.textContent = '✓ ' + (last.selOpp.idioma||last.selOpp.language||'');
+      var prev = document.getElementById('eb-final-preview');
+      if(prev && last.pdfHtml) prev.srcdoc = last.pdfHtml;
+    }, 200);
+  } else if(last.ebook){
+    loadHistData(last);
+    S.ebookData = last.ebook;
+    if(last.chapterImages) S.chapterImages = last.chapterImages;
+    setTimeout(function(){
+      hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
+      renderDraft(S.selOpp||last.opps[0], last.ebook);
+    }, 200);
+  }
+})();
 
 // Chat collapsible
 var chatCollapsed = {};
