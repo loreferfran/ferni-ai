@@ -1194,7 +1194,7 @@ app.post('/api/generate-image', async function(req, res) {
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
-      body: JSON.stringify({ model: 'gpt-image-1', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard' })
+      body: JSON.stringify({ model: 'gpt-image-1', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'high' })
     });
     var d = await resp.json();
     if (d.data && d.data[0]) {
