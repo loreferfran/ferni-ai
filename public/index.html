@@ -321,6 +321,7 @@ select option { background: #1e2d52; }
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:6px;">
               <button onclick="refreshDraftPreview()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(108,92,231,0.35);background:rgba(108,92,231,0.1);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">🔄 Actualizar vista previa</button>
               <button id="btn-edit-pdf" onclick="toggleEditPDF()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">✏️ Editar texto</button>
+              <button onclick="openFullPreview()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(253,203,110,0.5);background:rgba(253,203,110,0.1);color:#fdcb6e;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">🔍 Ver página completa</button>
             </div>
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
@@ -681,6 +682,15 @@ function pickChip(n,el){
 }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
 function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
+function openFullPreview(){
+  var html = S.pdfHtml;
+  if(!html){ alert('Genera el borrador primero'); return; }
+  var w = window.open('', '_blank');
+  if(!w){ alert('Activa las ventanas emergentes para esta página'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
 function toggleEditPDF(){
   var iframe = document.getElementById('eb-draft-preview');
   var btn = document.getElementById('btn-edit-pdf');
