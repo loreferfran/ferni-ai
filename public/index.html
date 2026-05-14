@@ -1112,47 +1112,10 @@ function saveFullDataToHist(histId){
 
 function renderDraft(o,eb){
   S.author='Ferni Guides';
-  const year=new Date().getFullYear();
-  document.getElementById('eb-meta').textContent=`${o.country} · ${o.rangoEdad||o.ageRange} · ${o.genero||o.gender} · ${o.precioHotmart||o.hotmartPrice} · Autor: ${S.author}`;
-  document.getElementById('eb-body').innerHTML=`
-    <div class="ebook-cover">
-      <div class="ebook-cover-tagline">${eb.tagline||''}</div>
-      <div class="ebook-cover-title">${eb.title||o.tituloEbook||o.ebookTitle}</div>
-      <div class="ebook-cover-sub">${eb.subtitle||o.promesaEbook||o.ebookPromise}</div>
-      <div class="ebook-cover-author">por ${S.author}</div>
-      <div class="ebook-copyright">© ${year} ${S.author} · Todos los derechos reservados</div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
-      <span class="badge bgold">✍️ Borrador en español</span>
-      <span class="badge ba">${o.rangoEdad||o.ageRange} · ${o.genero||o.gender}</span>
-      <span class="badge bg2">${o.precioHotmart||o.hotmartPrice}</span>
-      <span class="badge bteal">Final en: ${o.language}</span>
-    </div>
-    <div class="section-card" style="margin-bottom:16px;">
-      <div class="section-card-title">📋 Índice de contenidos</div>
-      <div class="toc-item"><span style="color:var(--muted);font-size:10px;">INTRO</span> Introducción</div>
-      ${(eb.chapters||[]).map((c,i)=>`<div class="toc-item"><span style="color:var(--muted);font-size:10px;">CAP ${i+1}</span> ${c.title||''}</div>`).join('')}
-      <div class="toc-item"><span style="color:var(--muted);font-size:10px;">FIN</span> Conclusión</div>
-      <div class="toc-item"><span style="color:var(--muted);font-size:10px;">EXTRA</span> Plan de acción · Recursos · Nota de la autora</div>
-    </div>
-    <div class="ch"><div class="ch-num">INTRODUCCIÓN</div><div class="ch-title">Por qué este ebook puede cambiar tu situación</div><div class="ch-text">${(eb.intro||'').replace(/\n/g,'<br><br>')}</div></div>
-    ${(eb.chapters||[]).map(c=>`
-      <div class="ch">
-        <div class="ch-num">CAPÍTULO ${c.number||''}</div>
-        <div class="ch-title">${c.title||''}</div>
-        ${c.opening?`<div class="ch-opening">${c.opening}</div>`:''}
-        <div class="ch-text">${(c.content||'').replace(/\n/g,'<br><br>')}</div>
-        ${c.keyPoints&&c.keyPoints.length?`<div class="ch-keys">${c.keyPoints.map(k=>`<div class="ch-key"><span style="color:var(--teal);">✓</span>${k}</div>`).join('')}</div>`:''}
-        ${c.exercise?`<div class="ch-exercise"><div class="ch-exercise-title">✏️ ${c.exercise.title||'Ejercicio práctico'}</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">${c.exercise.description||''}</div>${(c.exercise.steps||[]).map((s,i)=>`<div class="ch-exercise-step"><div class="step-num">${i+1}</div><div>${s}</div></div>`).join('')}</div>`:''}
-      </div>`).join('')}
-    <div class="ch"><div class="ch-num">CONCLUSIÓN</div><div class="ch-title">Tu transformación comienza hoy</div><div class="ch-text">${(eb.conclusion||'').replace(/\n/g,'<br><br>')}</div></div>
-    ${(eb.actionPlan||[]).filter(a=>a&&a.trim().length>10).length?`<div class="section-card" style="margin-top:16px;"><div class="section-card-title">🎯 Plan de acción</div>${eb.actionPlan.filter(a=>a&&a.trim().length>10).map((a,i)=>`<div class="action-plan-item"><div class="step-num">${i+1}</div><div>${a}</div></div>`).join('')}</div>`:''}
-    ${eb.resources&&eb.resources.length?`<div class="section-card" style="margin-top:12px;"><div class="section-card-title">📚 Recursos adicionales</div>${eb.resources.map(r=>`<div class="resource-item">→ ${r}</div>`).join('')}</div>`:''}
-    ${eb.authorNote?`<div class="ch" style="margin-top:16px;"><div class="ch-num">NOTA DE LA AUTORA</div><div class="ch-text">${eb.authorNote.replace(/\n/g,'<br>')}</div></div>`:''}
-    <div class="divider"></div>
-    <div style="font-size:11px;color:var(--muted);line-height:1.6;">${eb.disclaimer||''}</div>
-    <div class="divider"></div>
-    <div style="font-size:11px;color:var(--muted);">Borrador en español · Elige el idioma abajo y aprueba para traducir.</div>`;
+  var countryName = getCountryNameFront(o.pais||o.country||'France');
+  S.pdfHtml = buildFinalPdfHtml(eb, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
+  var preview = document.getElementById('eb-draft-preview');
+  if(preview) preview.srcdoc = S.pdfHtml;
   // Pre-seleccionar idioma del país en el selector
   var langSel = document.getElementById('eb-lang-sel');
   if(langSel && o.language) langSel.value = o.language;
@@ -2388,6 +2351,7 @@ initKeys();
     loadHistData(last);
     S.ebookData = last.ebook;
     if(last.chapterImages) S.chapterImages = last.chapterImages;
+    if(last.pdfHtml) S.pdfHtml = last.pdfHtml;
     setTimeout(function(){
       hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
       renderDraft(S.selOpp||last.opps[0], last.ebook);
