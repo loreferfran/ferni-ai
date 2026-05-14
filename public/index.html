@@ -1090,6 +1090,7 @@ function saveEbookToHist(histId, ebook){
 function saveFullDataToHist(histId){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
   if(idx>=0){
+    if(S.ebookData) S.history[idx].ebook=S.ebookData;
     if(S.finalEbook) S.history[idx].finalEbook=S.finalEbook;
     if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
