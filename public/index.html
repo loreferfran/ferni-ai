@@ -563,17 +563,29 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
 
-// Generacion de imagenes directo desde browser — sin timeout de Vercel
+// Generacion de imagenes via backend (usa la API key del servidor)
 async function genImgDirectGlobal(prompt){
-  if(!S.openaiKey) return null;
   try {
-    const r = await fetch('https://api.openai.com/v1/images/generations',{
+    // Intento 1: backend /api/generate-image (usa la key del servidor, siempre disponible)
+    const r = await fetch('/api/generate-image',{
       method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.openaiKey},
-      body:JSON.stringify({model:'dall-e-3',prompt:prompt+'. Professional commercial quality. No text. No watermarks. No faces.',n:1,size:'1024x1024',quality:'standard',style:'natural'})
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt:prompt})
     });
     const d = await r.json();
-    return (d.data&&d.data[0])?d.data[0].url:null;
+    if(d.success && d.url) return d.url;
+    // Si el backend falla y tenemos key directa, intentar directo
+    if(S.openaiKey){
+      const r2 = await fetch('https://api.openai.com/v1/images/generations',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.openaiKey},
+        body:JSON.stringify({model:'dall-e-3',prompt:prompt+'. Professional commercial quality. No text. No watermarks. No faces.',n:1,size:'1024x1024',quality:'standard',style:'natural'})
+      });
+      const d2 = await r2.json();
+      return (d2.data&&d2.data[0])?d2.data[0].url:null;
+    }
+    console.log('DALL-E backend error:', d.error);
+    return null;
   } catch(e){ console.log('DALL-E error:',e.message); return null; }
 }
 
@@ -1082,7 +1094,7 @@ async function generateSlotImage(slotIndex, slotName, description){
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     addMsg('chat-ebook', '✅ Imagen insertada en el PDF. ¿Quieres cambiarla o generar otra?', 'ferni');
   } else {
-    addMsg('chat-ebook', '❌ No pude generar la imagen. Verifica tu saldo de OpenAI e intenta de nuevo.', 'ferni');
+    addMsg('chat-ebook', '❌ No pude generar la imagen. Intenta de nuevo — si el error persiste revisa los logs de Vercel.', 'ferni');
     renderImgSlots(ebook);
   }
 }
