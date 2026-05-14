@@ -944,7 +944,7 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   var year = new Date().getFullYear();
-  var espInstruction = 'OBLIGATORIO FASE 1: TODO en ESPANOL CASTELLANO. CERO palabras en frances, aleman, ingles u otro idioma. El pais destino se llama en espanol (Alemania, Francia, Italia — NUNCA Germany, France, Italy). La traduccion es Fase 2 y aun no ocurre. JSON valido sin markdown:\n';
+  var espInstruction = 'TODO en ESPANOL CASTELLANO. El pais se llama en espanol (Alemania no Germany, Francia no France). RESPONDE UNICAMENTE CON EL OBJETO JSON. SIN bloques markdown, SIN ``` antes o despues. Empieza con { y termina con }:\n';
 
   try {
     var schema, prompt, maxTokens;
@@ -954,35 +954,35 @@ app.post('/api/generate-chapter', async function(req, res) {
         title: 'titulo impactante max 10 palabras',
         subtitle: 'subtitulo vendedor max 12 palabras',
         tagline: 'tagline max 8 palabras',
-        intro: 'introduccion 400-500 palabras - gancho emocional profundo + historia real de ' + countryName + ' + promesa clara + por que ESTE metodo funciona + dato del problema'
+        intro: 'introduccion 350-450 palabras: gancho emocional + dato real de ' + countryName + ' + promesa clara + por que este metodo funciona'
       });
-      prompt = 'Escribe SOLO el titulo, subtitulo, tagline e introduccion del ebook. ' + espInstruction + schema;
-      maxTokens = 2000;
+      prompt = 'Escribe titulo, subtitulo, tagline e introduccion del ebook. ' + espInstruction + schema;
+      maxTokens = 1500;
 
     } else if (section === 'ch1') {
-      schema = JSON.stringify({chapter1:{number:1,title:'titulo max 8 palabras',opening:'apertura 200-250 palabras impactante + contexto + por que es critico',content:'contenido 2500+ PALABRAS MINIMO - explicacion profunda 6-7 subsecciones minimo 350 p/c - datos numericos reales de ' + countryName + ' - lista detallada recursos con precios en ' + regs.currency + ' - tabla comparativa - checklist - 3+ errores comunes + solucion',keyPoints:['punto clave: dato numerico especifico de ' + countryName,'punto clave: medida tiempo o costo exacto','punto clave: criterio verificable','punto clave: conexion al metodo','punto clave: ejemplo real de ' + countryName,'punto clave: dato sorprendente'],exercise:{title:'Plan 60 minutos - ejercicio practico HOY',description:'descripcion 150+ palabras con pasos concretos, tiempo por paso, resultado esperado al final',steps:['paso 1 con tiempo - accion concreta - resultado esperado','paso 2 con tiempo - accion concreta - resultado esperado','paso 3 con tiempo - accion concreta - resultado esperado','paso 4 con tiempo - verificacion objetiva - resultado final medible']}}});
-      prompt = 'Escribe SOLO el capitulo 1. MINIMO 2500 palabras en content. ' + espInstruction + schema;
-      maxTokens = 8000;
+      schema = JSON.stringify({chapter1:{number:1,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura impactante + dato real de ' + countryName + ' + por que es urgente resolver esto',content:'700-900 palabras: 4 subsecciones practicas con ejemplos reales de ' + countryName + ', datos numericos, lista de recursos con precios en ' + regs.currency + ', 2-3 errores comunes y como evitarlos',keyPoints:['dato numerico real de ' + countryName,'medida o tiempo concreto','consejo practico verificable','ejemplo del metodo','resultado medible'],exercise:{title:'Ejercicio practico — 30 minutos hoy',steps:['Paso 1: accion concreta con tiempo estimado','Paso 2: accion concreta con tiempo estimado','Paso 3: verificacion del resultado']}}});
+      prompt = 'Escribe el capitulo 1 del ebook. ' + espInstruction + schema;
+      maxTokens = 3000;
 
     } else if (section === 'ch2') {
-      schema = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'apertura 200-250 palabras profunda',content:'contenido 2500+ PALABRAS MINIMO - 6-7 subsecciones minimo 350 p/c - tabla comparativa A vs B vs C - 4+ errores comunes con solucion - estadistica real del sector en ' + countryName + ' - ejemplos concretos de ' + countryName + ' - todos los precios en ' + regs.currency,keyPoints:['punto: dato numerico verificable','punto: medida o tiempo concreto','punto: criterio de seleccion','punto: conexion al metodo principal','punto: ejemplo de ' + countryName,'punto: resultado medible'],exercise:{title:'ejercicio practico - aplicacion del metodo Cap2',description:'descripcion 150+ palabras con pasos y tiempo',steps:['paso 1 con duracion - accion - resultado observable','paso 2 con duracion - accion - resultado observable','paso 3 con duracion - accion - resultado observable','paso 4 con duracion - verificacion - resultado final']}}});
-      prompt = 'Escribe SOLO el capitulo 2. MINIMO 2500 palabras en content. ' + espInstruction + schema;
-      maxTokens = 8000;
+      schema = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura que conecta con el cap 1 + nuevo angulo del problema en ' + countryName,content:'700-900 palabras: 4 subsecciones con metodo paso a paso, tabla comparativa de opciones con precios en ' + regs.currency + ', errores frecuentes y soluciones, estadisticas reales de ' + countryName,keyPoints:['dato verificable del sector','tiempo o costo exacto','criterio de eleccion claro','ejemplo practico de ' + countryName,'resultado esperado'],exercise:{title:'Ejercicio practico — aplicar metodo',steps:['Paso 1: accion concreta','Paso 2: accion concreta','Paso 3: verificacion del avance']}}});
+      prompt = 'Escribe el capitulo 2 del ebook. ' + espInstruction + schema;
+      maxTokens = 3000;
 
     } else if (section === 'ch3') {
-      schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras - aplicacion avanzada',opening:'apertura 200-250 palabras profunda',content:'contenido 2500+ PALABRAS MINIMO - 6-7 subsecciones minimo 350 p/c - plan paso a paso detallado con tiempos exactos - 5+ tips expertos unicos no en internet - tabla comparativa - checklist avanzado - ejemplos de ' + countryName + ' - precios en ' + regs.currency,keyPoints:['punto: dato numerico con contexto','punto: tiempo o medida exacta','punto: tip experto no publicado','punto: conexion con metodo','punto: ejemplo avanzado','punto: resultado observable'],exercise:{title:'Aplicacion avanzada - cronograma 8 semanas',description:'descripcion 150+ palabras - cronograma real con hitos medibles - tiempo estimado total - resultado esperado final',steps:['Semana 1-2: preparacion - que hacer exactamente - resultado esperado','Semana 3-4: implementacion basica - tareas concretas - verificacion','Semana 5-6: optimizacion - ajustes - medicion resultados','Semana 7-8: resultados finales - verificacion profesional - siguiente nivel']}}});
-      prompt = 'Escribe SOLO el capitulo 3. MINIMO 2500 palabras en content. ' + espInstruction + schema;
-      maxTokens = 8000;
+      schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras - aplicacion avanzada',opening:'120-150 palabras: apertura que profundiza en la transformacion con ejemplos de ' + countryName,content:'700-900 palabras: plan paso a paso con tiempos exactos, 4-5 tips expertos unicos, checklist de control, ejemplos avanzados de ' + countryName + ', precios reales en ' + regs.currency,keyPoints:['tip experto no obvio','tiempo o medida exacta','criterio de calidad verificable','ejemplo avanzado','resultado observable en dias'],exercise:{title:'Plan de accion — proximas 2 semanas',steps:['Semana 1: que hacer exactamente con resultado esperado','Semana 2: que hacer exactamente con verificacion','Control final: como saber que funciono']}}});
+      prompt = 'Escribe el capitulo 3 del ebook. ' + espInstruction + schema;
+      maxTokens = 3000;
 
     } else if (section === 'ch4') {
-      schema = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras - dominio profesional',opening:'apertura 200-250 palabras vision inspiradora + resultados reales de ' + countryName,content:'contenido 2500+ PALABRAS MINIMO - resultado final detallado con datos - como verificar (5-7 criterios concretos) - como mantener a largo plazo - 3+ errores finales evitar - siguiente nivel avanzado - tabla resumen antes/despues - precios en ' + regs.currency,keyPoints:['logro verificable: dato numerico concreto','logro verificable: medida o indicador','logro verificable: tiempo alcanzado','logro verificable: comparacion antes/despues','logro verificable: ejemplo real','logro verificable: impacto en vida'],exercise:{title:'Checklist de verificacion profesional + mantenimiento',description:'descripcion 150+ palabras con criterios objetivos y plan de mantenimiento a perpetuidad',steps:['Verificacion 1: criterio objetivo medible - como checkearlo','Verificacion 2: criterio objetivo medible - como checkearlo','Verificacion 3: criterio objetivo medible - como checkearlo','Mantenimiento mensual: que hacer para mantener resultados 12+ meses']}}});
-      prompt = 'Escribe SOLO el capitulo 4 (resultado final). MINIMO 2500 palabras en content. ' + espInstruction + schema;
-      maxTokens = 8000;
+      schema = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras - resultados y siguiente nivel',opening:'120-150 palabras: vision del resultado final + casos reales de ' + countryName,content:'700-900 palabras: como verificar el exito (5 criterios concretos), como mantener resultados a largo plazo, errores finales a evitar, tabla resumen antes/despues, proximo nivel y recursos en ' + regs.currency,keyPoints:['logro medible concreto','indicador de exito verificable','habito de mantenimiento clave','comparacion antes/despues real','impacto en calidad de vida'],exercise:{title:'Checklist de verificacion final',steps:['Verificacion 1: criterio objetivo y como medirlo','Verificacion 2: criterio objetivo y como medirlo','Mantenimiento: que hacer cada mes para mantener resultados']}}});
+      prompt = 'Escribe el capitulo 4 del ebook. ' + espInstruction + schema;
+      maxTokens = 3000;
 
     } else if (section === 'ending') {
-      schema = JSON.stringify({conclusion:'conclusion inspiradora 300-400 palabras - resumen del metodo - resultados esperados - llamada a accion - proximos pasos - impacto en vida',actionPlan:['Accion 1 (hoy): tarea concreta con tiempo estimado y resultado esperado','Accion 2 (esta semana): tarea concreta con detalles y resultado medible','Accion 3 (este mes): hito importante - criterio de exito - conexion a siguiente nivel'],resources:['recurso 1 con descripcion de por que es util','recurso 2 con descripcion de por que es util','recurso 3 con descripcion de por que es util','plantilla o checklist bonus si aplica'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
-      prompt = 'Escribe conclusion, plan de accion, recursos y seccion legal del ebook. Conclusion 300-400 palabras, cada plan de accion 80+ palabras, recursos con descripcion, legal completo. Adapta TODO a ' + countryName + '. ' + espInstruction + schema;
-      maxTokens = 2500;
+      schema = JSON.stringify({conclusion:'250-350 palabras: resumen del metodo, resultados esperados, llamada a accion inspiradora, proximos pasos concretos',actionPlan:['Accion 1 hoy: tarea concreta con tiempo y resultado esperado','Accion 2 esta semana: tarea con detalle y resultado medible','Accion 3 este mes: hito clave con criterio de exito'],resources:['Recurso 1: nombre y por que es util para este tema','Recurso 2: nombre y por que es util para este tema','Recurso 3: nombre y por que es util para este tema'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
+      prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook. Adapta todo a ' + countryName + '. ' + espInstruction + schema;
+      maxTokens = 2000;
 
     } else {
       return res.status(400).json({ success: false, error: 'section invalida: ' + section });
