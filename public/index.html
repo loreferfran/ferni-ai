@@ -294,6 +294,7 @@ select option { background: #1e2d52; }
             <div style="font-size:14px;color:var(--text);margin-top:14px;font-weight:600;">FERNI está escribiendo tu ebook...</div>
             <div style="margin-top:18px;text-align:left;min-width:270px;">
               <div class="lstep" id="ebst-header"><span class="ldot"></span><span>Portada e introducción</span></div>
+              <div class="lstep" id="ebst-outline"><span class="ldot"></span><span>Planificando estructura (sin repeticiones)</span></div>
               <div class="lstep" id="ebst-ch1"><span class="ldot"></span><span>Capítulo 1</span></div>
               <div class="lstep" id="ebst-ch2"><span class="ldot"></span><span>Capítulo 2</span></div>
               <div class="lstep" id="ebst-ch3"><span class="ldot"></span><span>Capítulo 3</span></div>
@@ -885,6 +886,7 @@ async function goEbook(){
     // Generacion capitulo a capitulo — 1 llamada Claude por seccion, sin timeout
     const steps = [
       { section:'header' },
+      { section:'outline' },
       { section:'ch1' },
       { section:'ch2' },
       { section:'ch3' },
@@ -892,19 +894,22 @@ async function goEbook(){
       { section:'ending' }
     ];
     var parts = {};
-    var ebookDefs = null; // diccionario de nombres fijos generado en el header
+    var ebookDefs = null;    // diccionario de nombres fijos (del header)
+    var ebookOutline = null; // plan de temas por capitulo (del outline)
     for(var si=0; si<steps.length; si++){
       var step = steps[si];
       ebStep(step.section, 'active');
-      loadEl.textContent = 'Escribiendo... (' + (si+1) + ' de 6)';
+      var stepLabel = step.section === 'outline' ? 'Planificando estructura...' : 'Escribiendo... (' + (si) + ' de 5)';
+      loadEl.textContent = stepLabel;
       var chPayload = Object.assign({}, payload, { section: step.section });
       if(ebookDefs) chPayload.ebookDefs = ebookDefs;
+      if(ebookOutline) chPayload.ebookOutline = ebookOutline;
       var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
       var sd = await sr.json();
       if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
       parts[step.section] = sd.data;
-      // Capture definitions dictionary from header and pass to all subsequent chapters
       if(step.section === 'header' && sd.data.definitions) ebookDefs = sd.data.definitions;
+      if(step.section === 'outline') ebookOutline = sd.data;
       ebStep(step.section, 'done');
     }
     loadEl.textContent = 'Construyendo PDF...';
