@@ -1033,7 +1033,7 @@ function renderImgSlots(ebook){
   var html = '';
   // Slot portada
   var coverHtml = S.coverUrl 
-    ? '<img src="'+S.coverUrl+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+    ? '<img src="'+S.coverUrl+'" style="width:100%;max-height:120px;width:100%;object-fit:contain;border-radius:6px;background:#000;">'
     : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🖼️</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
   html += '<div class="img-slot" data-slot="cover" data-name="Portada" style="cursor:pointer;border:2px dashed rgba(108,92,231,0.4);border-radius:8px;overflow:hidden;position:relative;">' +
     coverHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Portada</div></div>';
@@ -1041,7 +1041,7 @@ function renderImgSlots(ebook){
   // Slots capítulos
   chapters.forEach(function(ch, i){
     var imgHtml = (S.chapterImages && S.chapterImages[i])
-      ? '<img src="'+S.chapterImages[i]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      ? '<img src="'+S.chapterImages[i]+'" style="width:100%;max-height:120px;width:100%;object-fit:contain;border-radius:6px;background:#000;">'
       : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#00b894,#00cec9);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🖼️</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
     var chName = (ch.title||'Capítulo '+(i+1)).replace(/'/g,'');
     html += '<div class="img-slot" data-slot="'+i+'" data-name="Cap '+(i+1)+': '+chName.slice(0,15)+'" style="cursor:pointer;border:2px dashed rgba(0,184,148,0.4);border-radius:8px;overflow:hidden;">' +
@@ -1053,13 +1053,13 @@ function renderImgSlots(ebook){
   if(isVisualNiche(o)){
     var nChaps = chapters.length;
     var conclHtml = (S.chapterImages && S.chapterImages[nChaps])
-      ? '<img src="'+S.chapterImages[nChaps]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      ? '<img src="'+S.chapterImages[nChaps]+'" style="width:100%;max-height:120px;width:100%;object-fit:contain;border-radius:6px;background:#000;">'
       : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#e17055,#d63031);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🏆</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
     html += '<div class="img-slot" data-slot="'+nChaps+'" data-name="Conclusión resultado final" style="cursor:pointer;border:2px dashed rgba(225,112,85,0.4);border-radius:8px;overflow:hidden;">' +
       conclHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Conclusión / Resultado</div></div>';
 
     var baHtml = (S.chapterImages && S.chapterImages[nChaps+1])
-      ? '<img src="'+S.chapterImages[nChaps+1]+'" style="width:100%;height:100px;object-fit:cover;border-radius:6px;">'
+      ? '<img src="'+S.chapterImages[nChaps+1]+'" style="width:100%;max-height:120px;width:100%;object-fit:contain;border-radius:6px;background:#000;">'
       : '<div style="width:100%;height:100px;background:linear-gradient(135deg,#fdcb6e,#e67e22);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">✨</span><span style="font-size:10px;color:white;">Clic para generar</span></div>';
     html += '<div class="img-slot" data-slot="'+(nChaps+1)+'" data-name="Antes y Después - transformación" style="cursor:pointer;border:2px dashed rgba(253,203,110,0.6);border-radius:8px;overflow:hidden;">' +
       baHtml + '<div style="font-size:10px;text-align:center;padding:4px;color:var(--muted);">Antes → Después</div></div>';
@@ -1296,7 +1296,7 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '.chapter-header{background:linear-gradient(135deg,#2d3180,#6c5ce7);color:white;padding:30px;border-radius:12px;margin-bottom:30px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
     '.chapter-num{font-size:12px;text-transform:uppercase;letter-spacing:2px;opacity:0.7;}' +
     '.chapter-title{font-size:24px;font-weight:bold;margin-top:8px;}' +
-    '.chapter-img{display:block;width:100%;height:auto;border-radius:10px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.15);}' +
+    '.chapter-img{display:block;width:100%;height:auto;max-height:none;border-radius:10px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.15);}' +
     '.opening{background:#fffbf0;border-left:4px solid #fdcb6e;padding:16px 20px;font-style:italic;color:#5a4a2a;margin:20px 0;border-radius:0 8px 8px 0;}' +
     'p{margin-bottom:16px;text-align:justify;}' +
     '.fmt-list{margin:12px 0 16px 0;padding-left:20px;list-style:none;}' +
