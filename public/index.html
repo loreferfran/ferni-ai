@@ -666,12 +666,12 @@ function applyIDBImages(histId, ebook, results) {
 
 // Generacion de imagenes via backend (usa la API key del servidor)
 // Retorna {url, error} en lugar de null para mostrar el error real al usuario
-async function genImgDirectGlobal(prompt, imageType){
+async function genImgDirectGlobal(prompt, imageType, niche){
   try {
     const r = await fetch('/api/generate-image',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:prompt, imageType: imageType||'chapter'})
+      body:JSON.stringify({prompt:prompt, imageType: imageType||'chapter', niche: niche||''})
     });
     const d = await r.json();
     if(d.success && d.url) return {url: d.url, error: null};
@@ -1163,6 +1163,35 @@ function isVisualNiche(o){
   return tipoDemanda.indexOf('transform')!==-1 || tipoDemanda.indexOf('crear')!==-1 || tipoDemanda.indexOf('hacer')!==-1;
 }
 
+// Devuelve template visual para la portada según nicho
+function getCoverTemplate(o){
+  var t = ((o.nicho||'')+(o.niche||'')+(o.problema||'')+(o.problem||'')).toLowerCase();
+  if(/beauty|belleza|skin|piel|maquill|makeup|nail|uña|cabello|hair|serum|crema|skincare/.test(t))
+    return { hookColor:'#f8a5c2', titleSize:'32px', topH:'36%', botH:'32%',
+      topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0) 100%)',
+      botGrad:'linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0) 100%)' };
+  if(/kid|niño|infant|bebe|baby|child|juego|educacion|escuela|multiplicacion|aprend/.test(t))
+    return { hookColor:'#00b894', titleSize:'38px', topH:'40%', botH:'25%',
+      topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.80) 0%,rgba(0,0,0,0) 100%)',
+      botGrad:'linear-gradient(to top,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0) 100%)' };
+  if(/fitness|gym|ejercicio|workout|yoga|pilates|deporte|sport|entrena/.test(t))
+    return { hookColor:'#e17055', titleSize:'36px', topH:'36%', botH:'30%',
+      topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%)',
+      botGrad:'linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0) 100%)' };
+  if(/business|negocio|empresa|startup|emprendimiento|marketing|venta|finanz|inversion|cripto|dinero/.test(t))
+    return { hookColor:'#74b9ff', titleSize:'30px', topH:'38%', botH:'32%',
+      topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0) 100%)',
+      botGrad:'linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0) 100%)' };
+  if(/cocina|recipe|receta|food|comida|cook|chef/.test(t))
+    return { hookColor:'#fdcb6e', titleSize:'33px', topH:'35%', botH:'30%',
+      topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0) 100%)',
+      botGrad:'linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0) 100%)' };
+  // default
+  return { hookColor:'#fdcb6e', titleSize:'34px', topH:'37%', botH:'32%',
+    topGrad:'linear-gradient(to bottom,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0) 100%)',
+    botGrad:'linear-gradient(to top,rgba(0,0,0,0.78) 0%,rgba(0,0,0,0) 100%)' };
+}
+
 // Renderizar slots de imágenes clickeables
 function renderImgSlots(ebook){
   var slots = document.getElementById('img-slots');
@@ -1246,7 +1275,8 @@ async function generateSlotImage(slotIndex, slotName, description){
   
   addMsg('chat-ebook', '🎨 Generando imagen para "' + slotName + '"...', 'ferni');
   
-  var imgResult = await genImgDirectGlobal(prompt, slotIndex === 'cover' ? 'cover' : 'chapter');
+  var niche = (o.nicho || o.niche || o.problema || o.problem || '').toLowerCase();
+  var imgResult = await genImgDirectGlobal(prompt, slotIndex === 'cover' ? 'cover' : 'chapter', niche);
   var url = imgResult.url;
 
   if(url){
@@ -1486,20 +1516,24 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var authorPrefix = isEs?'por':isFr?'par':isDe?'von':isIt?'di':isPt?'por':'by';
   var lblRights = isEs?'Todos los derechos reservados':isFr?'Tous droits réservés':isDe?'Alle Rechte vorbehalten':isIt?'Tutti i diritti riservati':isPt?'Todos os direitos reservados':'All rights reserved';
   if(coverUrl){
-    // Página 1: SOLO la imagen de portada, sin ningún texto
+    // Página 1: imagen fondo + texto superpuesto por la app según template de nicho
+    var tpl = getCoverTemplate(o);
     html += '<div class="pg pg-img page-break">';
-    html += '<img class="cover-img-only" src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'">';
+    html += '<img src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;">';
+    // Overlay superior — título
+    html += '<div style="position:absolute;top:0;left:0;right:0;height:' + tpl.topH + ';background:' + tpl.topGrad + ';display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:40px 44px 16px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+    html += '<h1 style="color:white;font-size:' + tpl.titleSize + ';font-weight:900;line-height:1.2;text-shadow:0 2px 14px rgba(0,0,0,0.95),0 0 40px rgba(0,0,0,0.5);margin:0;">' + (eb.title||'') + '</h1>';
     html += '</div>';
-    // Página 2: título y autor con fondo degradado
-    html += '<div class="pg cover page-break">';
-    html += '<h1>' + (eb.title||'') + '</h1>';
-    html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
-    if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
-    html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
-    html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; ' + lblRights + '</div>';
+    // Overlay inferior — subtítulo, hook, autor
+    html += '<div style="position:absolute;bottom:0;left:0;right:0;height:' + tpl.botH + ';background:' + tpl.botGrad + ';display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:16px 44px 38px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+    html += '<div style="color:rgba(255,255,255,0.92);font-size:16px;font-style:italic;text-shadow:0 1px 10px rgba(0,0,0,0.95);margin-bottom:10px;">' + (eb.subtitle||'') + '</div>';
+    if(eb.tagline) html += '<div style="color:' + tpl.hookColor + ';font-size:13px;font-weight:700;letter-spacing:0.5px;text-shadow:0 1px 8px rgba(0,0,0,0.95);margin-bottom:12px;">' + eb.tagline + '</div>';
+    html += '<div style="color:rgba(255,255,255,0.6);font-size:10px;letter-spacing:2px;text-transform:uppercase;text-shadow:0 1px 6px rgba(0,0,0,0.9);">' + authorPrefix + ' ' + author + '</div>';
     html += '</div>';
+    html += '</div>';
+    // Página 2 continúa con el índice (sin página de gradiente morado)
   } else {
-    // Sin imagen: portada con gradiente y texto
+    // Sin imagen: portada con gradiente y texto (comportamiento original)
     html += '<div class="pg cover page-break">';
     html += '<h1>' + (eb.title||'') + '</h1>';
     html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
