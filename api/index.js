@@ -1189,10 +1189,12 @@ app.post('/api/translate-custom', async function(req, res) {
 
 app.post('/api/generate-image', async function(req, res) {
   try {
+    var keyPreview = OPENAI_KEY ? OPENAI_KEY.substring(0, 12) + '...' : 'NO KEY';
+    console.log('generate-image using key:', keyPreview);
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
-      body: JSON.stringify({ model: 'dall-e-2', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024' })
+      body: JSON.stringify({ model: 'dall-e-3', prompt: req.body.prompt + '. Professional commercial quality. No text. No watermarks. No faces.', n: 1, size: '1024x1024', quality: 'standard', style: 'natural' })
     });
     var d = await resp.json();
     if (d.data && d.data[0]) {
