@@ -944,7 +944,9 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   var sys = buildEbookSystem(countryName, regs);
   var year = new Date().getFullYear();
-  var espInstruction = 'TODO en ESPANOL CASTELLANO. El pais se llama en espanol (Alemania no Germany, Francia no France). RESPONDE UNICAMENTE CON EL OBJETO JSON. SIN bloques markdown, SIN ``` antes o despues. Empieza con { y termina con }:\n';
+  var espInstruction = 'TODO en ESPANOL CASTELLANO. El pais se llama en espanol (Alemania no Germany, Francia no France).' +
+    ' REGLAS DE PRECIOS Y PRODUCTOS: (1) NUNCA uses precios exactos — usa siempre rangos: "entre X y Y ' + regs.currency + '" o "desde X ' + regs.currency + '". (2) Cuando menciones donde conseguir un producto, da SIEMPRE 2 o 3 opciones de lugares (tiendas, farmacias, supermercados, online) propias de ' + countryName + ', no solo uno.' +
+    ' RESPONDE UNICAMENTE CON EL OBJETO JSON. SIN bloques markdown, SIN ``` antes o despues. Empieza con { y termina con }:\n';
 
   try {
     var schema, prompt, maxTokens;
