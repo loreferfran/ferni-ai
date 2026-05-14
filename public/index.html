@@ -1156,6 +1156,8 @@ function renderDraft(o,eb){
   // Pre-seleccionar idioma del país en el selector
   var langSel = document.getElementById('eb-lang-sel');
   if(langSel && o.language) langSel.value = o.language;
+  // Renderizar slots de imagen
+  renderImgSlots(eb);
 }
 
 async function approveEbook(){
