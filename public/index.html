@@ -1135,7 +1135,7 @@ function renderDraft(o,eb){
         ${c.exercise?`<div class="ch-exercise"><div class="ch-exercise-title">✏️ ${c.exercise.title||'Ejercicio práctico'}</div><div style="font-size:12px;color:var(--text2);margin-bottom:8px;">${c.exercise.description||''}</div>${(c.exercise.steps||[]).map((s,i)=>`<div class="ch-exercise-step"><div class="step-num">${i+1}</div><div>${s}</div></div>`).join('')}</div>`:''}
       </div>`).join('')}
     <div class="ch"><div class="ch-num">CONCLUSIÓN</div><div class="ch-title">Tu transformación comienza hoy</div><div class="ch-text">${(eb.conclusion||'').replace(/\n/g,'<br><br>')}</div></div>
-    ${eb.actionPlan&&eb.actionPlan.length?`<div class="section-card" style="margin-top:16px;"><div class="section-card-title">🎯 Plan de acción</div>${eb.actionPlan.map((a,i)=>`<div class="action-plan-item"><div class="step-num">${i+1}</div><div>${a}</div></div>`).join('')}</div>`:''}
+    ${(eb.actionPlan||[]).filter(a=>a&&a.trim().length>10).length?`<div class="section-card" style="margin-top:16px;"><div class="section-card-title">🎯 Plan de acción</div>${eb.actionPlan.filter(a=>a&&a.trim().length>10).map((a,i)=>`<div class="action-plan-item"><div class="step-num">${i+1}</div><div>${a}</div></div>`).join('')}</div>`:''}
     ${eb.resources&&eb.resources.length?`<div class="section-card" style="margin-top:12px;"><div class="section-card-title">📚 Recursos adicionales</div>${eb.resources.map(r=>`<div class="resource-item">→ ${r}</div>`).join('')}</div>`:''}
     ${eb.authorNote?`<div class="ch" style="margin-top:16px;"><div class="ch-num">NOTA DE LA AUTORA</div><div class="ch-text">${eb.authorNote.replace(/\n/g,'<br>')}</div></div>`:''}
     <div class="divider"></div>

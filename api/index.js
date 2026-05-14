@@ -982,8 +982,13 @@ app.post('/api/generate-chapter', async function(req, res) {
       maxTokens = 3000;
 
     } else if (section === 'ending') {
-      schema = JSON.stringify({conclusion:'250-350 palabras: resumen del metodo, resultados esperados, llamada a accion inspiradora, proximos pasos concretos',actionPlan:['Accion 1 hoy: tarea concreta con tiempo y resultado esperado','Accion 2 esta semana: tarea con detalle y resultado medible','Accion 3 este mes: hito clave con criterio de exito'],resources:['Recurso 1: nombre y por que es util para este tema','Recurso 2: nombre y por que es util para este tema','Recurso 3: nombre y por que es util para este tema'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
-      prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook. Adapta todo a ' + countryName + '. ' + espInstruction + schema;
+      prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
+        ' conclusion: 250-350 palabras inspiradoras con resultados esperados y llamada a accion.' +
+        ' actionPlan: array con exactamente 3 strings — cada string es una accion concreta y especifica del tema del ebook (NO ejemplos genericos), con tiempo estimado y resultado esperado. Ejemplo real: "Esta tarde dedica 20 minutos a identificar tu tipo de piel con el test del papel secante: presiona suavemente en frente y mejillas. Si el papel se impregna en T eres mixta, si es seco eres normal/seca."' +
+        ' resources: array con 3 strings — recursos reales y utiles para el tema (apps, webs, libros, comunidades) disponibles en ' + countryName + '.' +
+        ' legalSection: objeto con healthDisclaimer, guarantee, dataProtection, copyright.' +
+        ' ' + espInstruction +
+        JSON.stringify({conclusion:'[texto conclusion]',actionPlan:['[accion 1 especifica del ebook con tiempo y resultado]','[accion 2 especifica del ebook con tiempo y resultado]','[accion 3 especifica del ebook con tiempo y resultado]'],resources:['[recurso 1 real]','[recurso 2 real]','[recurso 3 real]'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
       maxTokens = 2000;
 
     } else {
