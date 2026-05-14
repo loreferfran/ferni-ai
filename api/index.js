@@ -1201,6 +1201,73 @@ app.post('/api/translate-custom', async function(req, res) {
   }
 });
 
+// Módulo Directo: GPT-4o genera el brief de producción sin búsqueda Serper
+app.post('/api/quick-brief', async function(req, res) {
+  var topic = (req.body.topic || '').trim();
+  var lang = req.body.lang || 'Español';
+  var country = req.body.country || 'España';
+  if (!topic) return res.status(400).json({ success: false, error: 'Topic is required' });
+
+  var sys = 'You are a Premium Ebook Creative Director, Market Psychologist, Editorial Designer, and Digital Product Architect.' +
+    ' This system does NOT use external search engines. The user directly provides a PDF topic.' +
+    ' Your job: deeply analyze the topic, identify the target audience and buyer psychology, and produce a complete PREMIUM EBOOK PRODUCTION BRIEF.' +
+    '\n\nAUDIENCE ADAPTATION RULE: Always adapt the ebook to the final audience.' +
+    ' Children → playful colors, fun icons, simple language, entertaining structure.' +
+    ' Parents → warm trustworthy colors, calm professional design, practical checklists.' +
+    ' Business → clean corporate design, frameworks, charts, dashboards.' +
+    ' Beauty → elegant feminine design, luxury color palettes, emotional aspirational tone.' +
+    ' Fitness → energetic visuals, motivational structure, dynamic formatting.' +
+    ' Finance → trustworthy authority-driven layouts.' +
+    ' Always adapt: colors, typography, tone, formatting, visual hierarchy to niche and audience.' +
+    '\n\nCOMMERCIAL OBJECTIVE: This ebook is created to be sold as an infoproduct on platforms like Hotmart, Gumroad, Kiwify, Payhip, Etsy.' +
+    ' Every decision must increase: perceived value, trust, attractiveness, readability, transformation, buyer satisfaction, resale potential.' +
+    ' Do NOT create a generic ebook. Create a niche-adapted premium PDF experience commercially ready to sell.' +
+    '\n\nReturn ONLY valid JSON (no markdown, no explanation) with EXACTLY this structure:\n' +
+    '{\n' +
+    '  "tituloEbook": "compelling title in Spanish",\n' +
+    '  "promesaEbook": "clear transformation promise in Spanish",\n' +
+    '  "problema": "specific problem solved (Spanish)",\n' +
+    '  "necesidad": "specific reader need (Spanish)",\n' +
+    '  "tipoDemanda": "aprendizaje|transformacion|entretenimiento|referencia",\n' +
+    '  "rangoEdad": "age range e.g. 25-45",\n' +
+    '  "genero": "mujeres|hombres|ambos",\n' +
+    '  "emocion": "primary emotional driver (Spanish)",\n' +
+    '  "dolorODeseo": "deep pain or desire (Spanish)",\n' +
+    '  "nicho": "niche in Spanish",\n' +
+    '  "busquedaExacta": "main keyword in Spanish",\n' +
+    '  "precioHotmart": "suggested price e.g. 17 EUR",\n' +
+    '  "pais": "' + country + '",\n' +
+    '  "country": "' + country + '",\n' +
+    '  "idioma": "' + lang + '",\n' +
+    '  "language": "' + lang + '",\n' +
+    '  "scoreMonetizacion": 80,\n' +
+    '  "estiloVisual": "brief visual style description for images",\n' +
+    '  "colorPalette": "main colors for the niche",\n' +
+    '  "tono": "tone of voice description"\n' +
+    '}';
+
+  var userMsg = 'Create a complete premium ebook production brief for this topic: "' + topic + '"' +
+    '\nTarget country: ' + country +
+    '\nDelivery language: ' + lang +
+    '\nAnalyze who will buy and read this, what emotional tone fits, what visual style matches the audience, and what makes it commercially valuable.' +
+    '\nRespond ONLY with the JSON object described in your instructions.';
+
+  try {
+    var resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
+      body: JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }], temperature: 0.6, max_tokens: 800 })
+    });
+    var d = await resp.json();
+    var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+    if (!raw) return res.status(500).json({ success: false, error: 'No response from GPT-4o' });
+    var brief = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    res.json({ success: true, opportunity: brief });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/generate-image', async function(req, res) {
   try {
     var imageType = req.body.imageType || 'chapter';
