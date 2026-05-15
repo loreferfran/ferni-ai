@@ -396,12 +396,17 @@ select option { background: #1e2d52; }
             <div class="big-icon">🛒</div>
             <div class="state-title">Kit Marketing Digital</div>
             <div class="state-sub" style="margin-bottom:16px;">Genera textos para Hotmart, Meta, Facebook e Instagram<br>adaptados al idioma <b>y mercado</b> exacto.</div>
-            <div style="width:100%;max-width:360px;text-align:left;margin-bottom:6px;">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
-              <input id="hm-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:6px;" />
-              <div style="font-size:10px;color:var(--muted);">Especifica el país exacto aunque el idioma sea el mismo (ej: Inglés para Canada ≠ UK ≠ USA)</div>
+            <div style="width:100%;max-width:400px;text-align:left;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Ebook a promocionar</div>
+              <select id="hm-ebook-sel" style="width:100%;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:6px;">
+                <option value="">— Selecciona un ebook —</option>
+              </select>
+              <div id="hm-ebook-preview" style="display:none;background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text2);"></div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
+              <input id="hm-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:4px;" />
+              <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">Inglés para Canada ≠ UK ≠ USA — Claude adapta tono y modismos al mercado exacto</div>
+              <button class="btn btn-p" style="width:100%;font-size:14px;padding:11px;" onclick="genHotmartFromSel()">✦ Generar Kit Marketing</button>
             </div>
-            <button class="btn btn-p" style="margin-top:12px;font-size:14px;padding:10px 24px;" onclick="genHotmart()">✦ Generar Kit Marketing</button>
           </div>
           <div id="hm-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Generando kit Hotmart...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="hm-load-txt">Escribiendo copy de ventas...</div></div>
           <div id="hm-content" class="hidden">
@@ -705,6 +710,7 @@ function showTab(id,el){
   if(id==='ebook') restoreEbookTab();
   if(id==='translate') restoreTranslateTab();
   if(id==='extras' && S.extrasData){ hide('ex-empty'); hide('ex-loading'); show('ex-content'); }
+  if(id==='hotmart' && !S.hmKit) populateHmSel();
   if(id==='meta' && !S.maKit) populateMetaSel();
 }
 
@@ -2218,9 +2224,9 @@ function dlFinalEbook(){
   if(S.fmt==='epub') alert('Para EPUB (Amazon KDP):\n1. Descarga Calibre gratis en calibre-ebook.com\n2. Importa el archivo .doc\n3. Convierte a EPUB\n4. El EPUB cumplirá los requisitos básicos de Amazon KDP\n\nTambién puedes usar Amazon KDP directamente — acepta archivos .doc');
 }
 
-async function genHotmart(o){
+async function genHotmart(o, langOverride){
   o=o||S.selOpp; if(!o) return;
-  const lang = S.approvedLang || o.idioma || o.language || 'Español';
+  const lang = langOverride || S.approvedLang || o.idioma || o.language || 'Español';
   const marketInp = document.getElementById('hm-market-inp');
   const targetMarket = (marketInp && marketInp.value.trim()) || o.pais || o.country || '';
   show('hm-loading'); hide('hm-empty');
@@ -2332,6 +2338,64 @@ async function genHotmartImg(idx){
     if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" /><div style="font-size:8px;color:#aaa;margin-top:3px;text-align:center;">Clic derecho → Guardar</div>`; }
     else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
+}
+
+// Poblar selector de ebooks disponibles para Kit Marketing (Hotmart)
+function populateHmSel(){
+  var sel = document.getElementById('hm-ebook-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Selecciona un ebook —</option>';
+  if(S.selOpp && (S.finalEbook || S.ebookData)){
+    var eb = S.finalEbook || S.ebookData;
+    var o = S.selOpp;
+    var opt = document.createElement('option');
+    opt.value = 'current';
+    opt.textContent = '📖 ' + (eb.title || o.tituloEbook || o.ebookTitle || 'Ebook actual') + ' — ' + (o.pais||o.country||'') + ' · ' + (S.approvedLang||o.language||'');
+    sel.appendChild(opt);
+    sel.value = 'current';
+  }
+  (S.history||[]).forEach(function(h){
+    if(!h.ebook && !h.finalEbook) return;
+    var eb = h.finalEbook || h.ebook;
+    var o = h.selOpp || (h.opps&&h.opps[0]);
+    if(!o) return;
+    var opt = document.createElement('option');
+    opt.value = 'hist_' + h.id;
+    opt.textContent = '📖 ' + (eb.title||o.tituloEbook||o.ebookTitle||'Ebook') + ' — ' + (o.pais||o.country||'') + ' · ' + (h.language||o.language||'');
+    sel.appendChild(opt);
+  });
+  sel.onchange = function(){
+    var data = getHmEbookData(sel.value);
+    var prev = document.getElementById('hm-ebook-preview');
+    if(!data){ prev.style.display='none'; return; }
+    prev.style.display='block';
+    var o = data.opp; var eb = data.ebook;
+    prev.innerHTML = '<strong>'+(eb.title||o.tituloEbook||'')+'</strong><br>'+(o.pais||o.country||'')+' · '+(data.lang||'')+' · '+(o.precioHotmart||o.hotmartPrice||'')+'<br><span style="color:var(--muted);">'+(o.problema||o.problem||'')+'</span>';
+    var marketInp = document.getElementById('hm-market-inp');
+    if(marketInp) marketInp.value = o.pais || o.country || '';
+  };
+}
+
+function getHmEbookData(val){
+  if(val === 'current'){
+    return { opp: S.selOpp, ebook: S.finalEbook||S.ebookData, lang: S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'Español' };
+  }
+  if(val && val.startsWith('hist_')){
+    var id = parseInt(val.replace('hist_',''));
+    var h = (S.history||[]).find(function(x){ return x.id===id; });
+    if(!h || (!h.ebook && !h.finalEbook)) return null;
+    var opp = h.selOpp || (h.opps&&h.opps[0]);
+    return { opp: opp, ebook: h.finalEbook||h.ebook, lang: h.language||(opp&&(opp.idioma||opp.language))||'Español' };
+  }
+  return null;
+}
+
+function genHotmartFromSel(){
+  var val = document.getElementById('hm-ebook-sel') && document.getElementById('hm-ebook-sel').value;
+  if(!val){ alert('Selecciona primero un ebook de la lista.'); return; }
+  var data = getHmEbookData(val);
+  if(!data || !data.opp){ alert('No se encontraron datos del ebook seleccionado.'); return; }
+  genHotmart(data.opp, data.lang);
 }
 
 // Poblar selector de ebooks disponibles para Meta Ads
