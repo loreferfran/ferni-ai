@@ -1821,18 +1821,15 @@ function dlPDF(){
   if(!eb){ alert('Genera y aprueba el ebook primero'); return; }
   if(!S.pdfHtml) S.pdfHtml = buildPdfHtml();
   var html = S.pdfHtml;
-  var o = S.selOpp || {};
-  var author = S.author || 'Ferni Guides';
-  var year = new Date().getFullYear();
-  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  var filename = 'FERNI_PDF_'+(o.country||'ebook')+'_'+author+'_'+year+'.html';
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  setTimeout(function(){
-    window.open(URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'})),'_blank');
-  }, 800);
+  // Abrir en ventana nueva y lanzar diálogo de impresión → "Guardar como PDF"
+  var w = window.open('', '_blank');
+  if(!w){ alert('Activa las ventanas emergentes para esta página'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.onload = function(){ w.print(); };
+  // fallback si onload no dispara
+  setTimeout(function(){ try{ w.print(); }catch(e){} }, 1500);
 }
 
 // ─── BONUS PACK ─────────────────────────────────────────────────────────────
