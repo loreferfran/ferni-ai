@@ -1177,16 +1177,21 @@ app.post('/api/translate-ebook', async function(req, res) {
 app.post('/api/translate-custom', async function(req, res) {
   var ebook = req.body.ebook;
   var language = req.body.language;
+  var targetMarket = req.body.targetMarket || '';
   var author = req.body.author || 'Ferni Guides';
-  var sys = 'Eres un traductor literario profesional experto en ' + language + '.' +
-    ' Tu trabajo es traducir el siguiente JSON de ebook al ' + language + ' de forma natural y fluida.' +
-    '\nREGLAS:' +
-    ' 1. Traduce al ' + language + ' mas natural — el lector debe sentir que fue escrito originalmente en ' + language + '.' +
-    ' 2. Conserva EXACTAMENTE todos los numeros, medidas y cantidades.' +
-    ' 3. Conserva el nombre del autor: ' + author + ' — NO traducir.' +
-    ' 4. Conserva toda la estructura JSON y los keys identicos.' +
-    ' 5. Devuelve SOLO JSON valido, sin markdown, sin texto extra.' +
-    ' 6. Si el idioma usa escritura de derecha a izquierda (arabe, hebreo), traduce igualmente pero mantén los keys en ingles.';
+  var marketRule = targetMarket
+    ? ' TARGET MARKET: ' + targetMarket + '. This is critical — ' + language + ' for ' + targetMarket + ' has specific cultural nuances, idioms, expressions, and tone different from other ' + language + '-speaking markets. Adapt vocabulary, expressions, cultural references, and tone to sound completely native to ' + targetMarket + '. For example: English for Canada uses different expressions than UK or USA. French for Canada (Quebec) differs from France. Portuguese for Brazil differs from Portugal. Spanish for Mexico differs from Spain. Do NOT use generic translated text — use market-specific native language.'
+    : '';
+  var sys = 'You are a professional literary translator and cultural adaptation specialist expert in ' + language + (targetMarket ? ' for the ' + targetMarket + ' market' : '') + '.' +
+    ' Your job is to translate the following ebook JSON into ' + language + ' in a natural, fluent, market-native way.' +
+    '\nRULES:' +
+    ' 1. Translate to the most natural ' + language + (targetMarket ? ' specifically for ' + targetMarket : '') + ' — the reader must feel it was written originally in this language for this market.' +
+    ' 2. Preserve EXACTLY all numbers, measurements and quantities.' +
+    ' 3. Preserve the author name: ' + author + ' — do NOT translate.' +
+    ' 4. Preserve all JSON structure and keys identical.' +
+    ' 5. Return ONLY valid JSON, no markdown, no extra text.' +
+    ' 6. If the language uses right-to-left script (Arabic, Hebrew), translate normally but keep keys in English.' +
+    marketRule;
   function safeParseTranslation(raw) {
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) {

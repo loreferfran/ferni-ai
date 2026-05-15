@@ -326,9 +326,9 @@ select option { background: #1e2d52; }
             </div>
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
-              <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: elige el idioma del PDF</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">El borrador está en español. Al aprobar, Claude lo traduce al idioma que elijas. Puedes cambiar el idioma pre-seleccionado del país.</div>
-              <select id="eb-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;width:100%;margin-bottom:10px;">
+              <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: idioma + mercado del PDF</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">El borrador está en español. Al aprobar, Claude lo traduce adaptado al mercado exacto.</div>
+              <select id="eb-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;width:100%;margin-bottom:8px;">
                 <option value="">-- Selecciona idioma destino --</option>
                 <option value="English">🇬🇧 Inglés (English)</option>
                 <option value="French">🇫🇷 Francés (Français)</option>
@@ -359,6 +359,8 @@ select option { background: #1e2d52; }
                 <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
                 <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
               </select>
+              <input id="eb-market-inp" type="text" placeholder="Mercado objetivo — ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:4px;" />
+              <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Inglés para Canada ≠ UK ≠ USA — Claude adapta modismos, referencias y tono al mercado exacto</div>
               <div class="btn-row" style="margin:0;">
                 <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR y traducir</button>
                 <button class="btn btn-s" onclick="regenEbook()" title="Regenera todo desde cero — consume créditos completos de Claude">↺ Regenerar todo (costoso)</button>
@@ -390,7 +392,17 @@ select option { background: #1e2d52; }
       <!-- HOTMART -->
       <div id="panel-hotmart" class="panel">
         <div class="panel-scroll">
-          <div id="hm-empty" class="state-c"><div class="big-icon">🛒</div><div class="state-title">Módulo Hotmart</div><div class="state-sub">Genera el kit completo de ventas en el idioma elegido:<br>copy de página, emails, bullets, bonos y más.</div><button class="btn btn-p" style="margin-top:16px;font-size:14px;padding:10px 24px;" onclick="genHotmart()">✦ Generar Kit Hotmart</button></div>
+          <div id="hm-empty" class="state-c">
+            <div class="big-icon">🛒</div>
+            <div class="state-title">Kit Marketing Digital</div>
+            <div class="state-sub" style="margin-bottom:16px;">Genera textos para Hotmart, Meta, Facebook e Instagram<br>adaptados al idioma <b>y mercado</b> exacto.</div>
+            <div style="width:100%;max-width:360px;text-align:left;margin-bottom:6px;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
+              <input id="hm-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:6px;" />
+              <div style="font-size:10px;color:var(--muted);">Especifica el país exacto aunque el idioma sea el mismo (ej: Inglés para Canada ≠ UK ≠ USA)</div>
+            </div>
+            <button class="btn btn-p" style="margin-top:12px;font-size:14px;padding:10px 24px;" onclick="genHotmart()">✦ Generar Kit Marketing</button>
+          </div>
           <div id="hm-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Generando kit Hotmart...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="hm-load-txt">Escribiendo copy de ventas...</div></div>
           <div id="hm-content" class="hidden">
             <div class="row-hd">
@@ -529,7 +541,14 @@ select option { background: #1e2d52; }
                 <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
                 <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
               </select>
-              <button class="btn btn-p" style="font-size:14px;padding:10px 20px;" onclick="translateCustom()">🌍 Traducir ebook</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
+              <div style="flex:1;min-width:200px;">
+                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
+                <input id="tr-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;" />
+                <div style="font-size:10px;color:var(--muted);margin-top:3px;">Inglés Canada ≠ UK ≠ USA — Claude adapta modismos y tono</div>
+              </div>
+              <button class="btn btn-p" style="font-size:14px;padding:10px 20px;align-self:flex-end;" onclick="translateCustom()">🌍 Traducir ebook</button>
             </div>
             <div id="tr-preview-wrap" class="hidden">
               <div class="row-hd" style="margin-bottom:8px;">
@@ -704,6 +723,9 @@ function restoreTranslateTab(){
     hide('tr-empty'); hide('tr-loading'); show('tr-content');
     if(S.translatedPdfHtml){ show('tr-preview-wrap'); }
     else { hide('tr-preview-wrap'); }
+    // Pre-rellenar mercado con el país del ebook
+    var trMarket = document.getElementById('tr-market-inp');
+    if(trMarket && !trMarket.value && S.selOpp) trMarket.value = S.selOpp.pais || S.selOpp.country || '';
   } else {
     hide('tr-loading'); hide('tr-content'); show('tr-empty');
   }
@@ -1331,6 +1353,9 @@ function renderDraft(o,eb){
   // Pre-seleccionar idioma del país en el selector
   var langSel = document.getElementById('eb-lang-sel');
   if(langSel && o.language) langSel.value = o.language;
+  // Pre-rellenar mercado con el país del ebook
+  var marketInp = document.getElementById('eb-market-inp');
+  if(marketInp && !marketInp.value) marketInp.value = o.pais || o.country || '';
   // Renderizar slots de imagen
   renderImgSlots(eb);
 }
@@ -1338,19 +1363,21 @@ function renderDraft(o,eb){
 async function approveEbook(){
   const o = S.selOpp; if(!o || !S.ebookData) return;
 
-  // Leer idioma elegido por el usuario en el selector
   var selEl = document.getElementById('eb-lang-sel');
   var lang = selEl ? selEl.value : '';
   if(!lang){ alert('Elige el idioma destino antes de aprobar.'); return; }
 
+  var marketEl = document.getElementById('eb-market-inp');
+  var targetMarket = (marketEl && marketEl.value.trim()) || o.pais || o.country || '';
+
   hide('eb-content'); show('eb-loading');
-  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + '...';
+  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + ' para ' + targetMarket + '...';
 
   try {
     const tr = await fetch('/api/translate-custom', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ ebook: S.ebookData, language: lang, author: 'Ferni Guides' })
+      body: JSON.stringify({ ebook: S.ebookData, language: lang, targetMarket: targetMarket, author: 'Ferni Guides' })
     });
     const td = await tr.json();
     if(!td.success) throw new Error(td.error || 'Error');
@@ -2134,13 +2161,15 @@ async function translateCustom(){
   if(!lang){ alert('Selecciona un idioma destino.'); return; }
   var eb = S.ebookData;
   if(!eb){ alert('Primero genera el borrador del ebook en la pestaña Ebook.'); return; }
+  var marketEl = document.getElementById('tr-market-inp');
+  var targetMarket = (marketEl && marketEl.value.trim()) || (S.selOpp && (S.selOpp.pais||S.selOpp.country)) || '';
   hide('tr-content'); show('tr-loading');
-  document.getElementById('tr-load-txt').textContent = 'Traduciendo al ' + lang + '...';
+  document.getElementById('tr-load-txt').textContent = 'Traduciendo al ' + lang + (targetMarket ? ' para ' + targetMarket : '') + '...';
   try {
     var r = await fetch('/api/translate-custom', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ ebook: eb, language: lang, author: 'Ferni Guides' })
+      body: JSON.stringify({ ebook: eb, language: lang, targetMarket: targetMarket, author: 'Ferni Guides' })
     });
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error');
@@ -2192,18 +2221,22 @@ function dlFinalEbook(){
 async function genHotmart(o){
   o=o||S.selOpp; if(!o) return;
   const lang = S.approvedLang || o.idioma || o.language || 'Español';
-  show('hm-loading');
+  const marketInp = document.getElementById('hm-market-inp');
+  const targetMarket = (marketInp && marketInp.value.trim()) || o.pais || o.country || '';
+  show('hm-loading'); hide('hm-empty');
+  document.getElementById('hm-load-txt').textContent = 'Generando textos para ' + targetMarket + ' en ' + lang + '...';
   try{
-    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang})});
+    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket})});
     const d=await resp.json();
-    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit); addMsg('chat-hotmart',`🛒 Kit Hotmart listo en ${lang}. Revisa cada sección y dime si cambio algo.`,'ferni'); }
-    else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit Hotmart: '+d.error); }
+    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart',`✦ Kit Marketing listo — ${lang} · Mercado: ${targetMarket}. Revisa cada sección y dime si cambio algo.`,'ferni'); }
+    else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit: '+d.error); }
   }catch(e){ hide('hm-loading'); show('hm-empty'); alert('Error: '+e.message); }
 }
 
-function renderHotmart(o,kit){
+function renderHotmart(o,kit,targetMarket){
   const lang = S.approvedLang || o.idioma || o.language || 'Español';
-  document.getElementById('hm-lang').textContent=`${lang} · ${o.pais||o.country}`;
+  const market = targetMarket || o.pais || o.country || '';
+  document.getElementById('hm-lang').textContent=`${lang} · ${market}`;
   const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v||'—'}</div></div>`;
   const fa=(icon,l,arr)=>f(icon,l,(arr||[]).map((x,i)=>`${i+1}. ${typeof x==='object'?(x.objection||x.q?`<b>${x.objection||x.q}</b><br>${x.answer||x.a}`:JSON.stringify(x)):x}`).join('<br><br>'));
   document.getElementById('hm-body').innerHTML=
