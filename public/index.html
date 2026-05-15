@@ -2710,7 +2710,17 @@ function loadHist(id){
   showTab('search', document.querySelectorAll('.tab')[0]);
 }
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
-function delHist(id){ if(!confirm('¿Eliminar?'))return; S.history=S.history.filter(h=>h.id!==id); try{localStorage.setItem('ferni_pro',JSON.stringify(S.history));}catch(e){} renderHist(); }
+function delHist(id){
+  if(!confirm('¿Eliminar este ebook del historial? Se borrarán también sus imágenes.')) return;
+  // Borrar imágenes de IndexedDB (portada + hasta 6 capítulos)
+  var keys = ['img_'+id+'_cover'];
+  for(var i=0;i<6;i++) keys.push('img_'+id+'_ch'+i);
+  keys.forEach(function(k){ idbSet(k, null); });
+  // Borrar del historial
+  S.history = S.history.filter(function(h){ return h.id !== id; });
+  try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history)); } catch(e){}
+  renderHist();
+}
 
 setMode('trends'); renderHist();
 
