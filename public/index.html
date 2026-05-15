@@ -2653,8 +2653,9 @@ function renderHist(){
           <div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div>
         </div>
         <div class="hbtns" onclick="event.stopPropagation()">
-          <button class="ibtn" onclick="dlHistExcel(${e.id})" title="Excel">📊</button>
-          <button class="ibtn" onclick="delHist(${e.id})" title="Eliminar" style="color:var(--red);">🗑</button>
+          <button class="ibtn" onclick="dlHistExcel(${e.id})" title="Exportar Excel">📊</button>
+          <button class="ibtn" onclick="delHistImages(${e.id})" title="Borrar imágenes (libera espacio IndexedDB)" style="color:#fdcb6e;">🖼</button>
+          <button class="ibtn" onclick="delHist(${e.id})" title="Eliminar ebook del historial (texto)" style="color:var(--red);">🗑</button>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-left:22px;" onclick="event.stopPropagation()">
@@ -2733,13 +2734,16 @@ function loadHist(id){
   showTab('search', document.querySelectorAll('.tab')[0]);
 }
 function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
-function delHist(id){
-  if(!confirm('¿Eliminar este ebook del historial? Se borrarán también sus imágenes.')) return;
-  // Borrar imágenes de IndexedDB (portada + hasta 6 capítulos)
+function delHistImages(id){
+  if(!confirm('¿Borrar solo las imágenes de este ebook?\nEl texto e historial se conservan.')) return;
   var keys = ['img_'+id+'_cover'];
   for(var i=0;i<6;i++) keys.push('img_'+id+'_ch'+i);
   keys.forEach(function(k){ idbSet(k, null); });
-  // Borrar del historial
+  alert('Imágenes borradas. El ebook sigue en el historial.');
+}
+
+function delHist(id){
+  if(!confirm('¿Eliminar este ebook del historial?\nSe borrará el texto. Las imágenes se borran aparte con el botón 🖼')) return;
   S.history = S.history.filter(function(h){ return h.id !== id; });
   try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history)); } catch(e){}
   renderHist();
