@@ -1516,22 +1516,31 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var authorPrefix = isEs?'por':isFr?'par':isDe?'von':isIt?'di':isPt?'por':'by';
   var lblRights = isEs?'Todos los derechos reservados':isFr?'Tous droits réservés':isDe?'Alle Rechte vorbehalten':isIt?'Tutti i diritti riservati':isPt?'Todos os direitos reservados':'All rights reserved';
   if(coverUrl){
-    // Página 1: imagen fondo + texto superpuesto por la app según template de nicho
+    // PÁGINA 1: imagen DALL-E como fondo + título/subtítulo/hook superpuestos por la app
     var tpl = getCoverTemplate(o);
     html += '<div class="pg pg-img page-break">';
+    // Imagen de fondo
     html += '<img src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;">';
-    // Overlay superior — título
-    html += '<div style="position:absolute;top:0;left:0;right:0;height:' + tpl.topH + ';background:' + tpl.topGrad + ';display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:40px 44px 16px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-    html += '<h1 style="color:white;font-size:' + tpl.titleSize + ';font-weight:900;line-height:1.2;text-shadow:0 2px 14px rgba(0,0,0,0.95),0 0 40px rgba(0,0,0,0.5);margin:0;">' + (eb.title||'') + '</h1>';
+    // Bloque superior: TÍTULO (grande, dominante) + SUBTÍTULO (justo debajo, con espacio)
+    html += '<div style="position:absolute;top:0;left:0;right:0;height:52%;background:linear-gradient(to bottom,rgba(0,0,0,0.80) 0%,rgba(0,0,0,0.40) 70%,rgba(0,0,0,0) 100%);display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:42px 44px 0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+    html += '<h1 style="color:white;font-size:' + tpl.titleSize + ';font-weight:900;line-height:1.2;text-shadow:0 2px 16px rgba(0,0,0,1),0 0 40px rgba(0,0,0,0.7);margin:0 0 14px 0;">' + (eb.title||'') + '</h1>';
+    html += '<div style="color:rgba(255,255,255,0.88);font-size:15px;font-style:italic;text-shadow:0 1px 10px rgba(0,0,0,0.95);line-height:1.4;">' + (eb.subtitle||'') + '</div>';
     html += '</div>';
-    // Overlay inferior — subtítulo, hook, autor
-    html += '<div style="position:absolute;bottom:0;left:0;right:0;height:' + tpl.botH + ';background:' + tpl.botGrad + ';display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:16px 44px 38px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-    html += '<div style="color:rgba(255,255,255,0.92);font-size:16px;font-style:italic;text-shadow:0 1px 10px rgba(0,0,0,0.95);margin-bottom:10px;">' + (eb.subtitle||'') + '</div>';
-    if(eb.tagline) html += '<div style="color:' + tpl.hookColor + ';font-size:13px;font-weight:700;letter-spacing:0.5px;text-shadow:0 1px 8px rgba(0,0,0,0.95);margin-bottom:12px;">' + eb.tagline + '</div>';
-    html += '<div style="color:rgba(255,255,255,0.6);font-size:10px;letter-spacing:2px;text-transform:uppercase;text-shadow:0 1px 6px rgba(0,0,0,0.9);">' + authorPrefix + ' ' + author + '</div>';
+    // Bloque inferior: HOOK (pequeño, emocional, elegante)
+    if(eb.tagline){
+      html += '<div style="position:absolute;bottom:0;left:0;right:0;height:28%;background:linear-gradient(to top,rgba(0,0,0,0.78) 0%,rgba(0,0,0,0) 100%);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:0 44px 38px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+      html += '<div style="color:' + tpl.hookColor + ';font-size:13px;font-weight:600;letter-spacing:0.3px;text-shadow:0 1px 8px rgba(0,0,0,0.95);font-style:italic;">' + eb.tagline + '</div>';
+      html += '</div>';
+    }
     html += '</div>';
+    // PÁGINA 2: título, subtítulo, autor, derechos — igual que siempre
+    html += '<div class="pg cover page-break">';
+    html += '<h1>' + (eb.title||'') + '</h1>';
+    html += '<div class="subtitle">' + (eb.subtitle||'') + '</div>';
+    if(eb.tagline) html += '<div class="tagline">' + eb.tagline + '</div>';
+    html += '<div class="author-line">' + authorPrefix + ' ' + author + '</div>';
+    html += '<div class="copyright">&copy; ' + year + ' ' + author + ' &middot; ' + lblRights + '</div>';
     html += '</div>';
-    // Página 2 continúa con el índice (sin página de gradiente morado)
   } else {
     // Sin imagen: portada con gradiente y texto (comportamiento original)
     html += '<div class="pg cover page-break">';
