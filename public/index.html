@@ -401,11 +401,11 @@ select option { background: #1e2d52; }
               <div class="section-card-title">🖼️ Imágenes para subir a Hotmart</div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Haz clic en cada imagen para generarla con DALL-E · Clic derecho → Guardar imagen</div>
               <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:9px;">Banner producto</div></div>
-                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:9px;">Banner beneficios</div></div>
+                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:9px;">Hero impacto</div></div>
+                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:9px;">Transformación</div></div>
                 <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:9px;">Mockup ebook</div></div>
-                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:9px;">Testimonio</div></div>
-                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:9px;">CTA compra</div></div>
+                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:9px;">Valor / beneficios</div></div>
+                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:9px;">Urgencia / CTA</div></div>
               </div>
             </div>
             <div id="hm-body"></div>
@@ -2238,23 +2238,41 @@ async function genCover(){
   }catch(e){ btn.textContent='✦ Generar portada con DALL-E'; btn.disabled=false; }
 }
 
-const HOTMART_IMG_PROMPTS = [
-  'Professional ebook banner for health wellness product, blue purple gradient, gold text, no faces, commercial quality',
-  'Digital product sales banner, elegant design, wellness theme, abstract elements, no faces, premium quality',
-  'Ebook mockup on tablet and phone screen, clean white background, professional product photography style',
-  'Happy person testimonial concept, wellness success story, bright warm colors, abstract, no identifiable faces',
-  'Call to action banner, bold typography space, urgency concept, blue purple gold colors, no people'
-];
+function buildHotmartImgPrompts(o){
+  if(!o) o={};
+  var topic = (o.problema||o.problem||'wellness transformation').split(':')[0].trim();
+  var niche = (o.nicho||o.niche||topic).toLowerCase();
+  var colors = o.colorPalette || 'deep purple, gold, white';
+  var desire = (o.dolorODeseo||o.emocion||o.emotion||'transformation and success').toLowerCase();
+  var style = o.estiloVisual || 'premium, elegant, professional';
+  var palette = colors;
+  if(/beauty|belleza|skin|piel|maquill|makeup|hair|cabello/.test(niche)) palette='soft rose gold, blush pink, champagne white, cream';
+  else if(/fitness|gym|deporte|yoga|workout/.test(niche)) palette='electric blue, vivid orange, charcoal black, white';
+  else if(/business|negocio|finanzas|dinero|cripto|inversion/.test(niche)) palette='deep navy, gold, slate grey, white';
+  else if(/kid|niño|baby|infant|crianza|bebe/.test(niche)) palette='pastel yellow, mint green, sky blue, warm white';
+  else if(/cocina|food|receta|cook|chef/.test(niche)) palette='warm terracotta, olive green, cream, rustic wood tones';
+  else if(/jardin|garden|plant|naturaleza|nature/.test(niche)) palette='forest green, earth brown, soft white, natural sage';
+  else if(/salud|health|bienestar|wellness|medic/.test(niche)) palette='clean teal, soft blue, pure white, gentle green';
+  var base = 'No text, no letters, no words, no numbers. No faces, no identifiable people. Commercial quality, marketplace-ready, ultra-premium infoproduct style. Landscape orientation. ';
+  return [
+    'Ultra-premium digital product hero banner. Bold ' + palette + ' gradient background. Abstract visual representing ' + topic + '. Geometric shapes, light rays, premium texture overlay, gold accents, strong visual hierarchy. ' + style + '. High contrast, eye-catching, stops the scroll. ' + base,
+    'Aspirational transformation concept banner. Visual metaphor for ' + desire + ' achieved through ' + topic + '. Split composition: dark moody left transitioning to bright luminous right. ' + palette + ' color story. Premium lifestyle aesthetic, abstract, symbolic. Powerful emotional contrast. ' + base,
+    'Professional digital product mockup. Premium ebook displayed on a sleek modern tablet and smartphone floating at a slight angle. Clean ' + palette + ' background with soft shadows. Minimalist studio lighting, depth of field. Product photography style, ultra-clean, high perceived value. ' + base,
+    'Bold benefits showcase banner. Dynamic ' + palette + ' background. Abstract icons representing results of ' + topic + '. Geometric layout with premium iconography style, energetic modern composition, multiple visual elements suggesting abundance of value. ' + base,
+    'High-urgency call-to-action sales banner. Bold ' + palette + ' with strong contrast and visual tension. Abstract hourglass or radial light burst concept, premium product shadow, explosive gradient. Creates desire and urgency. Maximum visual impact, stops the scroll. ' + base
+  ];
+}
 
 async function genHotmartImg(idx){
   const el=document.getElementById('himg'+idx);
-  el.innerHTML='<div style="font-size:18px;">⏳</div><div>Generando...</div>';
+  el.innerHTML='<div style="font-size:18px;">⏳</div><div style="font-size:9px;">Generando...</div>';
   try{
-    const o=S.selOpp; const basePrompt=HOTMART_IMG_PROMPTS[idx]||HOTMART_IMG_PROMPTS[0];
-    const prompt=`${basePrompt}. Theme: ${o?o.problema||o.problem.split(':')[0]:'wellness'}. Country: ${o?o.country:'Europe'}. DALL-E 3 quality.`;
-    const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    const o=S.selOpp;
+    const prompts=buildHotmartImgPrompts(o);
+    const prompt=prompts[idx]||prompts[0];
+    const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType:'chapter'})});
     const d=await resp.json();
-    if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" />`; }
+    if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" /><div style="font-size:8px;color:#aaa;margin-top:3px;text-align:center;">Clic derecho → Guardar</div>`; }
     else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
 }
