@@ -398,14 +398,15 @@ select option { background: #1e2d52; }
               <div style="display:flex;gap:7px;align-items:center;"><span class="badge bteal" id="hm-lang"></span><button class="btn btn-gold" onclick="dlHotmart()">⬇ Descargar kit Word</button></div>
             </div>
             <div id="hm-images-box" class="section-card">
-              <div class="section-card-title">🖼️ Imágenes para subir a Hotmart</div>
-              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Haz clic en cada imagen para generarla con DALL-E · Clic derecho → Guardar imagen</div>
-              <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:9px;">Hero impacto</div></div>
-                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:9px;">Transformación</div></div>
-                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:9px;">Mockup ebook</div></div>
-                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:9px;">Valor / beneficios</div></div>
-                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:9px;">Urgencia / CTA</div></div>
+              <div class="section-card-title">🖼️ 6 Imágenes de marketing (Hotmart · Meta · Instagram · Facebook)</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Haz clic para generar · Clic derecho → Guardar · Úsalas en todas las plataformas</div>
+              <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
+                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:8px;">Mockup ebook</div></div>
+                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:8px;">Hero Hotmart</div></div>
+                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:8px;">Ad Facebook</div></div>
+                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:8px;">Post Instagram</div></div>
+                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:8px;">Story / Reel</div></div>
+                <div class="ad-img" onclick="genHotmartImg(5)" id="himg5"><div>🎨</div><div style="font-size:8px;">Meta Ads</div></div>
               </div>
             </div>
             <div id="hm-body"></div>
@@ -2203,27 +2204,32 @@ async function genHotmart(o){
 function renderHotmart(o,kit){
   const lang = S.approvedLang || o.idioma || o.language || 'Español';
   document.getElementById('hm-lang').textContent=`${lang} · ${o.pais||o.country}`;
-  const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v}</div></div>`;
+  const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v||'—'}</div></div>`;
+  const fa=(icon,l,arr)=>f(icon,l,(arr||[]).map((x,i)=>`${i+1}. ${typeof x==='object'?(x.objection||x.q?`<b>${x.objection||x.q}</b><br>${x.answer||x.a}`:JSON.stringify(x)):x}`).join('<br><br>'));
   document.getElementById('hm-body').innerHTML=
-    f('📌','Nombre del producto',kit.productName||o.tituloEbook||o.ebookTitle)+
-    f('💥','Headline principal',kit.headline||o.promesaEbook||o.ebookPromise)+
-    f('✨','Subheadline',kit.subheadline||'')+
+    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🛒 HOTMART — Listado del producto</div>'+
+    f('📌','Título del producto',kit.productName||o.tituloEbook||o.ebookTitle)+
+    f('✨','Subtítulo premium',kit.premiumSubtitle||kit.subheadline||'')+
+    f('💥','Hook emocional',kit.emotionalHook||kit.headline||o.promesaEbook||'')+
+    f('🎯','Promesa de transformación',kit.transformationPromise||'')+
     f('📝','Descripción corta (listing)',kit.shortDesc||'')+
     f('📄','Descripción larga (página de ventas)',kit.longDesc||'')+
-    f('✅','Beneficios',(kit.benefits||[]).map(b=>`✓ ${b}`).join('<br>')||'')+
-    f('→','Bullets de venta',(kit.bullets||[]).map(b=>`→ ${b}`).join('<br>')||'')+
-    f('💰','Precio',o.precioHotmart||o.hotmartPrice)+
-    f('🛡','Garantía',kit.guarantee||'7 días sin preguntas')+
-    f('🎁','Bonus incluidos',(kit.bonus||[]).join('<br>')||'')+
-    f('⬆️','Upsell sugerido',kit.upsell||'')+
-    f('➕','Order Bump',kit.orderBump||'')+
-    f('📂','Categoría Hotmart',kit.category||'Salud y Bienestar')+
-    f('👆','CTA',kit.cta||'')+
-    f('📘','Post Facebook',kit.facebookPost||'')+
-    f('📸','Caption Instagram',kit.instagramCaption||'')+
-    f('📱','Story Instagram',kit.instagramStory||'')+
-    f('📧','Asunto email',kit.emailSubject||'')+
-    f('✉️','Cuerpo email',kit.emailBody||'');
+    f('👤','Público objetivo',kit.targetAudience||'')+
+    f('📂','Categoría Hotmart',kit.category||'')+
+    f('💰','Precio sugerido',kit.pricing||o.precioHotmart||o.hotmartPrice)+
+    f('🛡','Garantía',kit.guarantee||'')+
+    fa('✅','Beneficios clave',kit.benefits)+
+    fa('⭐','Destacados del producto',kit.highlights)+
+    fa('🎁','Bonus incluidos',kit.bonus)+
+    fa('⬆️','Upsell sugerido',Array.isArray(kit.upsell)?kit.upsell:[kit.upsell])+
+    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🚀 ESTRATEGIA DE CONVERSIÓN</div>'+
+    fa('👆','CTAs variaciones',Array.isArray(kit.cta)?kit.cta:[kit.cta])+
+    fa('⚡','Ángulos de urgencia',kit.urgencyAngles)+
+    fa('🛡','Manejo de objeciones',kit.objectionHandling)+
+    fa('🔎','Keywords SEO / Marketplace',kit.seoKeywords)+
+    fa('🖼️','Ideas de título para thumbnail',kit.thumbnailTitleIdeas)+
+    f('💎','Posicionamiento emocional',kit.emotionalPositioning||'')+
+    fa('❓','FAQ',kit.faq);
 }
 
 async function genCover(){
@@ -2253,13 +2259,29 @@ function buildHotmartImgPrompts(o){
   else if(/cocina|food|receta|cook|chef/.test(niche)) palette='warm terracotta, olive green, cream, rustic wood tones';
   else if(/jardin|garden|plant|naturaleza|nature/.test(niche)) palette='forest green, earth brown, soft white, natural sage';
   else if(/salud|health|bienestar|wellness|medic/.test(niche)) palette='clean teal, soft blue, pure white, gentle green';
-  var base = 'No text, no letters, no words, no numbers. No faces, no identifiable people. Commercial quality, marketplace-ready, ultra-premium infoproduct style. Landscape orientation. ';
+
+  var base = 'IMPORTANT: Do NOT include any text, letters, numbers, logos, watermarks, or UI elements. No faces, no identifiable people. The app will add all text later. Ultra-premium quality, professionally designed, high perceived value, marketplace-ready. ';
+
+  var niche_desc = topic + ' for ' + (o.rangoEdad||o.ageRange||'adults') + ' in ' + (o.country||o.pais||'Europe') + '. Niche: ' + niche + '. Emotional desire: ' + desire + '. Style: ' + style + '.';
+
   return [
-    'Ultra-premium digital product hero banner. Bold ' + palette + ' gradient background. Abstract visual representing ' + topic + '. Geometric shapes, light rays, premium texture overlay, gold accents, strong visual hierarchy. ' + style + '. High contrast, eye-catching, stops the scroll. ' + base,
-    'Aspirational transformation concept banner. Visual metaphor for ' + desire + ' achieved through ' + topic + '. Split composition: dark moody left transitioning to bright luminous right. ' + palette + ' color story. Premium lifestyle aesthetic, abstract, symbolic. Powerful emotional contrast. ' + base,
-    'Professional digital product mockup. Premium ebook displayed on a sleek modern tablet and smartphone floating at a slight angle. Clean ' + palette + ' background with soft shadows. Minimalist studio lighting, depth of field. Product photography style, ultra-clean, high perceived value. ' + base,
-    'Bold benefits showcase banner. Dynamic ' + palette + ' background. Abstract icons representing results of ' + topic + '. Geometric layout with premium iconography style, energetic modern composition, multiple visual elements suggesting abundance of value. ' + base,
-    'High-urgency call-to-action sales banner. Bold ' + palette + ' with strong contrast and visual tension. Abstract hourglass or radial light burst concept, premium product shadow, explosive gradient. Creates desire and urgency. Maximum visual impact, stops the scroll. ' + base
+    // 1. Luxury ebook mockup — Hotmart product listing
+    'Luxury premium ebook product mockup. The ebook displayed beautifully on a high-end tablet and smartphone, floating at an elegant angle with dramatic shadow. Ultra-clean ' + palette + ' studio background. Cinematic product photography lighting, depth of field, professional ecommerce quality. Topic: ' + niche_desc + ' ' + base + 'Landscape 1400x900.',
+
+    // 2. Hotmart hero banner — marketplace thumbnail
+    'Ultra-premium Hotmart marketplace hero banner. Bold ' + palette + ' gradient with premium texture. Abstract visual elements representing ' + topic + '. Strong visual hierarchy, gold accents, light rays, geometric premium composition. Eye-catching, high CTR, stops the scroll. Topic: ' + niche_desc + ' ' + base + 'Landscape 1400x900.',
+
+    // 3. Facebook ad creative — feed format
+    'High-converting Facebook ad creative. Premium lifestyle composition with ' + palette + ' color story. Abstract aspirational scene representing ' + desire + ' achieved. Split-tone lighting: dramatic on one side, warm and inviting on the other. Professional editorial photography style. Optimized for Facebook feed. Topic: ' + niche_desc + ' ' + base + 'Landscape 1400x900.',
+
+    // 4. Instagram feed post — square premium
+    'Instagram feed promotional visual. Luxury editorial composition, perfectly balanced square format. ' + palette + ' premium color palette. Abstract aspirational aesthetic representing ' + topic + ' transformation. Minimal, modern, visually stunning. Clean negative space for text overlay. Ultra-high quality, luxury brand feel. Topic: ' + niche_desc + ' ' + base + 'Square 1024x1024.',
+
+    // 5. Instagram story / reel cover — vertical
+    'Instagram story and reel cover visual. Vertical portrait format 9:16. Bold ' + palette + ' full-bleed background with dramatic premium composition. Abstract energy, motion blur, aspirational atmosphere representing ' + topic + '. Emotionally attractive, modern, ultra-premium. Strong upper and lower areas for text overlay. Topic: ' + niche_desc + ' ' + base + 'Vertical 1024x1536.',
+
+    // 6. Meta Ads conversion creative — performance ad
+    'High-performance Meta Ads conversion creative. Maximum visual impact composition using ' + palette + '. Abstract concept of transformation and results: dark-to-light, before-after atmosphere, radial energy burst, premium product shadow. Bold contrast, urgency, desire, and aspiration combined. Optimized for CTR and emotional response. Topic: ' + niche_desc + ' ' + base + 'Landscape 1400x900.'
   ];
 }
 
@@ -2270,7 +2292,9 @@ async function genHotmartImg(idx){
     const o=S.selOpp;
     const prompts=buildHotmartImgPrompts(o);
     const prompt=prompts[idx]||prompts[0];
-    const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType:'chapter'})});
+    // idx 3 = Instagram feed (square), idx 4 = Instagram story (portrait/cover), rest = landscape chapter
+    const imageType = idx===4 ? 'cover' : 'chapter';
+    const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType,niche:o?(o.nicho||o.niche||o.problema||''):''})});
     const d=await resp.json();
     if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" /><div style="font-size:8px;color:#aaa;margin-top:3px;text-align:center;">Clic derecho → Guardar</div>`; }
     else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
@@ -2388,8 +2412,21 @@ function renderMeta(o,kit){
       <div style="margin-top:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:3px;">SOCIAL PROOF</div><div style="font-size:12px;color:var(--text2);">${lp.socialProof||''}</div></div>
       <div style="margin-top:8px;"><div style="font-size:9px;color:var(--muted);margin-bottom:3px;">CTA</div><div style="font-size:13px;font-weight:700;color:var(--teal);">${lp.cta||''}</div></div>
     </div>
-    ${kit.retargeting?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">🔄 Retargeting</div><div style="margin-top:6px;font-size:13px;font-weight:700;color:var(--text);">${kit.retargeting.headline||''}</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.6;">${kit.retargeting.copy||''}</div></div>`:''}
-    ${kit.emailSequence&&kit.emailSequence.length?`<div class="fc"><div class="fc-label">📧 Secuencia de emails (${kit.emailSequence.length} emails)</div>${kit.emailSequence.map((e,i)=>`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:10px;color:var(--muted);">EMAIL ${i+1}</div><div style="font-size:12px;font-weight:700;color:var(--text);">${e.subject||''}</div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6;">${e.body||''}</div></div>`).join('')}</div>`:''}`;
+    ${kit.retargeting?`<div class="fc" style="margin-bottom:8px;"><div class="fc-label">🔄 Retargeting</div><div style="margin-top:6px;font-size:13px;font-weight:700;color:var(--text);">${kit.retargeting.headline||''}</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.6;">${kit.retargeting.copy||''}</div><div style="font-size:11px;font-weight:700;color:var(--teal);margin-top:4px;">${kit.retargeting.cta||''}</div></div>`:''}
+    ${kit.emailSequence&&kit.emailSequence.length?`<div class="fc"><div class="fc-label">📧 Secuencia de emails (${kit.emailSequence.length} emails)</div>${kit.emailSequence.map((e,i)=>`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:10px;color:var(--muted);">EMAIL ${i+1}</div><div style="font-size:12px;font-weight:700;color:var(--text);">${e.subject||''}</div><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6;">${e.body||''}</div></div>`).join('')}</div>`:''}
+    ${kit.facebook?`<div class="fc" style="margin-top:12px;"><div class="fc-label">📘 FACEBOOK — Contenido listo para publicar</div>
+      ${kit.facebook.post?`<div style="margin-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">POST PROMOCIONAL</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;white-space:pre-wrap;">${kit.facebook.post}</div></div>`:''}
+      ${kit.facebook.storytellingPost?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">POST STORYTELLING</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;white-space:pre-wrap;">${kit.facebook.storytellingPost}</div></div>`:''}
+      ${kit.facebook.authorityPost?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">POST DE AUTORIDAD</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;white-space:pre-wrap;">${kit.facebook.authorityPost}</div></div>`:''}
+      ${kit.facebook.viralHook?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">HOOK VIRAL</div><div style="font-size:13px;font-weight:700;color:var(--accent);margin-top:4px;">${kit.facebook.viralHook}</div></div>`:''}
+    </div>`:''}
+    ${kit.instagram?`<div class="fc" style="margin-top:12px;"><div class="fc-label">📸 INSTAGRAM — Contenido listo para publicar</div>
+      ${kit.instagram.caption?`<div style="margin-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">CAPTION FEED</div><div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.7;white-space:pre-wrap;">${kit.instagram.caption}</div></div>`:''}
+      ${kit.instagram.reelHooks&&kit.instagram.reelHooks.length?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">HOOKS PARA REELS</div>${kit.instagram.reelHooks.map(h=>`<div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:5px;">▶ ${h}</div>`).join('')}</div>`:''}
+      ${kit.instagram.storyHooks&&kit.instagram.storyHooks.length?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">HOOKS PARA STORIES</div>${kit.instagram.storyHooks.map(h=>`<div style="font-size:12px;font-weight:600;color:var(--teal);margin-top:5px;">📱 ${h}</div>`).join('')}</div>`:''}
+      ${kit.instagram.carouselIdeas&&kit.instagram.carouselIdeas.length?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">IDEAS PARA CARRUSELES</div>${kit.instagram.carouselIdeas.map((c,i)=>`<div style="font-size:11px;color:var(--text2);margin-top:5px;">${i+1}. ${c}</div>`).join('')}</div>`:''}
+      ${kit.instagram.hashtags&&kit.instagram.hashtags.length?`<div style="margin-top:10px;border-top:1px solid rgba(100,140,255,0.1);padding-top:10px;"><div style="font-size:9px;color:var(--muted);letter-spacing:1px;">HASHTAGS</div><div style="font-size:11px;color:var(--accent);margin-top:5px;line-height:1.8;">${kit.instagram.hashtags.map(h=>h.startsWith('#')?h:'#'+h).join(' ')}</div></div>`:''}
+    </div>`:''}`;
 }
 
 async function genAdImg(idx,encodedPrompt){

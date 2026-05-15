@@ -1328,27 +1328,51 @@ app.post('/api/generate-image', async function(req, res) {
   }
 });
 
+function buildMarketingSystemPrompt(language, countryName, regs, section) {
+  var core = 'You are an elite direct response copywriter, Meta Ads strategist, Hotmart launch expert, luxury branding specialist, social media growth marketer, conversion-focused ecommerce advertiser, and premium infoproduct marketing team.' +
+    '\n\nIMPORTANT: PREMIUM DIGITAL PRODUCT MARKETING SYSTEM' +
+    '\nThe objective is to create a COMPLETE SALES ECOSYSTEM ready to publish and advertise professionally across multiple platforms.' +
+    '\n\nCORE RULE — NATIVE MARKET ADAPTATION:' +
+    '\nAll marketing materials must: match the ebook niche, match the target audience, match the emotional transformation, match the target country cultural buying psychology, sound native to that market.' +
+    '\nAdapt tone, persuasion style, vocabulary, emotional triggers, formatting, urgency, expressions, and branding style according to: language, target country, target audience, niche.' +
+    '\nExamples: English + USA → stronger direct-response style. English + UK → more elegant and restrained. French + France → premium editorial tone. German + Germany → structured and trust-focused. Do NOT create generic translated marketing. Create NATIVE MARKET-ADAPTED marketing.' +
+    '\n\nLanguage: ' + language + '. Target market: ' + countryName + '. REGULATIONS: ' + regs.legal + '. Guarantee: ' + regs.guarantee + '. PROHIBITED: ' + regs.forbidden + '.' +
+    '\n\nRespond ONLY with valid JSON. No markdown, no explanation.';
+  return core + '\n\n' + section;
+}
+
 app.post('/api/generate-hotmart', async function(req, res) {
   var o = req.body.opportunity;
   var author = req.body.author;
   var language = req.body.language;
-  var countryName = getCountryName(o.pais || o.country || 'France');
+  var targetMarket = req.body.targetMarket || '';
+  var countryName = targetMarket || getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   function safeParseKit(raw) {
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) {
-      var fixed = cleaned;
-      if (!fixed.endsWith('}')) fixed += '"}';
+      var fixed = cleaned; if (!fixed.endsWith('}')) fixed += '"}';
       try { return JSON.parse(fixed); } catch(e2) { throw new Error('JSON truncado en kit Hotmart'); }
     }
   }
   try {
-    var base = 'Copywriter experto en ventas de productos digitales en Hotmart para Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. Garantia: ' + regs.guarantee + '. PROHIBIDO: ' + regs.forbidden + '.';
-    var userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Promesa: ' + (o.promesaEbook || o.ebookPromise) + ' Tema: ' + (o.problema || o.problem) + ' Tipo: ' + (o.tipoDemanda || 'aprendizaje') + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Precio: ' + (o.precioHotmart || o.hotmartPrice) + ' Autor: ' + author + ' Motivacion: ' + (o.emocion || o.emotion) + ' Deseo o dolor: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
-    var p1 = safeParseKit(await claudeCall(base + ' Devuelve SOLO JSON con: productName, headline, subheadline, shortDesc, longDesc, benefits (array 6 strings), bullets (array 6 strings), guarantee, bonus (array 3 strings), upsell, orderBump, category, cta.', userMsg, 5000));
-    var p2 = safeParseKit(await claudeCall(base + ' Devuelve SOLO JSON con: salesPageTitle, salesPageBody, facebookPost, instagramCaption, instagramStory, emailSubject, emailBody.', userMsg, 5000));
-    var kit = Object.assign({}, p1, p2);
-    res.json({ success: true, kit: kit });
+    var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle) +
+      ' | Promise: ' + (o.promesaEbook || o.ebookPromise) +
+      ' | Topic: ' + (o.problema || o.problem) +
+      ' | Type: ' + (o.tipoDemanda || 'learning') +
+      ' | Audience: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) +
+      ' | Market: ' + countryName +
+      ' | Price: ' + (o.precioHotmart || o.hotmartPrice) +
+      ' | Author: ' + author +
+      ' | Emotional driver: ' + (o.emocion || o.emotion) +
+      ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
+
+    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title), premiumSubtitle, emotionalHook (1 powerful sentence), shortDesc (100 words max), longDesc (persuasive 250 words), transformationPromise, benefits (array 6 strings), highlights (array 4 unique selling points), targetAudience (description), category, pricing, guarantee, bonus (array 3 strings), upsell (array 2 strings).';
+    var hmSection2 = 'HOTMART ADVANCED STRATEGY — Generate JSON with: cta (array 3 different CTAs), urgencyAngles (array 3 urgency hooks), objectionHandling (array 3, each object with objection and answer), seoKeywords (array 8 marketplace keywords), thumbnailTitleIdeas (array 3 short catchy titles), emotionalPositioning (brand positioning statement), faq (array 3, each object with q and a).';
+
+    var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection1), userMsg, 5000));
+    var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection2), userMsg, 5000));
+    res.json({ success: true, kit: Object.assign({}, p1, p2) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -1357,23 +1381,32 @@ app.post('/api/generate-hotmart', async function(req, res) {
 app.post('/api/generate-meta', async function(req, res) {
   var o = req.body.opportunity;
   var language = req.body.language;
-  var countryName = getCountryName(o.pais || o.country || 'France');
+  var targetMarket = req.body.targetMarket || '';
+  var countryName = targetMarket || getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   function safeParseKit(raw) {
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) {
-      var fixed = cleaned;
-      if (!fixed.endsWith('}')) fixed += '"}}}';
+      var fixed = cleaned; if (!fixed.endsWith('}')) fixed += '"}}}';
       try { return JSON.parse(fixed); } catch(e2) { throw new Error('JSON truncado en kit Meta'); }
     }
   }
   try {
-    var base = 'Estratega experto en Meta Ads para productos digitales en Europa y USA. Todo en ' + language + ' para ' + countryName + '. REGULACIONES: ' + regs.legal + '. PROHIBIDO: ' + regs.forbidden + '.';
-    var userMsg = 'Producto: ' + (o.tituloEbook || o.ebookTitle) + ' Tema: ' + (o.problema || o.problem) + ' Tipo demanda: ' + (o.tipoDemanda || 'aprendizaje') + ' Publico: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) + ' ' + countryName + ' Motivacion: ' + (o.emocion || o.emotion) + ' Deseo o dolor: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain) + ' Precio: ' + (o.precioHotmart || o.hotmartPrice);
-    var p1 = safeParseKit(await claudeCall(base + ' Devuelve SOLO JSON con: segmentation (objeto con age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget). ads (array 5, cada uno con angle, platform, format, headline, primaryText, description, cta, dallePrompt en ingles sin texto ni caras, targetEmotion). Angulos: problema, urgencia, aspiracion, curiosidad, autoridad.', userMsg, 6000));
-    var p2 = safeParseKit(await claudeCall(base + ' Devuelve SOLO JSON con: landingPage (objeto con headline, subheadline, body, socialProof, cta, urgency). retargeting (objeto con headline, copy, cta, offer). emailSequence (array 3, cada uno con subject y body).', userMsg, 5000));
-    var kit = Object.assign({}, p1, p2);
-    res.json({ success: true, kit: kit });
+    var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle) +
+      ' | Topic: ' + (o.problema || o.problem) +
+      ' | Audience: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) +
+      ' | Market: ' + countryName +
+      ' | Emotional driver: ' + (o.emocion || o.emotion) +
+      ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain) +
+      ' | Price: ' + (o.precioHotmart || o.hotmartPrice) +
+      ' | Promise: ' + (o.promesaEbook || o.ebookPromise);
+
+    var metaSection = 'META ADS SYSTEM — Generate JSON with: segmentation (object: age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget). ads (array 5, each: angle, platform, format, headline, primaryText, shortCopy, longCopy, emotionalHook, cta, targetEmotion). Angles: problem, urgency, aspiration, curiosity, authority.';
+    var socialSection = 'FACEBOOK + INSTAGRAM KIT — Generate JSON with: facebook (object: post string, storytellingPost string, authorityPost string, viralHook string, engagementPost string, commentCTA string). instagram (object: caption string, carouselIdeas array 3 strings, reelHooks array 3 strings, storyHooks array 3 strings, hashtags array 15 strings, shortHooks array 3 strings). emailSequence (array 3, each: subject, body). retargeting (object: headline, copy, cta, offer).';
+
+    var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, metaSection), userMsg, 6000));
+    var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, socialSection), userMsg, 6000));
+    res.json({ success: true, kit: Object.assign({}, p1, p2) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
