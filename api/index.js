@@ -1372,13 +1372,51 @@ app.post('/api/generate-hotmart', async function(req, res) {
       ' | Emotional driver: ' + (o.emocion || o.emotion) +
       ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
 
-    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title string), premiumSubtitle (string), emotionalHook (1 powerful sentence string), shortDesc (100 words max string), longDesc (persuasive 250 words string), transformationPromise (string), benefits (array 6 strings), highlights (array 4 strings), targetAudience (string), category (string), pricing (PLAIN STRING with amount and currency, e.g. "27 EUR" or "19 USD" — NOT an object), guarantee (PLAIN STRING e.g. "7-day money back guarantee" — NOT an object), bonus (array 3 strings), upsell (array 2 strings).';
+    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title string), premiumSubtitle (string), emotionalHook (1 powerful sentence string), shortDesc (100 words max string), longDesc (persuasive 250 words string), transformationPromise (string), benefits (array 6 strings), highlights (array 4 strings), targetAudience (string), category (string), pricing (PLAIN STRING with amount and currency, e.g. "27 EUR" or "19 USD" — NOT an object), guarantee (PLAIN STRING e.g. "7-day money back guarantee" — NOT an object), bonus (array 3 strings — short names of bonus digital PDF items to include), upsell (array 2 strings — CRITICAL: suggest ONLY additional ebooks or PDF guides that could be created as a premium upsell digital product — NEVER suggest services, consultations, coaching programs, courses requiring personal delivery, or anything that is not a downloadable PDF — example format: "Advanced Guide: [specific topic]" or "Complete Workbook: [specific topic]").';
     var hmSection2 = 'HOTMART ADVANCED STRATEGY — Generate JSON with: cta (array 3 different CTAs), urgencyAngles (array 3 urgency hooks), objectionHandling (array 3, each object with objection and answer), seoKeywords (array 8 marketplace keywords), thumbnailTitleIdeas (array 3 short catchy titles), emotionalPositioning (brand positioning statement), faq (array 3, each object with q and a).';
 
     var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection1), userMsg, 5000));
     var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection2), userMsg, 5000));
     res.json({ success: true, kit: Object.assign({}, p1, p2) });
   } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/generate-bonuses', async function(req, res) {
+  var bonuses = req.body.bonuses || [];
+  var language = req.body.language || 'French';
+  var targetMarket = req.body.targetMarket || '';
+  var niche = req.body.niche || '';
+  var ebookTitle = req.body.ebookTitle || '';
+  if (!bonuses.length) return res.status(400).json({ success: false, error: 'No bonuses provided' });
+  function safeParseBonus(raw) {
+    var cleaned = raw.replace(/```json|```/g, '').trim();
+    try { return JSON.parse(cleaned); } catch(e) {
+      if (!cleaned.endsWith('}')) cleaned += '"}]}';
+      try { return JSON.parse(cleaned); } catch(e2) { throw new Error('JSON truncado en bonos'); }
+    }
+  }
+  try {
+    var sys = 'You are an expert creator of premium digital bonus resources for infoproduct sellers.' +
+      ' You create high-quality, practical, and beautifully structured bonus documents that complement a main ebook.' +
+      ' Language: ' + language + (targetMarket ? '. Target market: ' + targetMarket : '') + '.' +
+      ' Niche: ' + niche + '. Main ebook: ' + ebookTitle + '.' +
+      ' IMPORTANT: Write all content in ' + language + (targetMarket ? ' adapted for ' + targetMarket : '') + '.' +
+      ' Each bonus must feel like a standalone premium resource worth paying for on its own.' +
+      ' Respond ONLY with valid JSON. No markdown, no explanation.';
+    var userMsg = 'Generate the COMPLETE CONTENT for these ' + bonuses.length + ' bonus resources:\n' +
+      bonuses.map(function(b, i) { return (i+1) + '. ' + b; }).join('\n') +
+      '\n\nFor EACH bonus return a JSON object with:' +
+      '\n- title: the bonus title (string)' +
+      '\n- subtitle: brief description (string)' +
+      '\n- type: one of "checklist", "guide", "tracker", "worksheet", "glossary"' +
+      '\n- sections: array of sections, each with heading (string) and items (array of strings for checklist/tracker/glossary) OR content (string paragraph for guide)' +
+      '\n\nReturn JSON: { "bonuses": [ {...}, {...}, {...} ] }' +
+      '\n\nMake each bonus genuinely useful, detailed, and premium quality. Minimum 10-15 items per checklist, minimum 8 terms per glossary, minimum 4 sections per guide.';
+    var result = safeParseBonus(await claudeCall(sys, userMsg, 6000));
+    res.json({ success: true, bonuses: result.bonuses || [] });
+  } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });

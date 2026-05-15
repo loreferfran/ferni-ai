@@ -2284,7 +2284,10 @@ function renderHotmart(o,kit,targetMarket){
     fa('✅','Beneficios clave',kit.benefits)+
     fa('⭐','Destacados del producto',kit.highlights)+
     fa('🎁','Bonus sugeridos para ofrecer (crear y subir a Hotmart)',kit.bonus)+
-    fa('⬆️','Upsell sugerido',Array.isArray(kit.upsell)?kit.upsell:[kit.upsell])+
+    (kit.bonus&&kit.bonus.length?`<div style="margin-top:6px;"><button class="btn btn-p" style="font-size:12px;padding:8px 16px;" onclick="genBonuses()">✦ Generar estos bonos con Claude</button></div><div id="hm-bonus-generated" style="margin-top:10px;"></div>`:'')+
+    fa('⬆️','Ideas de upsell — infoproductos PDF que podrías crear y vender aparte',Array.isArray(kit.upsell)?kit.upsell:[kit.upsell])+
+    '<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px;padding-left:4px;">💡 Claude sugiere ebooks complementarios para vender como upsell. Son PDFs que puedes generar igual que el ebook principal.</div>'+
+    (kit.upsell&&(Array.isArray(kit.upsell)?kit.upsell.length:kit.upsell)?`<div style="margin-top:6px;"><button class="btn btn-p" style="font-size:12px;padding:8px 16px;" onclick="genUpsells()">✦ Generar estos upsells con Claude</button></div><div id="hm-upsell-generated" style="margin-top:10px;"></div>`:'')+
     '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🚀 ESTRATEGIA DE CONVERSIÓN</div>'+
     fa('👆','CTAs variaciones',Array.isArray(kit.cta)?kit.cta:[kit.cta])+
     fa('⚡','Ángulos de urgencia',kit.urgencyAngles)+
@@ -2560,6 +2563,139 @@ async function genAdImg(idx,encodedPrompt){
     if(d.success){ el.innerHTML=`<img src="${d.url}" />`; }
     else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
+}
+
+async function genBonuses(){
+  if(!S.hmKit||!S.hmKit.bonus||!S.hmKit.bonus.length){alert('Genera primero el kit Hotmart.');return;}
+  const o=S.selOpp||{};
+  const lang=S.approvedLang||o.idioma||o.language||'French';
+  const marketInp=document.getElementById('hm-market-inp');
+  const market=(marketInp&&marketInp.value.trim())||o.pais||o.country||'';
+  const box=document.getElementById('hm-bonus-generated');
+  box.innerHTML='<div style="font-size:12px;color:var(--muted);padding:10px 0;">⏳ Claude está creando los bonos... puede tardar 30 segundos.</div>';
+  try{
+    const resp=await fetch('/api/generate-bonuses',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bonuses:S.hmKit.bonus,language:lang,targetMarket:market,
+        niche:o.nicho||o.niche||o.problema||'',ebookTitle:S.hmKit.productName||o.tituloEbook||''})});
+    const d=await resp.json();
+    if(!d.success){box.innerHTML='<div style="color:red;font-size:12px;">Error: '+d.error+'</div>';return;}
+    S.generatedBonuses=d.bonuses;
+    box.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-top:10px;border-top:1px solid var(--border);">✅ Bonos generados — descarga cada uno como PDF</div>'+
+    d.bonuses.map(function(b,i){
+      return '<div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">'+
+        '<div><div style="font-size:13px;font-weight:700;color:var(--text);">🎁 '+b.title+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+(b.subtitle||'')+' · '+(b.type||'')+'</div></div>'+
+        '<button class="btn btn-gold" style="font-size:11px;padding:7px 14px;white-space:nowrap;" onclick="dlBonus('+i+')">📄 Descargar PDF</button></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div style="color:red;font-size:12px;">Error: '+e.message+'</div>';}
+}
+
+function dlBonus(idx){
+  var b=(S.generatedBonuses||[])[idx]; if(!b){alert('Bono no encontrado.');return;}
+  var lang=S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'French';
+  var typeLabel={'checklist':'✅','guide':'📖','tracker':'📊','worksheet':'📝','glossary':'📚'}[b.type]||'🎁';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+b.title+'</title><style>'+
+    'body{font-family:Georgia,serif;max-width:750px;margin:0 auto;padding:40px 36px;color:#1a1a2e;background:#fff;}'+
+    'h1{font-size:26px;color:#6c5ce7;margin-bottom:4px;} h2{font-size:13px;color:#888;font-weight:400;margin-bottom:32px;border-bottom:2px solid #6c5ce7;padding-bottom:10px;}'+
+    'h3{font-size:15px;color:#6c5ce7;margin:24px 0 10px;font-weight:700;} '+
+    'ul{list-style:none;padding:0;margin:0 0 16px;} li{padding:8px 12px 8px 32px;position:relative;border-bottom:1px solid #f0f0f0;font-size:13px;line-height:1.6;}'+
+    'li:before{content:"✓";position:absolute;left:10px;color:#6c5ce7;font-weight:700;}'+
+    '.tracker li:before{content:"○";}'+
+    '.glossary li{padding-left:0;} .glossary li strong{color:#6c5ce7;}'+
+    'p{font-size:13px;line-height:1.8;margin-bottom:12px;}'+
+    '.cover{text-align:center;padding:60px 20px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:white;border-radius:16px;margin-bottom:40px;}'+
+    '.cover h1{color:white;font-size:30px;} .cover p{color:rgba(255,255,255,0.85);font-size:14px;}'+
+    '@media print{body{padding:20px;} .cover{border-radius:0;}}'+
+    '</style></head><body>'+
+    '<div class="cover"><div style="font-size:32px;margin-bottom:12px;">'+typeLabel+'</div>'+
+    '<h1>'+b.title+'</h1><p>'+(b.subtitle||'')+'</p></div>'+
+    (b.sections||[]).map(function(sec){
+      var content='<h3>'+sec.heading+'</h3>';
+      if(sec.items&&sec.items.length){
+        var cls=b.type==='tracker'?'tracker':b.type==='glossary'?'glossary':'';
+        content+='<ul class="'+cls+'">';
+        content+=sec.items.map(function(item){return'<li>'+item+'</li>';}).join('');
+        content+='</ul>';
+      } else if(sec.content){
+        content+='<p>'+sec.content+'</p>';
+      }
+      return content;
+    }).join('')+
+    '<p style="margin-top:40px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px;">© Ferni Guides · Bonus exclusivo</p>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(!w){alert('Activa ventanas emergentes');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+  w.onload=function(){w.print();};
+  setTimeout(function(){try{w.print();}catch(e){}},1200);
+}
+
+async function genUpsells(){
+  const kit=S.hmKit;
+  if(!kit||!kit.upsell||(Array.isArray(kit.upsell)?!kit.upsell.length:!kit.upsell)){alert('Genera primero el kit Hotmart.');return;}
+  const upsellList=Array.isArray(kit.upsell)?kit.upsell:[kit.upsell];
+  const o=S.selOpp||{};
+  const lang=S.approvedLang||o.idioma||o.language||'French';
+  const marketInp=document.getElementById('hm-market-inp');
+  const market=(marketInp&&marketInp.value.trim())||o.pais||o.country||'';
+  const box=document.getElementById('hm-upsell-generated');
+  box.innerHTML='<div style="font-size:12px;color:var(--muted);padding:10px 0;">⏳ Claude está creando los upsells... puede tardar 30 segundos.</div>';
+  try{
+    const resp=await fetch('/api/generate-bonuses',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({bonuses:upsellList,language:lang,targetMarket:market,
+        niche:o.nicho||o.niche||o.problema||'',ebookTitle:kit.productName||o.tituloEbook||''})});
+    const d=await resp.json();
+    if(!d.success){box.innerHTML='<div style="color:red;font-size:12px;">Error: '+d.error+'</div>';return;}
+    S.generatedUpsells=d.bonuses;
+    box.innerHTML='<div style="font-size:11px;font-weight:700;color:#fd7043;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-top:10px;border-top:1px solid var(--border);">✅ Upsells generados — descarga cada uno como PDF</div>'+
+    d.bonuses.map(function(b,i){
+      return '<div style="background:rgba(253,112,67,0.08);border:1px solid rgba(253,112,67,0.25);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">'+
+        '<div><div style="font-size:13px;font-weight:700;color:var(--text);">⬆️ '+b.title+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+(b.subtitle||'')+' · '+(b.type||'')+'</div></div>'+
+        '<button class="btn btn-gold" style="font-size:11px;padding:7px 14px;white-space:nowrap;" onclick="dlUpsell('+i+')">📄 Descargar PDF</button></div>';
+    }).join('');
+  }catch(e){box.innerHTML='<div style="color:red;font-size:12px;">Error: '+e.message+'</div>';}
+}
+
+function dlUpsell(idx){
+  var b=(S.generatedUpsells||[])[idx]; if(!b){alert('Upsell no encontrado.');return;}
+  var lang=S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'French';
+  var typeLabel={'checklist':'✅','guide':'📖','tracker':'📊','worksheet':'📝','glossary':'📚'}[b.type]||'⬆️';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+b.title+'</title><style>'+
+    'body{font-family:Georgia,serif;max-width:750px;margin:0 auto;padding:40px 36px;color:#1a1a2e;background:#fff;}'+
+    'h1{font-size:26px;color:#fd7043;margin-bottom:4px;} h2{font-size:13px;color:#888;font-weight:400;margin-bottom:32px;border-bottom:2px solid #fd7043;padding-bottom:10px;}'+
+    'h3{font-size:15px;color:#fd7043;margin:24px 0 10px;font-weight:700;} '+
+    'ul{list-style:none;padding:0;margin:0 0 16px;} li{padding:8px 12px 8px 32px;position:relative;border-bottom:1px solid #f0f0f0;font-size:13px;line-height:1.6;}'+
+    'li:before{content:"✓";position:absolute;left:10px;color:#fd7043;font-weight:700;}'+
+    '.tracker li:before{content:"○";}'+
+    '.glossary li{padding-left:0;} .glossary li strong{color:#fd7043;}'+
+    'p{font-size:13px;line-height:1.8;margin-bottom:12px;}'+
+    '.cover{text-align:center;padding:60px 20px;background:linear-gradient(135deg,#e65100,#fd7043);color:white;border-radius:16px;margin-bottom:40px;}'+
+    '.cover h1{color:white;font-size:30px;} .cover p{color:rgba(255,255,255,0.85);font-size:14px;}'+
+    '@media print{body{padding:20px;} .cover{border-radius:0;}}'+
+    '</style></head><body>'+
+    '<div class="cover"><div style="font-size:32px;margin-bottom:12px;">'+typeLabel+'</div>'+
+    '<h1>'+b.title+'</h1><p>'+(b.subtitle||'')+'</p>'+
+    '<p style="font-size:11px;opacity:0.75;margin-top:16px;">Producto complementario premium</p></div>'+
+    (b.sections||[]).map(function(sec){
+      var content='<h3>'+sec.heading+'</h3>';
+      if(sec.items&&sec.items.length){
+        var cls=b.type==='tracker'?'tracker':b.type==='glossary'?'glossary':'';
+        content+='<ul class="'+cls+'">';
+        content+=sec.items.map(function(item){return'<li>'+item+'</li>';}).join('');
+        content+='</ul>';
+      } else if(sec.content){
+        content+='<p>'+sec.content+'</p>';
+      }
+      return content;
+    }).join('')+
+    '<p style="margin-top:40px;font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:12px;">© Ferni Guides · Producto complementario premium</p>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(!w){alert('Activa ventanas emergentes');return;}
+  w.document.open(); w.document.write(html); w.document.close();
+  w.onload=function(){w.print();};
+  setTimeout(function(){try{w.print();}catch(e){}},1200);
 }
 
 function dlHotmart(){
