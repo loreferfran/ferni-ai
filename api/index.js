@@ -1186,15 +1186,28 @@ app.post('/api/translate-custom', async function(req, res) {
     ' 4. Conserva toda la estructura JSON y los keys identicos.' +
     ' 5. Devuelve SOLO JSON valido, sin markdown, sin texto extra.' +
     ' 6. Si el idioma usa escritura de derecha a izquierda (arabe, hebreo), traduce igualmente pero mantén los keys en ingles.';
+  function safeParseTranslation(raw) {
+    var cleaned = raw.replace(/```json|```/g, '').trim();
+    try { return JSON.parse(cleaned); } catch(e) {
+      // Intentar recuperar JSON truncado añadiendo cierre
+      var fixed = cleaned;
+      if (!fixed.endsWith('}')) fixed += '"}}}';
+      try { return JSON.parse(fixed); } catch(e2) {
+        throw new Error('JSON truncado — el capítulo es demasiado largo para traducir en un solo bloque');
+      }
+    }
+  }
   try {
-    var part1 = JSON.parse((await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro, chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 7000)).replace(/```json|```/g, '').trim());
-    var part2 = JSON.parse((await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3], conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, resources: ebook.resources, disclaimer: ebook.disclaimer }), 7000)).replace(/```json|```/g, '').trim());
+    var p1 = safeParseTranslation(await claudeCall(sys, JSON.stringify({ title: ebook.title, subtitle: ebook.subtitle, tagline: ebook.tagline, intro: ebook.intro }), 8000));
+    var p2 = safeParseTranslation(await claudeCall(sys, JSON.stringify({ chapter1: ebook.chapters[0], chapter2: ebook.chapters[1] }), 8000));
+    var p3 = safeParseTranslation(await claudeCall(sys, JSON.stringify({ chapter3: ebook.chapters[2], chapter4: ebook.chapters[3] }), 8000));
+    var p4 = safeParseTranslation(await claudeCall(sys, JSON.stringify({ conclusion: ebook.conclusion, actionPlan: ebook.actionPlan, resources: ebook.resources, disclaimer: ebook.disclaimer }), 6000));
     res.json({ success: true, ebook: {
-      title: part1.title, subtitle: part1.subtitle, tagline: part1.tagline,
-      intro: part1.intro,
-      chapters: [part1.chapter1, part1.chapter2, part2.chapter3, part2.chapter4],
-      conclusion: part2.conclusion, actionPlan: part2.actionPlan,
-      resources: part2.resources, disclaimer: part2.disclaimer
+      title: p1.title, subtitle: p1.subtitle, tagline: p1.tagline,
+      intro: p1.intro,
+      chapters: [p2.chapter1, p2.chapter2, p3.chapter3, p3.chapter4],
+      conclusion: p4.conclusion, actionPlan: p4.actionPlan,
+      resources: p4.resources, disclaimer: p4.disclaimer
     }});
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
