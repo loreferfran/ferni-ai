@@ -1372,7 +1372,7 @@ app.post('/api/generate-hotmart', async function(req, res) {
       ' | Emotional driver: ' + (o.emocion || o.emotion) +
       ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
 
-    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title), premiumSubtitle, emotionalHook (1 powerful sentence), shortDesc (100 words max), longDesc (persuasive 250 words), transformationPromise, benefits (array 6 strings), highlights (array 4 unique selling points), targetAudience (description), category, pricing, guarantee, bonus (array 3 strings), upsell (array 2 strings).';
+    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title string), premiumSubtitle (string), emotionalHook (1 powerful sentence string), shortDesc (100 words max string), longDesc (persuasive 250 words string), transformationPromise (string), benefits (array 6 strings), highlights (array 4 strings), targetAudience (string), category (string), pricing (PLAIN STRING with amount and currency, e.g. "27 EUR" or "19 USD" — NOT an object), guarantee (PLAIN STRING e.g. "7-day money back guarantee" — NOT an object), bonus (array 3 strings), upsell (array 2 strings).';
     var hmSection2 = 'HOTMART ADVANCED STRATEGY — Generate JSON with: cta (array 3 different CTAs), urgencyAngles (array 3 urgency hooks), objectionHandling (array 3, each object with objection and answer), seoKeywords (array 8 marketplace keywords), thumbnailTitleIdeas (array 3 short catchy titles), emotionalPositioning (brand positioning statement), faq (array 3, each object with q and a).';
 
     var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection1), userMsg, 5000));

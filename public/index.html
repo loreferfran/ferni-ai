@@ -2266,7 +2266,8 @@ function renderHotmart(o,kit,targetMarket){
   const lang = S.approvedLang || o.idioma || o.language || 'Español';
   const market = targetMarket || o.pais || o.country || '';
   document.getElementById('hm-lang').textContent=`${lang} · ${market}`;
-  const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${v||'—'}</div></div>`;
+  const str=v=>{ if(!v) return '—'; if(typeof v==='object') return Object.values(v).filter(x=>x).join(' · '); return String(v); };
+  const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${str(v)}</div></div>`;
   const fa=(icon,l,arr)=>f(icon,l,(arr||[]).map((x,i)=>`${i+1}. ${typeof x==='object'?(x.objection||x.q?`<b>${x.objection||x.q}</b><br>${x.answer||x.a}`:JSON.stringify(x)):x}`).join('<br><br>'));
   document.getElementById('hm-body').innerHTML=
     '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🛒 HOTMART — Listado del producto</div>'+
