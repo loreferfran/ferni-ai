@@ -375,6 +375,7 @@ select option { background: #1e2d52; }
               <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
               <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
               <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
+              <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()" title="Descarga la portada y todas las imágenes de capítulo a tu PC">💾 Descargar imágenes</button>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:6px;">💡 Puedes seguir pidiendo correcciones en el chat antes de descargar.</div>
             <div style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Para descargar: abre el PDF en Chrome → Ctrl+P → Guardar como PDF → listo para Hotmart</div>
@@ -1857,6 +1858,28 @@ function dlPDF(){
   w.onload = function(){ w.print(); };
   // fallback si onload no dispara
   setTimeout(function(){ try{ w.print(); }catch(e){} }, 1500);
+}
+
+function dlAllImages(){
+  var title = (S.selOpp && (S.selOpp.tituloEbook||S.selOpp.ebookTitle||S.selOpp.problema||'ebook')) || 'ebook';
+  var slug = title.replace(/[^a-z0-9]/gi,'_').toLowerCase().slice(0,30);
+  var count = 0;
+  function dlImg(dataUrl, name){
+    if(!dataUrl) return;
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    count++;
+  }
+  if(S.coverUrl) dlImg(S.coverUrl, slug+'_portada.jpg');
+  (S.chapterImages||[]).forEach(function(img, i){
+    if(img) dlImg(img, slug+'_capitulo'+(i+1)+'.jpg');
+  });
+  if(count===0) alert('No hay imágenes generadas para este ebook todavía.');
+  else alert(count+' imagen(es) descargadas a tu PC.\nYa puedes guardar el ebook y borrarlo del historial si quieres liberar espacio.');
 }
 
 // ─── BONUS PACK ─────────────────────────────────────────────────────────────
