@@ -397,23 +397,16 @@ select option { background: #1e2d52; }
               <div class="sec-lbl">Kit completo Hotmart</div>
               <div style="display:flex;gap:7px;align-items:center;"><span class="badge bteal" id="hm-lang"></span><button class="btn btn-gold" onclick="dlHotmart()">⬇ Descargar kit Word</button></div>
             </div>
-            <div id="hm-cover-box" class="section-card">
-              <div class="section-card-title">🎨 Portada del ebook</div>
-              <div id="hm-cover-content" style="text-align:center;padding:10px 0;">
-                <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Genera la portada profesional con DALL-E</div>
-                <button class="btn btn-p" onclick="genCover()">✦ Generar portada con DALL-E</button>
-              </div>
-            </div>
             <div id="hm-images-box" class="section-card">
-              <div class="section-card-title">🖼️ 5 Imágenes para Hotmart</div>
+              <div class="section-card-title">🖼️ Imágenes para subir a Hotmart</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Haz clic en cada imagen para generarla con DALL-E · Clic derecho → Guardar imagen</div>
               <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
-                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:9px;">Banner 1</div></div>
-                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:9px;">Banner 2</div></div>
-                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:9px;">Mockup</div></div>
-                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:9px;">Testimonial</div></div>
-                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:9px;">CTA</div></div>
+                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:9px;">Banner producto</div></div>
+                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:9px;">Banner beneficios</div></div>
+                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:9px;">Mockup ebook</div></div>
+                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:9px;">Testimonio</div></div>
+                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:9px;">CTA compra</div></div>
               </div>
-              <div style="font-size:10px;color:var(--muted);margin-top:8px;">Haz clic en cada imagen para generarla con DALL-E · Clic derecho para guardar</div>
             </div>
             <div id="hm-body"></div>
           </div>
