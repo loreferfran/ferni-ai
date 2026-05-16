@@ -578,10 +578,10 @@ select option { background: #1e2d52; }
               <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Sobre qué quieres el ebook?</div>
               <textarea id="dir-topic" rows="4" placeholder="Ejemplos:&#10;• Cuidado de recién nacidos para madres primerizas&#10;• Guía de tablas de multiplicar para niños de 7 a 10 años&#10;• Skincare facial en casa para piel grasa&#10;• Inversión en criptomonedas para principiantes&#10;• Recetas saludables para bajar de peso" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
             </div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
               <div style="flex:1;min-width:180px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País de destino</div>
-                <select id="dir-country" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                <select id="dir-country" onchange="dirAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                   <option value="España">🇪🇸 España</option>
                   <option value="Mexico">🇲🇽 México</option>
                   <option value="Argentina">🇦🇷 Argentina</option>
@@ -595,6 +595,11 @@ select option { background: #1e2d52; }
                   <option value="Brazil">🇧🇷 Brasil</option>
                   <option value="United States">🇺🇸 Estados Unidos</option>
                   <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                  <option value="Canada">🇨🇦 Canadá</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Netherlands">🇳🇱 Países Bajos</option>
+                  <option value="Sweden">🇸🇪 Suecia</option>
+                  <option value="Poland">🇵🇱 Polonia</option>
                 </select>
               </div>
               <div style="flex:1;min-width:180px;">
@@ -611,6 +616,11 @@ select option { background: #1e2d52; }
                   <option value="Swedish">🇸🇪 Sueco</option>
                 </select>
               </div>
+            </div>
+            <div style="margin-bottom:20px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Mercado objetivo <span style="font-weight:400;text-transform:none;letter-spacing:0;">(para traducción cultural exacta)</span></div>
+              <input id="dir-market" type="text" placeholder="ej: United Kingdom, Canada, France, Germany..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
+              <div style="font-size:11px;color:var(--muted);margin-top:5px;">El borrador se genera en Español para revisión. Al aprobar, Claude traduce al idioma elegido adaptado a este mercado exacto.</div>
             </div>
             <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="generateDirectEbook()">⚡ Generar Ebook Premium</button>
           </div>
@@ -1020,11 +1030,29 @@ function cancelEbook(){
   if(S.ebookAbort) S.ebookAbort.abort();
 }
 
+var DIR_LANG_MAP = {
+  'España':'Español','Mexico':'Español','Argentina':'Español','Colombia':'Español','Chile':'Español','Peru':'Español',
+  'France':'French','Germany':'German','Italy':'Italian','Portugal':'Portuguese','Brazil':'Portuguese',
+  'United States':'English','United Kingdom':'English','Canada':'English','Australia':'English',
+  'Netherlands':'Dutch','Sweden':'Swedish','Poland':'Polish'
+};
+function dirAutoFill(){
+  var country = document.getElementById('dir-country').value;
+  var lang = DIR_LANG_MAP[country];
+  if(lang){
+    var sel = document.getElementById('dir-lang');
+    for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===lang){ sel.selectedIndex=i; break; } }
+  }
+  var mkt = document.getElementById('dir-market');
+  if(mkt && !mkt.value) mkt.value = country;
+}
+
 async function generateDirectEbook(){
   var topic = (document.getElementById('dir-topic').value || '').trim();
   if(!topic){ alert('Describe el ebook que necesitas.'); return; }
   var lang = document.getElementById('dir-lang').value || 'Español';
   var country = document.getElementById('dir-country').value || 'España';
+  var market = (document.getElementById('dir-market').value || '').trim() || country;
 
   hide('dir-form'); hide('dir-error'); show('dir-loading');
   document.getElementById('dir-load-txt').textContent = 'Analizando tema con GPT-4o...';
@@ -1035,6 +1063,7 @@ async function generateDirectEbook(){
     if(!d.success) throw new Error(d.error || 'Error generando brief');
 
     var opp = d.opportunity;
+    opp.targetMarket = market; // para que approveEbook() use el mercado correcto
     // Guardar en historial como nueva entrada
     var histId = 'dir_' + Date.now();
     S.currentHistId = histId;
@@ -1362,7 +1391,7 @@ function renderDraft(o,eb){
   if(langSel && o.language) langSel.value = o.language;
   // Pre-rellenar mercado con el país del ebook
   var marketInp = document.getElementById('eb-market-inp');
-  if(marketInp && !marketInp.value) marketInp.value = o.pais || o.country || '';
+  if(marketInp && !marketInp.value) marketInp.value = o.targetMarket || o.pais || o.country || '';
   // Renderizar slots de imagen
   renderImgSlots(eb);
 }
@@ -1375,7 +1404,7 @@ async function approveEbook(){
   if(!lang){ alert('Elige el idioma destino antes de aprobar.'); return; }
 
   var marketEl = document.getElementById('eb-market-inp');
-  var targetMarket = (marketEl && marketEl.value.trim()) || o.pais || o.country || '';
+  var targetMarket = (marketEl && marketEl.value.trim()) || o.targetMarket || o.pais || o.country || '';
 
   hide('eb-content'); show('eb-loading');
   document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + ' para ' + targetMarket + '...';
