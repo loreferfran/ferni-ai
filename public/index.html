@@ -578,44 +578,40 @@ select option { background: #1e2d52; }
               <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Sobre qué quieres el ebook?</div>
               <textarea id="dir-topic" rows="4" placeholder="Ejemplos:&#10;• Cuidado de recién nacidos para madres primerizas&#10;• Guía de tablas de multiplicar para niños de 7 a 10 años&#10;• Skincare facial en casa para piel grasa&#10;• Inversión en criptomonedas para principiantes&#10;• Recetas saludables para bajar de peso" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
             </div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-              <div style="flex:1;min-width:180px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País de destino</div>
-                <select id="dir-country" onchange="dirAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
-                  <option value="España">🇪🇸 España</option>
-                  <option value="Mexico">🇲🇽 México</option>
-                  <option value="Argentina">🇦🇷 Argentina</option>
-                  <option value="Colombia">🇨🇴 Colombia</option>
-                  <option value="Chile">🇨🇱 Chile</option>
-                  <option value="Peru">🇵🇪 Perú</option>
-                  <option value="France">🇫🇷 Francia</option>
-                  <option value="Germany">🇩🇪 Alemania</option>
-                  <option value="Italy">🇮🇹 Italia</option>
-                  <option value="Portugal">🇵🇹 Portugal</option>
-                  <option value="Brazil">🇧🇷 Brasil</option>
-                  <option value="United States">🇺🇸 Estados Unidos</option>
-                  <option value="United Kingdom">🇬🇧 Reino Unido</option>
-                  <option value="Canada">🇨🇦 Canadá</option>
-                  <option value="Australia">🇦🇺 Australia</option>
-                  <option value="Netherlands">🇳🇱 Países Bajos</option>
-                  <option value="Sweden">🇸🇪 Suecia</option>
-                  <option value="Poland">🇵🇱 Polonia</option>
-                </select>
-              </div>
-              <div style="flex:1;min-width:180px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Idioma de entrega final</div>
-                <select id="dir-lang" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
-                  <option value="Español">🇪🇸 Español</option>
-                  <option value="French">🇫🇷 Francés</option>
-                  <option value="German">🇩🇪 Alemán</option>
-                  <option value="Italian">🇮🇹 Italiano</option>
-                  <option value="Portuguese">🇵🇹 Portugués</option>
-                  <option value="English">🇬🇧 Inglés</option>
-                  <option value="Dutch">🇳🇱 Neerlandés</option>
-                  <option value="Polish">🇵🇱 Polaco</option>
-                  <option value="Swedish">🇸🇪 Sueco</option>
-                </select>
-              </div>
+            <div style="margin-bottom:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País de destino</div>
+              <select id="dir-country" onchange="dirAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                <option value="España">🇪🇸 España</option>
+                <option value="Mexico">🇲🇽 México</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Colombia">🇨🇴 Colombia</option>
+                <option value="Chile">🇨🇱 Chile</option>
+                <option value="Peru">🇵🇪 Perú</option>
+                <option value="France">🇫🇷 Francia</option>
+                <option value="Germany">🇩🇪 Alemania</option>
+                <option value="Italy">🇮🇹 Italia</option>
+                <option value="Portugal">🇵🇹 Portugal</option>
+                <option value="Brazil">🇧🇷 Brasil</option>
+                <option value="United States">🇺🇸 Estados Unidos</option>
+                <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                <option value="Canada">🇨🇦 Canadá</option>
+                <option value="Australia">🇦🇺 Australia</option>
+                <option value="Netherlands">🇳🇱 Países Bajos</option>
+                <option value="Sweden">🇸🇪 Suecia</option>
+                <option value="Poland">🇵🇱 Polonia</option>
+              </select>
+              <div id="dir-lang-hint" style="font-size:11px;color:var(--muted);margin-top:6px;">📝 Borrador en Español para revisión → PDF final en <span id="dir-lang-name" style="color:var(--accent);font-weight:600;">Español</span></div>
+              <select id="dir-lang" style="display:none;">
+                <option value="Español">Español</option>
+                <option value="French">Francés</option>
+                <option value="German">Alemán</option>
+                <option value="Italian">Italiano</option>
+                <option value="Portuguese">Portugués</option>
+                <option value="English">Inglés</option>
+                <option value="Dutch">Neerlandés</option>
+                <option value="Polish">Polaco</option>
+                <option value="Swedish">Sueco</option>
+              </select>
             </div>
             <div style="margin-bottom:20px;">
               <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Mercado objetivo <span style="font-weight:400;text-transform:none;letter-spacing:0;">(para traducción cultural exacta)</span></div>
@@ -1036,13 +1032,17 @@ var DIR_LANG_MAP = {
   'United States':'English','United Kingdom':'English','Canada':'English','Australia':'English',
   'Netherlands':'Dutch','Sweden':'Swedish','Poland':'Polish'
 };
+var DIR_LANG_LABELS = {
+  'Español':'Español','French':'Francés','German':'Alemán','Italian':'Italiano',
+  'Portuguese':'Portugués','English':'Inglés','Dutch':'Neerlandés','Polish':'Polaco','Swedish':'Sueco'
+};
 function dirAutoFill(){
   var country = document.getElementById('dir-country').value;
-  var lang = DIR_LANG_MAP[country];
-  if(lang){
-    var sel = document.getElementById('dir-lang');
-    for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===lang){ sel.selectedIndex=i; break; } }
-  }
+  var lang = DIR_LANG_MAP[country] || 'Español';
+  var sel = document.getElementById('dir-lang');
+  for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===lang){ sel.selectedIndex=i; break; } }
+  var hint = document.getElementById('dir-lang-name');
+  if(hint) hint.textContent = DIR_LANG_LABELS[lang] || lang;
   var mkt = document.getElementById('dir-market');
   if(mkt && !mkt.value) mkt.value = country;
 }
