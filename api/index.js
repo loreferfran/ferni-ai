@@ -836,6 +836,17 @@ function buildEbookSystem(countryName, regs) {
     '\ndespues de que el usuario haya revisado, corregido y aprobado explicitamente el ebook en español.' +
     '\nHasta recibir esa aprobacion, NO traduzcas, mezcles ni insertes ninguna palabra de otro idioma bajo ninguna circunstancia.' +
     '\n=== FIN BLOQUE IDIOMA ===' +
+    '\n\nFILTRO OBLIGATORIO DE VERIFICACION DE HECHOS (aplicar INTERNAMENTE antes de escribir cada estadistica, dato o cifra):' +
+    ' Antes de incluir cualquier estadistica, porcentaje, cifra o dato numerico, aplica este filtro de tres preguntas:' +
+    ' (1) ¿Puedo identificar la organizacion exacta, el año y el tipo de documento donde aparece este dato?' +
+    ' (2) ¿Estoy atribuyendo el dato a la fuente correcta o lo estoy generalizando como "el gobierno", "estudios dicen" o "investigadores afirman"?' +
+    ' (3) ¿Estoy presentando una proyeccion o escenario hipotetico como un hecho absoluto y confirmado?' +
+    ' Si alguna respuesta es incierta, SOLO tienes tres opciones validas:' +
+    ' (a) Usar la fuente correcta y nombrarla exactamente con organizacion especifica + año (ej: "segun el INE 2023", "segun McKinsey 2024", "segun la ONS 2022").' +
+    ' (b) Presentarlo como estimacion o proyeccion con su rango: "se estima que", "aproximadamente entre X e Y", "las proyecciones sugieren".' +
+    ' (c) Eliminarlo del contenido y no mencionarlo.' +
+    ' PROHIBIDO ABSOLUTO: inventar estadisticas, aproximar fuentes, atribuir datos a organizaciones incorrectas o presentar cifras sin respaldo real.' +
+    ' ES PREFERIBLE TENER MENOS DATOS QUE TENER DATOS INCORRECTOS O MAL ATRIBUIDOS.' +
     '\n\nCONDICIONES DE CALIDAD (aplica a cada seccion dentro del limite de extension indicado en el prompt):' +
     ' (1) DENSIDAD: cada parrafo con minimo 1 dato numerico, medida o referencia verificable. Cero filler.' +
     ' (2) METODO: crea un METODO CON NOMBRE PROPIO memorable (ej: Protocolo XYZ, Sistema ABC) — usalo en TODO.' +
@@ -938,6 +949,48 @@ function extractJSON(txt) {
   throw new Error('No valid JSON in Claude response. Preview: ' + txt.slice(0, 300));
 }
 
+// Verificación de hechos — segundo Claude independiente que audita el contenido generado
+app.post('/api/verify-content', async function(req, res) {
+  var content = (req.body.content || '').trim();
+  var isModule1 = req.body.isModule1 === true;
+  if (!content) return res.json({ ok: true, approved: true, result: 'VERIFICACION APROBADA' });
+
+  var module1Warning = isModule1
+    ? 'IMPORTANTE: Este contenido fue generado con datos que primero pasaron por un modelo de IA externo (OpenAI) antes de llegar a Claude. Por ello, trata TODO dato numerico y TODA atribucion de fuente como sospechoso hasta validarlo internamente. Se especialmente estricto con estadisticas, cifras exactas y nombres de organizaciones, ya que pudieron haber sido distorsionados o mal resumidos antes de llegar al generador.\n\n'
+    : '';
+
+  var verifierPrompt = module1Warning +
+    'Eres un editor especializado en verificacion de hechos para contenido de infoproductos digitales. Tu unica funcion es identificar problemas de verificacion factual.\n\n' +
+    'Revisa el siguiente contenido e identifica:\n' +
+    '1. Cualquier estadistica o dato sin fuente explicitamente nombrada (organizacion especifica + año)\n' +
+    '2. Datos atribuidos a "el gobierno", "estudios dicen", "investigadores", "expertos" u otra entidad generica en lugar de la organizacion especifica (ONS, CIPD, McKinsey, WEF, INE, Eurostat, etc.)\n' +
+    '3. Proyecciones o peores escenarios presentados como hechos absolutos y confirmados\n' +
+    '4. Años que parezcan incorrectos o anacrónicos para el dato citado\n' +
+    '5. Herramientas, plataformas, apps o recursos mencionados que no existan o esten desactualizados\n' +
+    '6. Datos que parezcan haber sido resumidos o alterados respecto a su fuente original\n\n' +
+    'Por cada problema encontrado devuelve exactamente este formato:\n' +
+    'PROBLEMA: descripcion del problema\n' +
+    'UBICACION: frase exacta donde aparece\n' +
+    'CORRECCION: version corregida o instruccion de eliminarlo\n\n' +
+    'Si no se encuentran problemas devuelve unicamente: VERIFICACION APROBADA\n\n' +
+    'Devuelve SOLO la lista de problemas o VERIFICACION APROBADA. Sin texto adicional, sin introduccion, sin conclusion.\n\n' +
+    'CONTENIDO A VERIFICAR:\n' + content.slice(0, 14000);
+
+  try {
+    var resp = await claudeClient.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: verifierPrompt }]
+    });
+    var result = (resp.content[0].text || '').trim();
+    var approved = result === 'VERIFICACION APROBADA' || result === 'VERIFICACIÓN APROBADA';
+    res.json({ ok: true, approved: approved, result: result });
+  } catch (e) {
+    console.error('verify-content error:', e.message);
+    res.json({ ok: false, approved: true, result: 'Error en verificacion: ' + e.message });
+  }
+});
+
 // Generación por capítulo individual — 1 Claude call por sección, sin riesgo de timeout
 app.post('/api/generate-chapter', async function(req, res) {
   var o = req.body.opportunity;
@@ -962,6 +1015,12 @@ app.post('/api/generate-chapter', async function(req, res) {
     ' REGLAS DE PRECIOS Y PRODUCTOS: (1) NUNCA uses precios exactos — usa siempre rangos: "entre X y Y ' + regs.currency + '" o "desde X ' + regs.currency + '". (2) Cuando menciones donde conseguir un producto, da SIEMPRE 2 o 3 opciones de lugares (tiendas, farmacias, supermercados, online) propias de ' + countryName + ', no solo uno.' +
     ' ESTADISTICAS Y DATOS: cuando uses porcentajes o cifras estadisticas escribe SIEMPRE "aproximadamente" antes del numero (ej: "aproximadamente el 60% de las personas..."). NUNCA presentes estadisticas como datos exactos certificados.' +
     defsRule +
+    ' AUTOVERIFICACION OBLIGATORIA — antes de entregar el JSON, revisa internamente todo el contenido generado:' +
+    ' (1) ¿Cada estadistica o cifra tiene su fuente nombrada con organizacion especifica + año?' +
+    ' (2) ¿Algun dato esta atribuido a "el gobierno", "estudios dicen" u entidad generica? Si es asi, corrigelo con la organizacion real o convierte el dato en estimacion.' +
+    ' (3) ¿Alguna proyeccion aparece como hecho absoluto confirmado? Si es asi, agrega "se proyecta que" o "se estima que".' +
+    ' (4) ¿Todas las herramientas, apps o plataformas mencionadas existen y estan activas en ' + countryName + '?' +
+    ' Corrige cualquier error encontrado antes de entregar el JSON.' +
     ' RESPONDE UNICAMENTE CON EL OBJETO JSON. SIN bloques markdown, SIN ``` antes o despues. Empieza con { y termina con }:\n';
 
   // Calcula regla de estructura para capitulos 1-4 basada en el outline

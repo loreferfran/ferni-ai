@@ -330,6 +330,8 @@ select option { background: #1e2d52; }
               <button onclick="openFullPreview()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(253,203,110,0.5);background:rgba(253,203,110,0.1);color:#fdcb6e;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">🔍 Ver página completa</button>
             </div>
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
+            <!-- Alerta de verificación de hechos (Capa 3) -->
+            <div id="eb-verify-alert" style="display:none;margin-bottom:12px;"></div>
             <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
               <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: idioma + mercado del PDF</div>
               <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">El borrador está en español. Al aprobar, Claude lo traduce adaptado al mercado exacto.</div>
@@ -1088,8 +1090,8 @@ async function generateDirectEbook(){
     document.getElementById('dir-load-txt').textContent = 'Brief listo — generando ebook con Claude...';
     // Resetear form para próxima vez
     setTimeout(function(){ show('dir-form'); hide('dir-loading'); hide('dir-error'); }, 500);
-    // Ir al tab ebook y lanzar generación
-    goEbook();
+    // Ir al tab ebook y lanzar generación — Módulo 2: solo Claude, verificación estándar
+    goEbook(false);
   } catch(e) {
     show('dir-form'); hide('dir-loading');
     var errEl = document.getElementById('dir-error');
@@ -1106,6 +1108,67 @@ function ebStep(id, state){
   if(state === 'done'){ if(dot){ dot.textContent='✓'; dot.style.width='auto'; } }
   else if(state === 'active'){ if(dot){ dot.textContent=''; dot.style.width='6px'; } }
   else if(state === 'error'){ if(dot){ dot.textContent='✗'; dot.style.width='auto'; dot.style.color='var(--red)'; } }
+}
+
+// Extrae texto plano del ebook para enviarlo al verificador
+function buildVerificationContent(ebook) {
+  var parts = [];
+  if (ebook.title) parts.push('TÍTULO: ' + ebook.title);
+  if (ebook.subtitle) parts.push('SUBTÍTULO: ' + ebook.subtitle);
+  if (ebook.intro) parts.push('INTRODUCCIÓN:\n' + ebook.intro);
+  (ebook.chapters || []).forEach(function(ch, i) {
+    if (!ch) return;
+    parts.push('=== CAPÍTULO ' + (i+1) + ': ' + (ch.title||'') + ' ===');
+    if (ch.opening) parts.push(ch.opening);
+    if (ch.content) parts.push(ch.content);
+    if (ch.keyPoints && ch.keyPoints.length) parts.push('Puntos clave: ' + ch.keyPoints.join(' | '));
+    if (ch.exercise && ch.exercise.steps) parts.push('Ejercicio: ' + ch.exercise.steps.join(' | '));
+  });
+  if (ebook.conclusion) parts.push('CONCLUSIÓN:\n' + ebook.conclusion);
+  if (ebook.actionPlan && ebook.actionPlan.length) parts.push('PLAN DE ACCIÓN:\n' + ebook.actionPlan.join('\n'));
+  if (ebook.resources && ebook.resources.length) parts.push('RECURSOS:\n' + ebook.resources.join('\n'));
+  return parts.join('\n\n').slice(0, 14000);
+}
+
+// Lanza verificación Capa 3 y muestra resultado en #eb-verify-alert
+async function runVerification(ebook, isModule1) {
+  var alertDiv = document.getElementById('eb-verify-alert');
+  if (!alertDiv) return;
+  alertDiv.style.display = 'block';
+  alertDiv.innerHTML = '<div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.25);border-radius:10px;padding:14px;font-size:13px;color:var(--text);">🔍 <strong>Verificando datos y fuentes...</strong> Un segundo Claude está auditando estadísticas y atribuciones.</div>';
+
+  try {
+    var content = buildVerificationContent(ebook);
+    var resp = await fetch('/api/verify-content', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ content: content, isModule1: !!isModule1 })
+    });
+    var data = await resp.json();
+
+    if (data.approved) {
+      alertDiv.innerHTML = '<div style="background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:14px;font-size:13px;color:#00b894;font-weight:600;">✅ Verificación aprobada — no se encontraron problemas de datos ni fuentes.</div>';
+    } else {
+      // Parsear bloques de problemas separados por doble salto
+      var blocks = data.result.split(/\n\s*\n/).filter(function(b){ return b.trim().length > 0; });
+      var problemItems = blocks.map(function(b) {
+        return '<div style="background:white;border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:12px;line-height:1.8;color:#2d3436;">' +
+          b.replace(/PROBLEMA:/g, '<strong style="color:#d63031;">⚠️ PROBLEMA:</strong>')
+           .replace(/UBICACION:|UBICACIÓN:/g, '<strong style="color:#636e72;">📍 UBICACIÓN:</strong>')
+           .replace(/CORRECCION:|CORRECCIÓN:/g, '<strong style="color:#0984e3;">✏️ CORRECCIÓN:</strong>')
+           .replace(/\n/g, '<br>') + '</div>';
+      }).join('');
+      var count = blocks.length;
+      alertDiv.innerHTML =
+        '<div style="background:rgba(253,203,110,0.12);border:1px solid #fdcb6e;border-radius:10px;padding:14px;">' +
+          '<div style="font-weight:700;color:#b8860b;margin-bottom:12px;font-size:14px;">⚠️ Verificación encontró ' + count + ' problema' + (count !== 1 ? 's' : '') + ' — revisa antes de aprobar</div>' +
+          '<div style="max-height:320px;overflow-y:auto;padding-right:4px;">' + problemItems + '</div>' +
+          '<div style="font-size:11px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.08);">Usa el chat de correcciones de abajo para pedir a Claude que corrija los problemas encontrados, o aprueba igualmente si consideras que los datos son correctos.</div>' +
+        '</div>';
+    }
+  } catch(e) {
+    alertDiv.innerHTML = '<div style="background:rgba(108,92,231,0.05);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;color:var(--muted);">⚠️ No se pudo completar la verificación automática.</div>';
+  }
 }
 
 async function runEbookSteps(startFrom){
@@ -1179,6 +1242,8 @@ async function runEbookSteps(startFrom){
     if(preview) preview.srcdoc = S.pdfHtml;
     renderImgSlots(ebook);
     addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista elige el idioma abajo y presiona ✅ APROBAR.','ferni');
+    // CAPA 3: verificación automática de hechos antes de que el usuario pueda aprobar
+    runVerification(ebook, S.ebookIsModule1);
 
   }catch(e){
     S.ebookAbort = null;
@@ -1214,10 +1279,15 @@ async function runEbookSteps(startFrom){
   }
 }
 
-async function goEbook(){
+async function goEbook(isModule1){
   const o=S.selOpp; if(!o) return;
+  // isModule1=true → Serper+OpenAI flow (datos pre-procesados, verificación estricta)
+  // isModule1=false → Directo flow (solo Claude)
+  S.ebookIsModule1 = (isModule1 !== false); // default true si no se especifica
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
+  var verAlert = document.getElementById('eb-verify-alert');
+  if(verAlert){ verAlert.style.display='none'; verAlert.innerHTML=''; }
   // Limpiar progreso anterior al iniciar de cero
   S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
   ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
