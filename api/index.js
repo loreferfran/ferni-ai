@@ -870,6 +870,14 @@ function buildEbookSystem(countryName, regs) {
     '\n\nESPECIFICIDAD EXTREMA (minimo 30 datos numericos en todo):' +
     ' MAL: "planta en espacio adecuado". BIEN: "en 4m² planta 12 lechugas (30cm), 6 tomates (50cm). Rendimiento 8kg/mes. Semilla 3-5 EUR/paquete."' +
     ' MAL: "toma agua suficiente". BIEN: "bebe 2.5L/dia si pesas 70kg (peso × 35ml). 8 vasos 320ml: 6am, 1pm, 6pm, 10pm."' +
+    '\n\nELEMENTOS VISUALES INTEGRADOS EN EL TEXTO (usa estos tags cuando el contenido lo requiera):' +
+    '\n  [TABLE: titulo | col1 | col2 | col3 ... | fila1col1 | fila1col2 | ...] — para comparaciones, rankings o datos por categoria. Incluye todos los datos completos.' +
+    '\n  [BAR CHART: titulo | etiqueta1:valor1 | etiqueta2:valor2 | ...] — para porcentajes, tendencias o comparaciones numericas.' +
+    '\n  [LINE CHART: titulo | periodo1:valor1 | periodo2:valor2 | ...] — para evolucion o tendencias en el tiempo.' +
+    '\n  [HIGHLIGHT BOX: dato clave o estadistica importante que el lector no debe perderse. Fuente: origen del dato.] — para estadisticas clave, citas importantes o datos criticos.' +
+    '\n  [CHECKLIST: item1 | item2 | item3 | ...] — para listas de acciones o verificacion. Cada item debe ser concreto y medible.' +
+    '\n  [ICON + TITLE: titulo de seccion o concepto clave] — para separar secciones o destacar conceptos dentro del texto.' +
+    '\n  REGLAS: (1) Solo incluirlos cuando aporten valor real y aclaren el contenido, nunca como decoracion. (2) Cada tag debe incluir TODOS los datos necesarios para construir el elemento, nunca vacios. (3) Para contenido con muchos datos numericos, prioriza tablas y graficos. (4) Para guias practicas o narrativas, prioriza highlight boxes y checklists.' +
     '\n\nPROHIBIDO ABSOLUTO:' +
     ' - Primera persona (yo, mi, he). NUNCA.' +
     ' - Experiencias personales inventadas.' +
