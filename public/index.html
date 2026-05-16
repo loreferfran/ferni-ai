@@ -1072,6 +1072,7 @@ async function generateDirectEbook(){
 
     var opp = d.opportunity;
     opp.targetMarket = market; // para que approveEbook() use el mercado correcto
+    S.ebookSerperContext = d.serperContext || ''; // datos reales de web para enriquecer capítulos
     // Guardar en historial como nueva entrada
     var histId = 'dir_' + Date.now();
     S.currentHistId = histId;
@@ -1213,6 +1214,7 @@ async function runEbookSteps(startFrom){
       var chPayload = Object.assign({}, payload, { section: sec });
       if(ebookDefs) chPayload.ebookDefs = ebookDefs;
       if(ebookOutline) chPayload.ebookOutline = ebookOutline;
+      if(S.ebookSerperContext) chPayload.serperContext = S.ebookSerperContext;
       var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
       var sd = await sr.json();
       if(!sd.success) throw { section: sec, message: sd.error };
@@ -1300,6 +1302,7 @@ async function goEbook(isModule1){
   if(verAlert){ verAlert.style.display='none'; verAlert.innerHTML=''; }
   // Limpiar progreso anterior al iniciar de cero
   S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
+  if(isModule1 !== false) S.ebookSerperContext = ''; // Módulo 1 no usa contexto Serper en capítulos
   ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
   var retryDiv = document.getElementById('eb-retry-msg');
   if(retryDiv) retryDiv.innerHTML = '';

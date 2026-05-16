@@ -1005,9 +1005,13 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ebookDefs = req.body.ebookDefs || null;     // diccionario de nombres fijos (del step 'header')
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
   var userInstructions = (req.body.userInstructions || '').trim();
+  var serperContext = (req.body.serperContext || '').trim();
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
+  if (serperContext) {
+    ctx += '\n\n' + serperContext + '\n\nUSO OBLIGATORIO DE DATOS WEB: cuando el contenido de arriba incluya estadísticas, cifras o datos concretos relevantes al tema, ÚSALOS en el PDF citando la fuente con "Según [nombre del sitio]". Prioriza siempre estos datos reales sobre datos genéricos o estimaciones propias.';
+  }
   if (userInstructions) {
     ctx += '\n\nINSTRUCCIONES ADICIONALES DEL AUTOR (obligatorio seguirlas, se suman a las reglas generales — tienen prioridad sobre cualquier regla genérica si hay conflicto):\n' + userInstructions;
   }
@@ -1285,6 +1289,27 @@ app.post('/api/quick-brief', async function(req, res) {
   var country = req.body.country || 'España';
   if (!topic) return res.status(400).json({ success: false, error: 'Topic is required' });
 
+  // Buscar datos reales con Serper para enriquecer el PDF con fuentes verificables
+  var serperContext = '';
+  try {
+    var sq1 = await serperSearch(topic + ' ' + country);
+    var sq2 = await serperSearch(topic + ' estadísticas datos ' + country);
+    var sq3 = await serperSearch(topic + ' guía consejos expertos');
+    var allSnippets = [...sq1, ...sq2, ...sq3].filter(function(r){ return r.snippet && r.snippet.length > 40; });
+    // Eliminar duplicados por URL
+    var seen = {}; allSnippets = allSnippets.filter(function(r){ if(seen[r.link]) return false; seen[r.link]=true; return true; });
+    if (allSnippets.length > 0) {
+      serperContext = 'DATOS REALES ENCONTRADOS EN WEB (úsalos como referencia de fuentes reales en el PDF — cita siempre con "Según [nombre del sitio/organización]"):\n' +
+        allSnippets.slice(0, 15).map(function(r, i){
+          var domain = r.link ? r.link.replace(/https?:\/\/(www\.)?/, '').split('/')[0] : 'fuente';
+          return (i+1) + '. ' + (r.title||'') + ' — ' + (r.snippet||'') + ' (Fuente: ' + domain + ')';
+        }).join('\n');
+    }
+  } catch(e) {
+    // Si Serper falla, continúa sin contexto web (no bloquear la generación)
+    console.error('Serper en quick-brief falló:', e.message);
+  }
+
   var sys = 'You are a Premium Ebook Creative Director, Market Psychologist, Editorial Designer, and Digital Product Architect.' +
     ' This system does NOT use external search engines. The user directly provides a PDF topic.' +
     ' Your job: deeply analyze the topic, identify the target audience and buyer psychology, and produce a complete PREMIUM EBOOK PRODUCTION BRIEF.' +
@@ -1328,6 +1353,7 @@ app.post('/api/quick-brief', async function(req, res) {
     '\nTarget country: ' + country +
     '\nDelivery language: ' + lang +
     '\nAnalyze who will buy and read this, what emotional tone fits, what visual style matches the audience, and what makes it commercially valuable.' +
+    (serperContext ? '\n\nREAL WEB DATA CONTEXT (use this to ground your brief in real-world data):\n' + serperContext : '') +
     '\nRespond ONLY with the JSON object described in your instructions.';
 
   try {
@@ -1340,7 +1366,7 @@ app.post('/api/quick-brief', async function(req, res) {
     var raw = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
     if (!raw) return res.status(500).json({ success: false, error: 'No response from GPT-4o' });
     var brief = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    res.json({ success: true, opportunity: brief });
+    res.json({ success: true, opportunity: brief, serperContext: serperContext });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
