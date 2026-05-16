@@ -1023,25 +1023,25 @@ app.post('/api/generate-chapter', async function(req, res) {
       var outRule1 = buildOutlineRule(1);
       schema = JSON.stringify({chapter1:{number:1,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura impactante + dato real de ' + countryName + ' + por que es urgente resolver esto',content:'700-900 palabras: 4 subsecciones practicas con ejemplos reales de ' + countryName + ', datos numericos, lista de recursos con precios en ' + regs.currency + ', 2-3 errores comunes y como evitarlos',keyPoints:['dato numerico real de ' + countryName,'medida o tiempo concreto','consejo practico verificable','ejemplo del metodo','resultado medible'],exercise:{title:'Ejercicio practico — 30 minutos hoy',steps:['Paso 1: accion concreta con tiempo estimado','Paso 2: accion concreta con tiempo estimado','Paso 3: verificacion del resultado']}}});
       prompt = 'Escribe el capitulo 1 del ebook.' + outRule1 + ' ' + espInstruction + schema;
-      maxTokens = 3000;
+      maxTokens = 5000;
 
     } else if (section === 'ch2') {
       var outRule2 = buildOutlineRule(2);
       schema = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura que conecta brevemente con el cap 1 + nuevo angulo del tema en ' + countryName,content:'700-900 palabras: 4 subsecciones con metodo paso a paso, tabla comparativa de opciones con precios en ' + regs.currency + ', errores frecuentes y soluciones, estadisticas de ' + countryName,keyPoints:['dato verificable del sector','tiempo o costo exacto','criterio de eleccion claro','ejemplo practico de ' + countryName,'resultado esperado'],exercise:{title:'Ejercicio practico — aplicar metodo',steps:['Paso 1: accion concreta','Paso 2: accion concreta','Paso 3: verificacion del avance']}}});
       prompt = 'Escribe el capitulo 2 del ebook.' + outRule2 + ' ' + espInstruction + schema;
-      maxTokens = 3000;
+      maxTokens = 5000;
 
     } else if (section === 'ch3') {
       var outRule3 = buildOutlineRule(3);
       schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura que profundiza en la transformacion con ejemplos de ' + countryName,content:'700-900 palabras: plan paso a paso con tiempos exactos, 4-5 tips expertos unicos, checklist de control, ejemplos avanzados de ' + countryName + ', precios reales en ' + regs.currency,keyPoints:['tip experto no obvio','tiempo o medida exacta','criterio de calidad verificable','ejemplo avanzado','resultado observable en dias'],exercise:{title:'Plan de accion — proximas 2 semanas',steps:['Semana 1: que hacer exactamente con resultado esperado','Semana 2: que hacer exactamente con verificacion','Control final: como saber que funciono']}}});
       prompt = 'Escribe el capitulo 3 del ebook.' + outRule3 + ' ' + espInstruction + schema;
-      maxTokens = 3000;
+      maxTokens = 5000;
 
     } else if (section === 'ch4') {
       var outRule4 = buildOutlineRule(4);
       schema = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras',opening:'120-150 palabras: vision del resultado final + casos reales de ' + countryName,content:'700-900 palabras: como verificar el exito (5 criterios concretos), como mantener resultados a largo plazo, errores finales a evitar, tabla resumen antes/despues, proximo nivel y recursos en ' + regs.currency,keyPoints:['logro medible concreto','indicador de exito verificable','habito de mantenimiento clave','comparacion antes/despues real','impacto en calidad de vida'],exercise:{title:'Checklist de verificacion final',steps:['Verificacion 1: criterio objetivo y como medirlo','Verificacion 2: criterio objetivo y como medirlo','Mantenimiento: que hacer cada mes para mantener resultados']}}});
       prompt = 'Escribe el capitulo 4 del ebook.' + outRule4 + ' ' + espInstruction + schema;
-      maxTokens = 3000;
+      maxTokens = 5000;
 
     } else if (section === 'ending') {
       prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
