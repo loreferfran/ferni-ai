@@ -3146,12 +3146,12 @@ function renderHist(){
         ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:2px 8px;">✏️ Borrador listo</span>'
         : '';
     const actionBtns = hasPDF
-      ? `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndShowPDF(${e.id})">📄 Ver PDF final</button>
-         <button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft(${e.id})">📖 Ver borrador</button>`
+      ? `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndShowPDF('${e.id}')">📄 Ver PDF final</button>
+         <button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft('${e.id}')">📖 Ver borrador</button>`
       : hasDraft
-        ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndApproveDraft(${e.id})">✓ Generar PDF final</button>
-           <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft(${e.id})">📖 Ver borrador</button>`
-        : `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndGenerateDraft(${e.id})">📖 Generar borrador</button>`;
+        ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndApproveDraft('${e.id}')">✓ Generar PDF final</button>
+           <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft('${e.id}')">📖 Ver borrador</button>`
+        : `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndGenerateDraft('${e.id}')">📖 Generar borrador</button>`;
     // Campos con fallback para entradas antiguas o del módulo Directo
     const flag = e.flag || (e.source==='directo' ? '✍️' : '🌐');
     const country = e.country || (e.selOpp && (e.selOpp.pais||e.selOpp.country)) || '—';
@@ -3160,7 +3160,7 @@ function renderHist(){
     const timeStr = e.time || (e.ts ? new Date(e.ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) : '');
     const count = e.count !== undefined ? e.count : (e.opps ? e.opps.length : '—');
     const score = e.topScore !== undefined ? e.topScore : (e.selOpp ? (e.selOpp.scoreMonetizacion||e.selOpp.monetizationScore||0) : 0);
-    return `<div class="hist-item" style="flex-direction:column;align-items:flex-start;gap:8px;" onclick="loadHist(${e.id})">
+    return `<div class="hist-item" style="flex-direction:column;align-items:flex-start;gap:8px;" onclick="loadHist('${e.id}')">
       <div style="display:flex;align-items:center;gap:10px;width:100%;">
         <div class="hdot"></div>
         <div class="hinfo" style="flex:1;">
@@ -3169,9 +3169,9 @@ function renderHist(){
           <div class="pbar"><div class="pfill" style="width:${score}%"></div></div>
         </div>
         <div class="hbtns" onclick="event.stopPropagation()">
-          <button class="ibtn" onclick="dlHistExcel(${e.id})" title="Exportar Excel">📊</button>
-          <button class="ibtn" onclick="delHistImages(${e.id})" title="Borrar imágenes (libera espacio IndexedDB)" style="color:#fdcb6e;">🖼</button>
-          <button class="ibtn" onclick="delHist(${e.id})" title="Eliminar ebook del historial (texto)" style="color:var(--red);">🗑</button>
+          <button class="ibtn" onclick="dlHistExcel('${e.id}')" title="Exportar Excel">📊</button>
+          <button class="ibtn" onclick="delHistImages('${e.id}')" title="Borrar imágenes (libera espacio IndexedDB)" style="color:#fdcb6e;">🖼</button>
+          <button class="ibtn" onclick="delHist('${e.id}')" title="Eliminar ebook del historial (texto)" style="color:var(--red);">🗑</button>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-left:22px;" onclick="event.stopPropagation()">
@@ -3183,7 +3183,7 @@ function renderHist(){
 
 // Cargar historial y mostrar borrador existente
 function loadAndDraft(id){
-  const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
+  const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.ebook) return;
   loadHistData(e);
   S.ebookData = e.ebook;
   var numCh=(e.ebook.chapters||[]).length;
@@ -3196,7 +3196,7 @@ function loadAndDraft(id){
 
 // Cargar historial y mostrar PDF final existente  
 function loadAndShowPDF(id){
-  const e=S.history.find(h=>h.id===id); if(!e||!e.finalEbook) return;
+  const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.finalEbook) return;
   loadHistData(e);
   showTab('ebook', document.querySelectorAll('.tab')[1]);
   setTimeout(function(){ 
@@ -3209,7 +3209,7 @@ function loadAndShowPDF(id){
 
 // Cargar historial, mostrar borrador y lanzar aprobacion directa
 function loadAndApproveDraft(id){
-  const e=S.history.find(h=>h.id===id); if(!e||!e.ebook) return;
+  const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.ebook) return;
   loadHistData(e);
   S.ebookData = e.ebook;
   showTab('ebook', document.querySelectorAll('.tab')[1]);
@@ -3218,7 +3218,7 @@ function loadAndApproveDraft(id){
 
 // Cargar historial y generar nuevo borrador
 function loadAndGenerateDraft(id){
-  const e=S.history.find(h=>h.id===id); if(!e) return;
+  const e=S.history.find(h=>String(h.id)===String(id)); if(!e) return;
   loadHistData(e);
   // Seleccionar primera oportunidad si no hay seleccionada
   if(!S.selOpp && e.opps && e.opps.length){ 
@@ -3244,12 +3244,12 @@ function loadHistData(e){
   const info=LANGS[e.country]||{lang:'English',flag:e.flag};
   showResults(e.opps,e.country,e.niche,{...info,flag:e.flag});
 }
-function loadHist(id){ 
-  const e=S.history.find(h=>h.id===id);if(!e)return;
+function loadHist(id){
+  const e=S.history.find(h=>String(h.id)===String(id));if(!e)return;
   loadHistData(e);
   showTab('search', document.querySelectorAll('.tab')[0]);
 }
-function dlHistExcel(id){const e=S.history.find(h=>h.id===id);if(e)genCSV(e.opps,e.country,e.niche);}
+function dlHistExcel(id){const e=S.history.find(h=>String(h.id)===String(id));if(e)genCSV(e.opps,e.country,e.niche);}
 function delHistImages(id){
   if(!confirm('¿Borrar solo las imágenes de este ebook?\nEl texto e historial se conservan.')) return;
   var keys = ['img_'+id+'_cover'];
@@ -3260,7 +3260,7 @@ function delHistImages(id){
 
 function delHist(id){
   if(!confirm('¿Eliminar este ebook del historial?\nSe borrará el texto. Las imágenes se borran aparte con el botón 🖼')) return;
-  S.history = S.history.filter(function(h){ return h.id !== id; });
+  S.history = S.history.filter(function(h){ return String(h.id) !== String(id); });
   try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history)); } catch(e){}
   renderHist();
 }
