@@ -270,6 +270,11 @@ select option { background: #1e2d52; }
             </div>
             <div class="stats" id="sr-stats"></div>
             <div id="sr-list"></div>
+            <div id="eb-user-instructions-box" style="margin:16px 0 4px;display:none;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">💬 Instrucciones adicionales para Claude <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;">(opcional)</span></div>
+              <textarea id="eb-user-instructions" rows="3" placeholder="Ej: incluye animalitos en los ejemplos, enfócate en gráficos visuales, el tono debe ser muy cercano y divertido, agrega más ejercicios prácticos, el lector es principiante absoluto..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px;">Claude usará estas instrucciones como guía adicional — se suman a todo lo que ya genera por defecto.</div>
+            </div>
             <div class="btn-row">
               <button class="btn btn-p" id="btn-draft" onclick="goEbook()" disabled>📄 Generar PDF</button>
               <button class="btn btn-s" onclick="resetSearch()">↺ Nueva búsqueda</button>
@@ -923,6 +928,7 @@ function selOpp(i){
   document.getElementById('oc'+i).classList.add('sel');
   S.selOpp=S.results[i];
   document.getElementById('btn-draft').disabled=false;
+  document.getElementById('eb-user-instructions-box').style.display='block';
   // Guardar oportunidad seleccionada en historial inmediatamente
   if(S.currentHistId){ 
     var idx=S.history.findIndex(function(h){return h.id===S.currentHistId;});
@@ -1097,7 +1103,9 @@ async function goEbook(){
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   S.author='Ferni Guides';
-  const payload = { opportunity: o, author: S.author };
+  var instrEl = document.getElementById('eb-user-instructions');
+  var userInstructions = (instrEl && instrEl.value.trim()) || '';
+  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;

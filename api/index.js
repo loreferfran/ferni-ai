@@ -964,9 +964,13 @@ app.post('/api/generate-chapter', async function(req, res) {
   var section = req.body.section; // 'header' | 'outline' | 'ch1' | 'ch2' | 'ch3' | 'ch4' | 'ending'
   var ebookDefs = req.body.ebookDefs || null;     // diccionario de nombres fijos (del step 'header')
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
+  var userInstructions = (req.body.userInstructions || '').trim();
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
+  if (userInstructions) {
+    ctx += '\n\nINSTRUCCIONES ADICIONALES DEL AUTOR (obligatorio seguirlas, se suman a las reglas generales — tienen prioridad sobre cualquier regla genérica si hay conflicto):\n' + userInstructions;
+  }
   var sys = buildEbookSystem(countryName, regs);
   var year = new Date().getFullYear();
 
