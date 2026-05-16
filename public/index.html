@@ -1479,9 +1479,101 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
   var year = new Date().getFullYear();
   var pageNum = 0;
 
+  // Renderiza tags visuales especiales [TAG: datos]
+  function renderVisualTag(tag, data) {
+    var parts = data.split('|').map(function(s){ return s.trim(); });
+    if(tag === 'HIGHLIGHT BOX') {
+      // [HIGHLIGHT BOX: dato clave. Fuente: origen]
+      var srcIdx = data.lastIndexOf('Fuente:');
+      var text = srcIdx > -1 ? data.slice(0, srcIdx).trim() : data.trim();
+      var src = srcIdx > -1 ? data.slice(srcIdx) : '';
+      // Intenta extraer número grande al inicio
+      var numMatch = text.match(/^([\d\.,\+\%]+[^\s]*)\s*(.*)/);
+      var statHtml = numMatch ? '<span class="vh-stat">'+numMatch[1]+'</span><span class="vh-text">'+numMatch[2]+'</span>' : '<span class="vh-text">'+text+'</span>';
+      return '<div class="vis-highlight">'+statHtml+(src?'<span class="vh-src">'+src+'</span>':'')+'</div>';
+    }
+    if(tag === 'CHECKLIST') {
+      var items = parts.filter(function(p){ return p.length > 0; });
+      return '<div class="vis-checklist"><div class="vc-title">✅ Lista de verificación</div><ul>'+
+        items.map(function(it){ return '<li>'+it+'</li>'; }).join('')+'</ul></div>';
+    }
+    if(tag === 'ICON + TITLE') {
+      return '<div class="vis-icon-title"><span>◆ '+data.trim()+'</span></div>';
+    }
+    if(tag === 'TABLE') {
+      // parts[0] = título, parts[1..N] = datos intercalados cabeceras+filas
+      var title = parts[0];
+      var cells = parts.slice(1);
+      if(cells.length === 0) return '';
+      // Claude puede mandar: col1|col2|col3|fila1col1|fila1col2|fila1col3|...
+      // Intentar detectar cuántas columnas hay — primera fila hasta donde se repite el patrón
+      var numCols = 0;
+      // Heurística: el número de cols es la raíz cuadrada aproximada o se detecta por separador
+      // Estrategia simple: si hay título, el resto son celdas; intentar dividir en ncols igual
+      // Intenta hallar num cols asumiendo que la primera fila son cabeceras
+      // Como no hay separador explícito cabecera/fila, asumimos que cols es la mitad
+      // Mejor: buscar si hay un patrón de repetición
+      // Solución pragmática: usar ceil(sqrt) si el total es cuadrado, si no la mitad
+      var total = cells.length;
+      // Calcular ncols como la primera raíz que divide bien
+      for(var nc=2; nc<=8; nc++){
+        if(total % nc === 0 || (total-nc) % nc === 0){ numCols = nc; break; }
+      }
+      if(!numCols) numCols = Math.max(2, Math.ceil(Math.sqrt(total)));
+      var html = '<table class="vis-vtable">';
+      if(title) html += '<caption style="text-align:left;font-weight:700;color:#2d3180;font-size:12px;margin-bottom:6px;caption-side:top;">'+title+'</caption>';
+      html += '<thead><tr>'+cells.slice(0,numCols).map(function(c){ return '<th>'+c+'</th>'; }).join('')+'</tr></thead><tbody>';
+      var dataRows = cells.slice(numCols);
+      for(var ri=0; ri<dataRows.length; ri+=numCols){
+        html += '<tr>'+dataRows.slice(ri,ri+numCols).map(function(c){ return '<td>'+c+'</td>'; }).join('')+'</tr>';
+      }
+      return html + '</tbody></table>';
+    }
+    if(tag === 'BAR CHART') {
+      var title = parts[0];
+      var bars = parts.slice(1).map(function(p){
+        var kv = p.split(':'); return { label: kv[0]||'', val: kv[1]||'0' };
+      });
+      var maxVal = Math.max.apply(null, bars.map(function(b){ return parseFloat(b.val)||0; })) || 1;
+      var html = '<div class="vis-bar-chart"><div class="vbc-title">📊 '+title+'</div>';
+      bars.forEach(function(b){
+        var pct = Math.round((parseFloat(b.val)||0) / maxVal * 100);
+        html += '<div class="vbc-row"><div class="vbc-label">'+b.label+'</div>'+
+          '<div class="vbc-bar-wrap"><div class="vbc-bar" style="width:'+pct+'%"><span class="vbc-val">'+b.val+'</span></div></div></div>';
+      });
+      return html + '</div>';
+    }
+    if(tag === 'LINE CHART') {
+      var title = parts[0];
+      var points = parts.slice(1).map(function(p){
+        var kv = p.split(':'); return { label: kv[0]||'', val: parseFloat(kv[1])||0 };
+      });
+      var maxVal = Math.max.apply(null, points.map(function(p){ return p.val; })) || 1;
+      var html = '<div class="vis-line-chart"><div class="vlc-title">📈 '+title+'</div><div class="vlc-grid">';
+      points.forEach(function(pt){
+        var pct = Math.round(pt.val / maxVal * 100);
+        html += '<div class="vlc-col" style="justify-content:flex-end;">'+
+          '<div style="height:'+(80*pct/100)+'px;width:100%;background:linear-gradient(180deg,#a29bfe,#6c5ce7);border-radius:3px 3px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>'+
+          '<div class="vlc-lbl">'+pt.label+'<br><b>'+pt.val+'</b></div></div>';
+      });
+      return html + '</div></div>';
+    }
+    return '';
+  }
+
+  // Pre-procesa tags [TAG: datos] antes del parser de líneas
+  function preProcessTags(txt) {
+    if(!txt || txt.indexOf('[') === -1) return txt;
+    return txt.replace(/\[(TABLE|BAR CHART|LINE CHART|HIGHLIGHT BOX|CHECKLIST|ICON \+ TITLE):\s*([\s\S]*?)\]/g, function(match, tag, data){
+      var rendered = renderVisualTag(tag, data.replace(/\n/g,' '));
+      return rendered ? '\x00VISUAL\x00' + rendered + '\x00ENDVISUAL\x00' : match;
+    });
+  }
+
   // Parser de formato: convierte markdown (tablas, listas, subtítulos) a HTML profesional
   function formatContent(txt) {
     if (!txt) return '';
+    txt = preProcessTags(txt);
     var lines = txt.split('\n');
     var out = '';
     var inList = false;
@@ -1506,6 +1598,11 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
           tableRows.push(line);
           inTable = true;
         }
+      // Bloque visual pre-renderizado
+      } else if (line.startsWith('\x00VISUAL\x00')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += renderTable(tableRows); tableRows = []; inTable = false; }
+        out += line.replace('\x00VISUAL\x00','').replace('\x00ENDVISUAL\x00','');
       // Párrafo normal
       } else if (line.length > 0) {
         if (inList) { out += '</ul>'; inList = false; }
@@ -1591,6 +1688,35 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     '.page-num{text-align:center;font-size:10px;color:#999;margin-top:20px;}' +
     'h2{color:#2d3180;font-size:20px;margin-top:28px;}' +
     'h3{color:#6c5ce7;font-size:15px;}' +
+    '.vis-highlight{background:linear-gradient(135deg,#fff9e6,#fffbf0);border-left:5px solid #fdcb6e;border-radius:0 10px 10px 0;padding:16px 20px;margin:20px 0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.vis-highlight .vh-stat{font-size:22px;font-weight:900;color:#e17055;display:block;margin-bottom:6px;}' +
+    '.vis-highlight .vh-text{font-size:13px;color:#2d3436;line-height:1.7;}' +
+    '.vis-highlight .vh-src{font-size:10px;color:#999;margin-top:6px;display:block;}' +
+    '.vis-checklist{background:#f0fff4;border:1px solid #00b894;border-radius:10px;padding:16px 20px;margin:20px 0;}' +
+    '.vis-checklist .vc-title{font-size:12px;font-weight:700;color:#00b894;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}' +
+    '.vis-checklist ul{list-style:none;padding:0;margin:0;}' +
+    '.vis-checklist li{padding:7px 0 7px 28px;border-bottom:1px solid #d4efdf;position:relative;font-size:13px;line-height:1.5;}' +
+    '.vis-checklist li:last-child{border-bottom:none;}' +
+    '.vis-checklist li::before{content:"☐";position:absolute;left:0;color:#00b894;font-size:16px;line-height:1;}' +
+    '.vis-icon-title{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#f0f4ff,transparent);border-left:4px solid #6c5ce7;padding:12px 16px;margin:24px 0 8px;border-radius:0 8px 8px 0;}' +
+    '.vis-icon-title span{font-size:16px;font-weight:700;color:#2d3180;}' +
+    '.vis-bar-chart{background:#f8f9ff;border:1px solid #e0e0f0;border-radius:10px;padding:18px 20px;margin:20px 0;}' +
+    '.vis-bar-chart .vbc-title{font-size:13px;font-weight:700;color:#2d3180;margin-bottom:14px;}' +
+    '.vbc-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}' +
+    '.vbc-label{font-size:11px;color:#636e72;width:130px;flex-shrink:0;text-align:right;}' +
+    '.vbc-bar-wrap{flex:1;background:#e8eaf6;border-radius:4px;height:22px;overflow:hidden;}' +
+    '.vbc-bar{height:100%;background:linear-gradient(90deg,#6c5ce7,#a29bfe);border-radius:4px;display:flex;align-items:center;padding-left:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.vbc-val{font-size:11px;color:white;font-weight:700;white-space:nowrap;}' +
+    '.vis-line-chart{background:#f8f9ff;border:1px solid #e0e0f0;border-radius:10px;padding:18px 20px;margin:20px 0;}' +
+    '.vis-line-chart .vlc-title{font-size:13px;font-weight:700;color:#2d3180;margin-bottom:14px;}' +
+    '.vlc-grid{display:flex;align-items:flex-end;gap:4px;height:80px;border-bottom:2px solid #ddd;padding:0 4px;}' +
+    '.vlc-col{display:flex;flex-direction:column;align-items:center;flex:1;}' +
+    '.vlc-dot{width:8px;height:8px;background:#6c5ce7;border-radius:50%;margin-bottom:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.vlc-lbl{font-size:9px;color:#636e72;margin-top:4px;text-align:center;}' +
+    '.vis-vtable{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px;border-radius:8px;overflow:hidden;}' +
+    '.vis-vtable th{background:#2d3180;color:white;padding:9px 12px;text-align:left;font-size:11px;letter-spacing:0.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '.vis-vtable td{padding:8px 12px;border-bottom:1px solid #e8e8e8;vertical-align:top;}' +
+    '.vis-vtable tr:nth-child(even) td{background:#f8f9ff;}' +
     '@media print{' +
     '.cover,.chapter-header,.action-plan{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}' +
     '.page-break{page-break-after:always;}' +
