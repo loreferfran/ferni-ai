@@ -836,40 +836,21 @@ function buildEbookSystem(countryName, regs) {
     '\ndespues de que el usuario haya revisado, corregido y aprobado explicitamente el ebook en español.' +
     '\nHasta recibir esa aprobacion, NO traduzcas, mezcles ni insertes ninguna palabra de otro idioma bajo ninguna circunstancia.' +
     '\n=== FIN BLOQUE IDIOMA ===' +
-    '\n\nCONDICIONES OBLIGATORIAS NO NEGOCIABLES:' +
-    ' (1) EXTENSION MINIMA: MINIMO 2500 PALABRAS POR CAPITULO. Esto garantiza 25-30 paginas en PDF final.' +
-    ' (2) DENSIDAD: cada parrafo debe tener MINIMO 1 dato numerico, medida o referencia verificable. Cero filler.' +
-    ' (3) METODO: crea un METODO CON NOMBRE PROPIO memorable (ej: Protocolo XYZ, Sistema JARDIN+) — usalo en TODO.' +
-    ' (4) TONO: experto cercano e impersonal. NUNCA primera persona. "Los expertos", "Se recomienda", "Los profesionales de ' + countryName + '".' +
-    ' (5) RESULTADO: el lector DEBE poder ejecutar SIN ayuda y ver resultado visible en 7 dias o menos.' +
-    ' (6) LOCALIZACION: ejemplos, precios, medidas, referencias TODAS para ' + countryName + ' en ' + (regs.currency || 'EUR') + '.' +
-    '\n\nNORMAS DE FORMATO OBLIGATORIAS (el PDF usa estas normas de escritura profesional):' +
-    ' USA SIEMPRE estos formatos en el campo content:' +
-    '\n  LISTAS: cuando enumeres materiales, pasos, errores, recursos o cualquier lista, usa viñetas asi (una por linea):\n  • Elemento 1\n  • Elemento 2\n  • Elemento 3' +
-    '\n  TABLAS: cuando compares opciones, precios, caracteristicas o datos, usa formato de tabla markdown asi:\n  | Columna A | Columna B | Columna C |\n  |-----------|-----------|------------|\n  | dato 1    | dato 2    | dato 3    |' +
-    '\n  SUBTITULOS: usa ## para subtitulos de seccion dentro del capitulo' +
-    '\n  NUNCA pongas listas como texto corrido separado por comas. SIEMPRE viñetas verticales.' +
-    '\n  NUNCA pongas tablas comparativas como parrafo. SIEMPRE formato tabla con pipes |.' +
-    '\n\nESTRUCTURA OBLIGATORIA DE CADA CAPITULO (2500+ palabras):' +
-    ' - APERTURA: 150-200 palabras impactante + por que es critico.' +
-    ' - CONTEXTO: 300-400 palabras explicacion profunda + datos + estadisticas de ' + countryName + '.' +
-    ' - RECURSOS: lista de materiales con viñetas • y costos EXACTOS en ' + (regs.currency || 'EUR') + '.' +
-    ' - TABLA COMPARATIVA: obligatoria con formato | col | col | col |.' +
-    ' - PASOS DETALLADOS: minimo 6-8 pasos con ## Paso 1: titulo, CADA UNO 150-200 palabras + error comun.' +
-    ' - PARA CADA PASO: qué, por qué, resultado, tiempo, error, solucion.' +
-    ' - TIP EXPERTO: consejo NO publicado en internet, basado en experiencia real.' +
-    ' - ERRORES: minimo 4 errores comunes + solucion rapida (2 minutos).' +
-    ' - VERIFICACION: checklist 5-7 criterios para saber si quedo perfecto.' +
-    '\n\nELEMENTOS OBLIGATORIOS EN EBOOK COMPLETO:' +
-    ' - Mapa de decision (texto con → y opciones claras).' +
-    ' - 3-4 tablas comparativas (A vs B vs C con criterios).' +
-    ' - 3-4 checklists profesionales imprimibles.' +
-    ' - Cronograma realista (8 semanas+) con hitos medibles.' +
-    ' - Hoja resumen ejecutiva (1 pagina) con TODO resumido.' +
-    ' - Casos reales de ' + countryName + ' (ejemplos concretos de personas aplicandolo).' +
-    '\n\nESPECIFICIDAD EXTREMA (minimo 30 datos numericos en todo):' +
-    ' MAL: "planta en espacio adecuado". BIEN: "en 4m² planta 12 lechugas (30cm), 6 tomates (50cm). Rendimiento 8kg/mes. Semilla 3-5 EUR/paquete."' +
-    ' MAL: "toma agua suficiente". BIEN: "bebe 2.5L/dia si pesas 70kg (peso × 35ml). 8 vasos 320ml: 6am, 1pm, 6pm, 10pm."' +
+    '\n\nCONDICIONES DE CALIDAD (aplica a cada seccion dentro del limite de extension indicado en el prompt):' +
+    ' (1) DENSIDAD: cada parrafo con minimo 1 dato numerico, medida o referencia verificable. Cero filler.' +
+    ' (2) METODO: crea un METODO CON NOMBRE PROPIO memorable (ej: Protocolo XYZ, Sistema ABC) — usalo en TODO.' +
+    ' (3) TONO: experto cercano. NUNCA primera persona. "Los expertos", "Se recomienda", "Los profesionales de ' + countryName + '".' +
+    ' (4) RESULTADO: el lector DEBE poder ejecutar SIN ayuda y ver resultado visible en 7 dias o menos.' +
+    ' (5) LOCALIZACION: ejemplos, precios, medidas, referencias TODAS para ' + countryName + ' en ' + (regs.currency || 'EUR') + '.' +
+    '\n\nNORMAS DE FORMATO (el PDF usa estas normas):' +
+    '\n  LISTAS: usa viñetas asi (una por linea): • Elemento 1 • Elemento 2' +
+    '\n  TABLAS: formato markdown: | Columna A | Columna B | fila1 | fila2 |' +
+    '\n  SUBTITULOS: usa ## para subtitulos dentro del capitulo.' +
+    '\n  NUNCA listas como texto corrido. NUNCA tablas comparativas como parrafo.' +
+    '\n\nELEMENTOS RECOMENDADOS (incluir segun el contenido lo requiera):' +
+    ' tabla comparativa, checklist practico, tip experto, errores comunes + solucion, ejemplo real de ' + countryName + '.' +
+    '\n\nESPECIFICIDAD: usa datos concretos siempre.' +
+    ' MAL: "espacio adecuado". BIEN: "en 4m² caben 12 lechugas a 30cm. Semilla 3-5 ' + (regs.currency||'EUR') + '/paquete."' +
     '\n\nELEMENTOS VISUALES INTEGRADOS EN EL TEXTO (usa estos tags cuando el contenido lo requiera):' +
     '\n  [TABLE: titulo | col1 | col2 | col3 ... | fila1col1 | fila1col2 | ...] — para comparaciones, rankings o datos por categoria. Incluye todos los datos completos.' +
     '\n  [BAR CHART: titulo | etiqueta1:valor1 | etiqueta2:valor2 | ...] — para porcentajes, tendencias o comparaciones numericas.' +
