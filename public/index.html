@@ -1098,62 +1098,56 @@ async function generateDirectEbook(){
   }
 }
 
-async function goEbook(){
-  const o=S.selOpp; if(!o) return;
-  showTab('ebook',document.querySelectorAll('.tab')[1]);
-  hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
-  S.author='Ferni Guides';
+function ebStep(id, state){
+  var el = document.getElementById('ebst-'+id);
+  if(!el) return;
+  el.className = 'lstep' + (state ? ' '+state : '');
+  var dot = el.querySelector('.ldot');
+  if(state === 'done'){ if(dot){ dot.textContent='✓'; dot.style.width='auto'; } }
+  else if(state === 'active'){ if(dot){ dot.textContent=''; dot.style.width='6px'; } }
+  else if(state === 'error'){ if(dot){ dot.textContent='✗'; dot.style.width='auto'; dot.style.color='var(--red)'; } }
+}
+
+async function runEbookSteps(startFrom){
+  const o = S.selOpp; if(!o) return;
+  S.author = 'Ferni Guides';
   var instrEl = document.getElementById('eb-user-instructions');
-  var userInstructions = (instrEl && instrEl.value.trim()) || '';
+  var userInstructions = (instrEl && instrEl.value.trim()) || (S.ebookUserInstructions || '');
+  S.ebookUserInstructions = userInstructions;
   const payload = { opportunity: o, author: S.author, userInstructions: userInstructions };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;
 
-  // Marcar paso: 'active' = en progreso (teal), 'done' = completado (verde), '' = pendiente (gris)
-  function ebStep(id, state){
-    var el = document.getElementById('ebst-'+id);
-    if(!el) return;
-    el.className = 'lstep' + (state ? ' '+state : '');
-    var dot = el.querySelector('.ldot');
-    if(state === 'done'){
-      if(dot) dot.textContent = '✓';
-      if(dot) dot.style.width = 'auto';
-    } else if(state === 'active'){
-      if(dot) dot.textContent = '';
-      if(dot) dot.style.width = '6px';
-    }
-  }
+  const allSteps = ['header','outline','ch1','ch2','ch3','ch4','ending'];
+  var startIdx = allSteps.indexOf(startFrom || 'header');
+  if(startIdx < 0) startIdx = 0;
+
+  // Restaurar partes ya completadas
+  var parts = S.ebookParts || {};
+  var ebookDefs = S.ebookDefs || null;
+  var ebookOutline = S.ebookOutline || null;
+
+  // Marcar como done los pasos ya completados
+  allSteps.slice(0, startIdx).forEach(function(id){ ebStep(id, 'done'); });
 
   try{
-    // Generacion capitulo a capitulo — 1 llamada Claude por seccion, sin timeout
-    const steps = [
-      { section:'header' },
-      { section:'outline' },
-      { section:'ch1' },
-      { section:'ch2' },
-      { section:'ch3' },
-      { section:'ch4' },
-      { section:'ending' }
-    ];
-    var parts = {};
-    var ebookDefs = null;    // diccionario de nombres fijos (del header)
-    var ebookOutline = null; // plan de temas por capitulo (del outline)
-    for(var si=0; si<steps.length; si++){
-      var step = steps[si];
-      ebStep(step.section, 'active');
-      var stepLabel = step.section === 'outline' ? 'Planificando estructura...' : 'Escribiendo... (' + (si) + ' de 5)';
-      loadEl.textContent = stepLabel;
-      var chPayload = Object.assign({}, payload, { section: step.section });
+    for(var si=startIdx; si<allSteps.length; si++){
+      var sec = allSteps[si];
+      ebStep(sec, 'active');
+      var label = sec==='outline' ? 'Planificando estructura...' : 'Escribiendo... (' + (si-1) + ' de 5)';
+      loadEl.textContent = label;
+      var chPayload = Object.assign({}, payload, { section: sec });
       if(ebookDefs) chPayload.ebookDefs = ebookDefs;
       if(ebookOutline) chPayload.ebookOutline = ebookOutline;
       var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
       var sd = await sr.json();
-      if(!sd.success) throw new Error(step.section.toUpperCase()+': '+sd.error);
-      parts[step.section] = sd.data;
-      if(step.section === 'header' && sd.data.definitions) ebookDefs = sd.data.definitions;
-      if(step.section === 'outline') ebookOutline = sd.data;
-      ebStep(step.section, 'done');
+      if(!sd.success) throw { section: sec, message: sd.error };
+      parts[sec] = sd.data;
+      S.ebookParts = parts; // guardar progreso
+      if(sec==='header' && sd.data.definitions){ ebookDefs=sd.data.definitions; S.ebookDefs=ebookDefs; }
+      if(sec==='outline'){ ebookOutline=sd.data; S.ebookOutline=ebookOutline; }
+      ebStep(sec, 'done');
     }
     loadEl.textContent = 'Construyendo PDF...';
 
@@ -1166,50 +1160,83 @@ async function goEbook(){
     };
     S.ebookData = ebook;
     S.ebookAbort = null;
+    S.ebookParts = {}; // limpiar partes — ebook completo guardado en S.ebookData
 
-    // PASO 2: Preparar slots de imágenes vacíos (extendidos si nicho visual)
     const countryName = getCountryNameFront(o.pais||o.country||'France');
     S.coverUrl = null;
     var numChapters = (ebook.chapters||[]).length;
     var visual = isVisualNiche(o);
-    // visual: portada + 4 caps + conclusión + antes/después = 6 extras (índices 4=conclusión, 5=antes/después)
-    S.chapterImages = new Array(visual ? numChapters + 2 : numChapters).fill(null);
-
-    // PASO 3: Construir PDF en español y mostrar preview
-    document.getElementById('eb-load-txt').textContent='Construyendo PDF...';
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', getCountryNameFront(o.pais||o.country||'France'), S.coverUrl, S.chapterImages);
-
+    S.chapterImages = new Array(visual ? numChapters+2 : numChapters).fill(null);
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, S.coverUrl, S.chapterImages);
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
 
-    // Construir PDF en español con imágenes
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, S.coverUrl, S.chapterImages);
-
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
-
-    // Pre-seleccionar idioma del país en el selector
     var langSel = document.getElementById('eb-lang-sel');
     if(langSel && o.language) langSel.value = o.language;
-
-    // Mostrar preview del PDF en pantalla
+    var marketInp = document.getElementById('eb-market-inp');
+    if(marketInp && !marketInp.value) marketInp.value = o.targetMarket || o.pais || o.country || '';
     var preview = document.getElementById('eb-draft-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
-
-    // Renderizar slots de imágenes
     renderImgSlots(ebook);
-
     addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista elige el idioma abajo y presiona ✅ APROBAR.','ferni');
 
   }catch(e){
     S.ebookAbort = null;
-    hide('eb-loading'); show('eb-empty');
-    if(e.name === 'AbortError'){
-      loadEl.textContent = '';
-      ['header','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ var el=document.getElementById('ebst-'+id); if(el) el.className='lstep'; });
-      addMsg('chat-ebook','⏹ Generación cancelada. Presiona "Generar PDF" cuando quieras reintentar.','ferni');
+    hide('eb-loading');
+    if(e && e.name==='AbortError'){
+      show('eb-empty');
+      ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
+      addMsg('chat-ebook','⏹ Generación cancelada.','ferni');
     } else {
-      alert('Error generando PDF: '+e.message);
+      // Error en un capítulo — mostrar botón de reintento sin perder lo ya generado
+      var failedSec = (e && e.section) ? e.section : '?';
+      var failedLabel = {header:'Encabezado',outline:'Estructura',ch1:'Capítulo 1',ch2:'Capítulo 2',ch3:'Capítulo 3',ch4:'Capítulo 4',ending:'Conclusión'}[failedSec] || failedSec;
+      ebStep(failedSec, 'error');
+      S.ebookRetryFrom = failedSec;
+      // Mostrar pantalla de reintento en lugar de alert
+      hide('eb-empty');
+      var loadEl2 = document.getElementById('eb-load-txt');
+      if(loadEl2) loadEl2.textContent = '';
+      var retryDiv = document.getElementById('eb-retry-msg');
+      if(!retryDiv){
+        retryDiv = document.createElement('div');
+        retryDiv.id = 'eb-retry-msg';
+        retryDiv.style.cssText = 'text-align:center;padding:30px 20px;';
+        document.getElementById('eb-loading').appendChild(retryDiv);
+      }
+      retryDiv.innerHTML = '<div style="font-size:32px;margin-bottom:12px;">⚠️</div>'+
+        '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">Error en '+failedLabel+'</div>'+
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:20px;">Los capítulos anteriores están guardados.<br>Solo se reintentará <strong>'+failedLabel+'</strong> en adelante.</div>'+
+        '<button class="btn btn-p" onclick="retryEbook()" style="font-size:14px;padding:12px 28px;">🔄 Reintentar desde '+failedLabel+'</button>'+
+        '<button class="btn btn-s" onclick="resetEbookFull()" style="font-size:13px;padding:10px 20px;margin-left:10px;">↺ Empezar de cero</button>';
+      show('eb-loading');
     }
   }
+}
+
+async function goEbook(){
+  const o=S.selOpp; if(!o) return;
+  showTab('ebook',document.querySelectorAll('.tab')[1]);
+  hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
+  // Limpiar progreso anterior al iniciar de cero
+  S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
+  ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
+  var retryDiv = document.getElementById('eb-retry-msg');
+  if(retryDiv) retryDiv.innerHTML = '';
+  await runEbookSteps('header');
+}
+
+async function retryEbook(){
+  if(!S.ebookRetryFrom){ goEbook(); return; }
+  var retryDiv = document.getElementById('eb-retry-msg');
+  if(retryDiv) retryDiv.innerHTML = '';
+  document.getElementById('eb-load-txt').textContent = 'Reintentando...';
+  await runEbookSteps(S.ebookRetryFrom);
+}
+
+function resetEbookFull(){
+  S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
+  goEbook();
 }
 
 // Detecta si el nicho es visual/práctico (jardín, cocina, fitness...) o teórico (idiomas, finanzas...)
