@@ -1083,7 +1083,17 @@ async function generateDirectEbook(){
     S.pdfHtml = null;
     S.hmKit = null;
     S.approvedLang = null;
-    var entry = { id: histId, ts: Date.now(), opp: opp, opps:[opp], selOpp: opp, source:'directo', topic: topic };
+    var entry = {
+      id: histId, ts: Date.now(), source: 'directo', topic: topic,
+      flag: '✍️',
+      country: opp.pais || opp.country || country,
+      niche: topic,
+      date: new Date().toLocaleDateString('es-CL'),
+      time: new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
+      count: 1,
+      topScore: opp.scoreMonetizacion || opp.monetizationScore || 0,
+      opp: opp, opps: [opp], selOpp: opp
+    };
     S.history.unshift(entry);
     try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); }catch(e){}
 
@@ -3130,10 +3140,10 @@ function renderHist(){
   el.innerHTML=S.history.map(e=>{
     const hasPDF = !!e.finalEbook;
     const hasDraft = !!e.ebook;
-    const statusBadge = hasPDF 
-      ? '<span style="font-size:10px;background:#00b894;color:white;border-radius:10px;padding:2px 8px;">✅ PDF listo</span>' 
-      : hasDraft 
-        ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:2px 8px;">✏️ Borrador listo</span>' 
+    const statusBadge = hasPDF
+      ? '<span style="font-size:10px;background:#00b894;color:white;border-radius:10px;padding:2px 8px;">✅ PDF listo</span>'
+      : hasDraft
+        ? '<span style="font-size:10px;background:#6c5ce7;color:white;border-radius:10px;padding:2px 8px;">✏️ Borrador listo</span>'
         : '';
     const actionBtns = hasPDF
       ? `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndShowPDF(${e.id})">📄 Ver PDF final</button>
@@ -3142,13 +3152,21 @@ function renderHist(){
         ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndApproveDraft(${e.id})">✓ Generar PDF final</button>
            <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft(${e.id})">📖 Ver borrador</button>`
         : `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndGenerateDraft(${e.id})">📖 Generar borrador</button>`;
+    // Campos con fallback para entradas antiguas o del módulo Directo
+    const flag = e.flag || (e.source==='directo' ? '✍️' : '🌐');
+    const country = e.country || (e.selOpp && (e.selOpp.pais||e.selOpp.country)) || '—';
+    const niche = e.niche || e.topic || (e.selOpp && (e.selOpp.nicho||e.selOpp.niche)) || '—';
+    const dateStr = e.date || (e.ts ? new Date(e.ts).toLocaleDateString('es-CL') : '—');
+    const timeStr = e.time || (e.ts ? new Date(e.ts).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) : '');
+    const count = e.count !== undefined ? e.count : (e.opps ? e.opps.length : '—');
+    const score = e.topScore !== undefined ? e.topScore : (e.selOpp ? (e.selOpp.scoreMonetizacion||e.selOpp.monetizationScore||0) : 0);
     return `<div class="hist-item" style="flex-direction:column;align-items:flex-start;gap:8px;" onclick="loadHist(${e.id})">
       <div style="display:flex;align-items:center;gap:10px;width:100%;">
         <div class="hdot"></div>
         <div class="hinfo" style="flex:1;">
-          <div class="htitle">${e.flag} ${e.country} · ${e.niche} ${statusBadge}</div>
-          <div class="hmeta">${e.date} ${e.time} · ${e.count} oportunidades · Score: ${e.topScore}</div>
-          <div class="pbar"><div class="pfill" style="width:${e.topScore}%"></div></div>
+          <div class="htitle">${flag} ${country} · ${niche} ${statusBadge}</div>
+          <div class="hmeta">${dateStr} ${timeStr} · ${count} oportunidades · Score: ${score}</div>
+          <div class="pbar"><div class="pfill" style="width:${score}%"></div></div>
         </div>
         <div class="hbtns" onclick="event.stopPropagation()">
           <button class="ibtn" onclick="dlHistExcel(${e.id})" title="Exportar Excel">📊</button>
