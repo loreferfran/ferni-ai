@@ -1061,7 +1061,7 @@ app.post('/api/generate-chapter', async function(req, res) {
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
       : 'EXTENSION OBJETIVO: opening 120-150 palabras, content 900-1200 palabras con datos concretos y ejemplos practicos. Calidad sobre cantidad — cumple el JSON completo.';
-    var chMaxTokens = 8000;
+    var chMaxTokens = isRewrite ? 8000 : 4000;
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {
@@ -1180,7 +1180,15 @@ app.post('/api/generate-chapter', async function(req, res) {
     var chResult = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens, true);
     var data;
     try { data = extractJSON(chResult.text); } catch(e) { data = null; }
-    if (!data) throw new Error('No se pudo parsear la respuesta de Claude. Intenta de nuevo.');
+
+    // Fallback: si JSON falló, reintentar con prompt más simple
+    if (!data) {
+      var simplePrompt = prompt.replace(/\{[\s\S]{200,}\}/, '') +
+        ' Responde UNICAMENTE con JSON valido, sin markdown, sin explicaciones. Empieza con { y termina con }.';
+      var chResult2 = await claudeCall(sys, ctx + '\n\n' + simplePrompt, maxTokens, true);
+      try { data = extractJSON(chResult2.text); } catch(e2) { data = null; }
+    }
+    if (!data) throw new Error('No se pudo generar el capítulo. Usa el botón Reintentar.');
 
     res.json({ success: true, section: section, data: data });
   } catch (e) {
