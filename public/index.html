@@ -335,7 +335,7 @@ select option { background: #1e2d52; }
               </div>
               <div id="ch-rewrite-panel" style="display:none;">
                 <div id="ch-rewrite-label" style="font-size:12px;color:var(--muted);margin-bottom:6px;"></div>
-                <textarea id="ch-rewrite-instructions" rows="3" placeholder="Describe qué debe cambiar o cómo debe quedar el capítulo. Ej: 'incluye más datos estadísticos reales', 'hazlo más práctico con ejemplos del Reino Unido', 'el tono es muy académico, simplificalo'..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(0,184,148,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+                <textarea id="ch-rewrite-instructions" rows="5" placeholder="Describe qué debe cambiar. Para capítulos muy largos, divide en 2 llamadas usando el separador:&#10;&#10;[instrucciones parte 1 — primeras secciones]&#10;&#10;--- PARTE 2 ---&#10;&#10;[instrucciones parte 2 — secciones restantes]" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(0,184,148,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
                 <div style="display:flex;gap:8px;margin-top:8px;">
                   <button onclick="runChRewrite()" style="padding:8px 20px;border-radius:8px;border:none;background:#00b894;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Regenerar capítulo</button>
                   <button onclick="document.getElementById('ch-rewrite-panel').style.display='none'" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
@@ -1766,9 +1766,31 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     return '';
   }
 
+  // Convierte bloques ASCII de cuadros en divs HTML estilizados
+  function sanitizeAsciiBoxes(txt) {
+    if(!txt) return txt;
+    // Bloques dobles ╔═══╗ ... ╚═══╝
+    txt = txt.replace(/╔[═╦╗]+[\s\S]*?╚[═╩╝]+/g, function(m){
+      var inner = m.replace(/╔[^\n]*\n?/, '').replace(/╚[^\n]*/, '')
+                   .replace(/^[║│]\s?/gm, '').replace(/\s?[║│]$/gm, '').trim();
+      return inner ? '<div class="vis-highlight"><span class="vh-text">' + inner + '</span></div>' : '';
+    });
+    // Bloques simples ┌───┐ ... └───┘
+    txt = txt.replace(/┌[─┬┐]+[\s\S]*?└[─┴┘]+/g, function(m){
+      var inner = m.replace(/┌[^\n]*\n?/, '').replace(/└[^\n]*/, '')
+                   .replace(/^[│]\s?/gm, '').replace(/\s?[│]$/gm, '').trim();
+      return inner ? '<div class="vis-highlight"><span class="vh-text">' + inner + '</span></div>' : '';
+    });
+    // Eliminar caracteres sueltos restantes
+    txt = txt.replace(/[╔╗╚╝═║╠╣╦╩╬╭╮╯╰┌┐└┘─│├┤┬┴┼▶◀▲▼]/g, '');
+    return txt;
+  }
+
   // Pre-procesa tags [TAG: datos] antes del parser de líneas
   function preProcessTags(txt) {
-    if(!txt || txt.indexOf('[') === -1) return txt;
+    if(!txt) return txt;
+    txt = sanitizeAsciiBoxes(txt);
+    if(txt.indexOf('[') === -1) return txt;
     return txt.replace(/\[(TABLE|BAR CHART|LINE CHART|HIGHLIGHT BOX|CHECKLIST|ICON \+ TITLE):\s*([\s\S]*?)\]/g, function(match, tag, data){
       var rendered = renderVisualTag(tag, data.replace(/\n/g,' '));
       return rendered ? '\x00VISUAL\x00' + rendered + '\x00ENDVISUAL\x00' : match;
@@ -2260,9 +2282,20 @@ function openChRewrite(n){
 async function runChRewrite(){
   var n = S.chRewriteTarget;
   if(!n){ return; }
-  var instructions = (document.getElementById('ch-rewrite-instructions') || {}).value || '';
-  instructions = instructions.trim();
-  if(!instructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
+  var rawInstructions = (document.getElementById('ch-rewrite-instructions') || {}).value || '';
+  rawInstructions = rawInstructions.trim();
+  if(!rawInstructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
+
+  // Detectar separador ---PARTE 2--- para dividir en 2 llamadas
+  var splitSep = /\n\s*---+\s*PARTE\s*2\s*---+\s*\n/i;
+  var hasSplit = splitSep.test(rawInstructions);
+  var part1Instructions = rawInstructions;
+  var part2Instructions = '';
+  if(hasSplit){
+    var splitParts = rawInstructions.split(splitSep);
+    part1Instructions = splitParts[0].trim();
+    part2Instructions = splitParts[1].trim();
+  }
 
   var ebook = S.finalEbook || S.ebookData;
   if(!ebook){ alert('No hay ebook activo. Genera el ebook primero.'); return; }
@@ -2273,54 +2306,61 @@ async function runChRewrite(){
   var statusEl = document.getElementById('ch-rewrite-status');
   statusEl.style.background = 'rgba(0,184,148,0.1)';
   statusEl.style.color = '#00b894';
-  statusEl.textContent = '🔄 Regenerando capítulo ' + n + '... esto puede tardar 30-60 segundos.';
   statusEl.style.display = 'block';
 
   var o = S.selOpp || {};
   var secId = 'ch' + n;
-  var chPayload = {
+  var basePayload = {
     opportunity: o,
     author: S.author || 'Ferni Guides',
     section: secId,
-    userInstructions: instructions,
     ebookDefs: S.ebookDefs || null,
     ebookOutline: S.ebookOutline || null
   };
-  if(S.ebookSerperContext) chPayload.serperContext = S.ebookSerperContext;
+  if(S.ebookSerperContext) basePayload.serperContext = S.ebookSerperContext;
+
+  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.style.background = ok === false ? 'rgba(231,76,60,0.1)' : 'rgba(0,184,148,0.1)'; statusEl.style.color = ok === false ? '#e74c3c' : '#00b894'; }
 
   try {
-    var cr = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(chPayload)});
+    // — Llamada 1: genera el capítulo completo con la Parte 1 de instrucciones —
+    setStatus(hasSplit ? '🔄 Parte 1/2: generando estructura y primeras secciones...' : '🔄 Regenerando capítulo ' + n + '... esto puede tardar 30-60 segundos.', true);
+    var payload1 = Object.assign({}, basePayload, { userInstructions: part1Instructions });
+    var cr = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload1)});
     var cd = await cr.json();
-    if(cd.success && cd.data){
-      var chData = cd.data['chapter' + n];
-      if(chData && ebook.chapters && ebook.chapters[n-1]){
-        ebook.chapters[n-1] = chData;
-        if(S.finalEbook) S.finalEbook = ebook;
-        else S.ebookData = ebook;
-        var lang = S.approvedLang || o.idioma || o.language || 'Español';
-        var countryName = S.countryName || o.pais || o.country || '';
-        S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
-        var previewDraft = document.getElementById('eb-draft-preview');
-        var previewFinal = document.getElementById('eb-final-preview');
-        if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
-        if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
-        if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-        statusEl.style.background = 'rgba(0,184,148,0.15)';
-        statusEl.textContent = '✅ Capítulo ' + n + ' reescrito con tus instrucciones. Revísalo en el PDF de arriba.';
-      } else {
-        statusEl.style.background = 'rgba(231,76,60,0.1)';
-        statusEl.style.color = '#e74c3c';
-        statusEl.textContent = '❌ El servidor no devolvió los datos del capítulo. Intenta de nuevo.';
+    if(!cd.success || !cd.data) throw new Error(cd.error || 'Error en Parte 1');
+    var chData = cd.data['chapter' + n];
+    if(!chData || !ebook.chapters || !ebook.chapters[n-1]) throw new Error('El servidor no devolvió los datos del capítulo.');
+
+    // — Llamada 2 (si hay PARTE 2): obtiene continuación del content —
+    if(hasSplit && part2Instructions){
+      setStatus('🔄 Parte 2/2: generando secciones restantes...', true);
+      var payload2 = Object.assign({}, basePayload, {
+        userInstructions: part2Instructions,
+        isContinuation: true,
+        previousContent: chData.content || ''
+      });
+      var cr2 = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload2)});
+      var cd2 = await cr2.json();
+      if(cd2.success && cd2.continuation){
+        chData.content = (chData.content || '') + '\n\n' + cd2.continuation;
       }
-    } else {
-      statusEl.style.background = 'rgba(231,76,60,0.1)';
-      statusEl.style.color = '#e74c3c';
-      statusEl.textContent = '❌ Error: ' + (cd.error || 'desconocido');
     }
+
+    ebook.chapters[n-1] = chData;
+    if(S.finalEbook) S.finalEbook = ebook;
+    else S.ebookData = ebook;
+    var lang = S.approvedLang || o.idioma || o.language || 'Español';
+    var countryName = S.countryName || o.pais || o.country || '';
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
+    var previewDraft = document.getElementById('eb-draft-preview');
+    var previewFinal = document.getElementById('eb-final-preview');
+    if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
+    if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    setStatus('✅ Capítulo ' + n + ' reescrito' + (hasSplit ? ' (2 partes combinadas)' : '') + '. Revísalo en el PDF de arriba.', true);
+
   } catch(e){
-    statusEl.style.background = 'rgba(231,76,60,0.1)';
-    statusEl.style.color = '#e74c3c';
-    statusEl.textContent = '❌ Error de red: ' + e.message;
+    setStatus('❌ Error: ' + e.message, false);
   }
 }
 

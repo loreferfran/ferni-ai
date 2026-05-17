@@ -1006,6 +1006,8 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
   var userInstructions = (req.body.userInstructions || '').trim();
   var serperContext = (req.body.serperContext || '').trim();
+  var isContinuation = req.body.isContinuation === true;
+  var previousContent = (req.body.previousContent || '').trim();
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
@@ -1014,6 +1016,9 @@ app.post('/api/generate-chapter', async function(req, res) {
   }
   if (userInstructions) {
     ctx += '\n\nINSTRUCCIONES ADICIONALES DEL AUTOR (obligatorio seguirlas, se suman a las reglas generales — tienen prioridad sobre cualquier regla genérica si hay conflicto):\n' + userInstructions;
+  }
+  if (isRewrite) {
+    ctx += '\n\nFORMATO OBLIGATORIO: PROHIBIDO usar caracteres ASCII de dibujo de cuadros (╔═╗ ║ ╚═╝ ┌─┐ │ └─┘ ┬ ┴ ┼). Para cajas de destacado usa el tag [HIGHLIGHT BOX: texto]. Para tablas usa [TABLE: titulo|col1|col2|dato1|dato2]. Para listas usa guión (-).';
   }
   var sys = buildEbookSystem(countryName, regs);
   var year = new Date().getFullYear();
@@ -1055,6 +1060,20 @@ app.post('/api/generate-chapter', async function(req, res) {
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
       : 'LIMITE ESTRICTO DE EXTENSION: opening MAXIMO 150 palabras, content MAXIMO 900 palabras. La calidad premium viene de PRECISION y DENSIDAD, no de longitud. Cumple el JSON completo dentro del limite.';
     var chMaxTokens = isRewrite ? 8000 : 4000;
+
+    // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
+    if (isContinuation) {
+      var chN = parseInt((section || 'ch1').replace('ch', '')) || 1;
+      var contPrompt =
+        'Estas escribiendo la SEGUNDA PARTE del contenido del capitulo ' + chN + ' de un ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.\n\n' +
+        'PRIMERA PARTE YA ESCRITA (NO repetir ni resumir — continua exactamente donde se corto):\n"""\n' + previousContent.slice(-3000) + '\n"""\n\n' +
+        'Escribe SOLO la continuacion del contenido. Texto en formato Markdown: subtitulos en negrita (**Titulo**), listas con -, datos concretos. SIN JSON. SIN repetir lo anterior.\n\n' +
+        'INSTRUCCIONES PARA ESTA SEGUNDA PARTE:\n' + userInstructions;
+      var sys2 = buildEbookSystem(countryName, regs);
+      var contText = await claudeCall(sys2, ctx + '\n\n' + contPrompt, 8000);
+      contText = contText.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
+      return res.json({ success: true, continuation: contText });
+    }
 
     if (section === 'header') {
       schema = JSON.stringify({
