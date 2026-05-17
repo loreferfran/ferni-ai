@@ -1122,13 +1122,13 @@ app.post('/api/generate-chapter', async function(req, res) {
 
     } else if (section === 'ending') {
       prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
-        ' conclusion: 250-350 palabras inspiradoras con resultados esperados y llamada a accion.' +
-        ' actionPlan: array con exactamente 3 strings — cada string es una accion concreta y especifica del tema del ebook (NO ejemplos genericos), con tiempo estimado y resultado esperado. Ejemplo real: "Esta tarde dedica 20 minutos a identificar tu tipo de piel con el test del papel secante: presiona suavemente en frente y mejillas. Si el papel se impregna en T eres mixta, si es seco eres normal/seca."' +
-        ' resources: array con 3 strings — recursos reales y utiles para el tema (apps, webs, libros, comunidades) disponibles en ' + countryName + '.' +
+        ' conclusion: 150-200 palabras MAXIMO inspiradoras con llamada a accion.' +
+        ' actionPlan: exactamente 3 strings cortos — accion concreta + tiempo estimado (max 30 palabras cada una).' +
+        ' resources: 3 strings cortos — recurso real disponible en ' + countryName + ' (max 20 palabras cada uno).' +
         ' legalSection: objeto con healthDisclaimer, guarantee, dataProtection, copyright.' +
         ' ' + espInstruction +
-        JSON.stringify({conclusion:'[texto conclusion]',actionPlan:['[accion 1 especifica del ebook con tiempo y resultado]','[accion 2 especifica del ebook con tiempo y resultado]','[accion 3 especifica del ebook con tiempo y resultado]'],resources:['[recurso 1 real]','[recurso 2 real]','[recurso 3 real]'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
-      maxTokens = 2000;
+        JSON.stringify({conclusion:'[texto conclusion breve]',actionPlan:['[accion 1 concreta con tiempo]','[accion 2 concreta con tiempo]','[accion 3 concreta con tiempo]'],resources:['[recurso 1]','[recurso 2]','[recurso 3]'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
+      maxTokens = 1400;
 
     } else {
       // Handler generico para ch1-ch8
