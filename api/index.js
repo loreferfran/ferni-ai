@@ -1007,6 +1007,9 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ebookDefs = req.body.ebookDefs || null;     // diccionario de nombres fijos (del step 'header')
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
   var userInstructions = (req.body.userInstructions || '').trim();
+  var topicInstructions = (req.body.topicInstructions || '').trim();
+  // Truncar topicInstructions si viene muy largo (prompt del usuario del módulo Directo)
+  if (topicInstructions.length > 3000) topicInstructions = topicInstructions.slice(0, 3000);
   var serperContext = (req.body.serperContext || '').trim();
   // Truncar serperContext — el contexto completo de 3 búsquedas puede ser 6000+ chars
   // y hace que cada capítulo tome >60s (timeout Vercel). Máx 1500 chars es suficiente.
@@ -1019,6 +1022,11 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   if (serperContext) {
     ctx += '\n\nDATOS WEB DE REFERENCIA (usar cifras reales citando la fuente):\n' + serperContext;
+  }
+  // topicInstructions: instrucciones completas del usuario del módulo Directo.
+  // Se pasan siempre (generación inicial + reescritura) para que Claude conozca la estructura exacta pedida.
+  if (topicInstructions) {
+    ctx += '\n\nINSTRUCCIONES DEL AUTOR PARA ESTE EBOOK (estructura, formato y contenido OBLIGATORIO — sigue exactamente lo que se pide, tiene máxima prioridad):\n' + topicInstructions;
   }
   var isRewrite = userInstructions.length > 0;
   if (userInstructions) {
@@ -1064,8 +1072,10 @@ app.post('/api/generate-chapter', async function(req, res) {
     var schema, prompt, maxTokens;
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
-      : 'EXTENSION OBJETIVO: opening 60-80 palabras MAXIMO, content 400-500 palabras MAXIMO. Extremadamente conciso — el ebook se puede expandir capitulo por capitulo despues. Cumple el JSON completo.';
-    var chMaxTokens = isRewrite ? 8000 : 1800;
+      : topicInstructions
+        ? 'EXTENSION OBJETIVO: opening 60-80 palabras MAXIMO, content 500-600 palabras MAXIMO. Respeta EXACTAMENTE la estructura y secciones pedidas en las instrucciones del autor — aunque seas breve en cada seccion, incluye TODAS las secciones indicadas. Cumple el JSON completo.'
+        : 'EXTENSION OBJETIVO: opening 60-80 palabras MAXIMO, content 400-500 palabras MAXIMO. Extremadamente conciso — el ebook se puede expandir capitulo por capitulo despues. Cumple el JSON completo.';
+    var chMaxTokens = isRewrite ? 8000 : (topicInstructions ? 2000 : 1800);
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {

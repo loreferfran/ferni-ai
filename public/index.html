@@ -1132,6 +1132,7 @@ async function generateDirectEbook(){
 
     document.getElementById('dir-load-txt').textContent = 'Brief listo — generando ebook con Claude...';
     S.directTopic = topic;
+    S.directTopicInstructions = topic; // Instrucciones originales completas — se envían a Claude en cada capítulo
     // Leer número de capítulos del selector antes de pasar al ebook
     var ncSel = parseInt((document.getElementById('dir-num-chapters') || {}).value) || 4;
     S.numChapters = ncSel;
@@ -1226,7 +1227,7 @@ async function runEbookSteps(startFrom){
   S.ebookUserInstructions = userInstructions;
   var nc = S.numChapters || parseNumChapters(userInstructions) || 4;
   S.numChapters = nc;
-  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc };
+  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc, topicInstructions: S.directTopicInstructions || '' };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;
@@ -1379,7 +1380,7 @@ async function goEbook(isModule1){
   rebuildRewriteBtns(nc);
   // Limpiar progreso anterior al iniciar de cero
   S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
-  if(isModule1 !== false) S.ebookSerperContext = '';
+  if(isModule1 !== false){ S.ebookSerperContext = ''; S.directTopicInstructions = ''; }
   var allIds = ['header','outline'];
   for(var i=1;i<=nc;i++) allIds.push('ch'+i);
   allIds.push('ending');
