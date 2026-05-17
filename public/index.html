@@ -2170,7 +2170,7 @@ async function sendCorrectionChat(){
       sumMsg += ' ¿Algo más?';
       addMsg('chat-ebook', sumMsg, 'ferni');
     } else {
-      addMsg('chat-ebook', '⚠️ No encontré ese texto en el ebook. Intenta siendo más específica, por ejemplo: copia la frase exacta que quieres cambiar y di qué debería decir.', 'ferni');
+      addMsg('chat-ebook', '⚠️ No se pudo aplicar el cambio. Intenta siendo más específica: indica el capítulo (ej: "en el capítulo 2, agrega...") o describe exactamente qué sección quieres modificar.', 'ferni');
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');

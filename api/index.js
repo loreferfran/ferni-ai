@@ -1771,40 +1771,46 @@ app.post('/api/correct-ebook', async function(req, res) {
   var correction = req.body.correction;
   var language = req.body.language || 'Spanish';
   try {
-    var sys = 'Eres un editor experto de ebooks. El año actual es 2026.' +
-      ' El usuario pide una corrección. Haz cambios INTELIGENTES y COMPLETOS.' +
-      ' REGLAS:' +
-      ' 1) NUNCA dejes newText vacío — siempre reemplaza con algo mejor.' +
-      ' 2) Años desactualizados (2022-2024): actualiza a 2025 o 2026, o reformula sin fecha.' +
-      ' 3) Si el usuario copia un fragmento exacto, ESE es el oldText aunque ya hayas cambiado algo parecido antes — busca y aplica EN ESE FRAGMENTO ESPECÍFICO.' +
-      ' 4) Si dice "elimina/cambia todos los X" o "en todo el ebook": devuelve UN cambio con oldText=la palabra/frase y se aplicará globalmente en todo el ebook.' +
-      ' 5) Mejora la frase completa para que quede natural.' +
-      ' Responde SIEMPRE JSON puro sin markdown:' +
-      ' Un cambio: {"oldText":"fragmento exacto","newText":"texto mejorado","summary":"resumen corto","global":false}' +
-      ' Cambio global (aplica en todo el ebook): {"oldText":"palabra o frase","newText":"reemplazo","summary":"resumen","global":true}' +
-      ' Varios cambios: array de objetos. No puedes proceder: {"clarify":"pregunta en español"}.' +
-      ' NUNCA texto fuera del JSON.';
+    var sys = 'Eres el autor que creó este ebook y conoces perfectamente su contenido.' +
+      ' El usuario pide cambios, correcciones o adiciones. Tu trabajo es aplicarlos con precisión.' +
+      ' IMPORTANTE: puedes agregar, modificar, ampliar o reescribir cualquier parte del ebook.' +
+      ' No necesitas buscar texto exacto — simplemente identifica qué sección debe cambiar y devuelve el contenido completo actualizado de esa sección.' +
+      '\n\nRESPONDE SIEMPRE con JSON puro sin markdown. Formato de cada cambio:' +
+      '\n{"section":"SECCION","chapterIndex":N,"field":"CAMPO","newValue":"contenido completo nuevo","summary":"qué cambió"}' +
+      '\nSecciones posibles:' +
+      '\n  "title" → título del ebook (field no aplica)' +
+      '\n  "subtitle" → subtítulo (field no aplica)' +
+      '\n  "intro" → introducción (field no aplica)' +
+      '\n  "chapter" → un capítulo específico, con chapterIndex (0=cap1, 1=cap2, 2=cap3, 3=cap4) y field: "title"|"opening"|"content"|"keyPoints"|"exercise"' +
+      '\n  "conclusion" → conclusión (field no aplica)' +
+      '\n  "actionPlan" → plan de acción, newValue debe ser array de 3 strings' +
+      '\nSi son varios cambios: devuelve array de objetos. Si no puedes proceder: {"clarify":"pregunta en español"}.' +
+      '\nNUNCA texto fuera del JSON. El newValue debe ser el texto COMPLETO del campo actualizado, no un fragmento.';
 
-    // Incluir TODO el contenido: intro, capítulos completos con keyPoints, conclusión
-    var summary = {
+    // Enviar el ebook completo para que Claude lo conozca en su totalidad
+    var ebookContent = {
       title: ebook.title,
       subtitle: ebook.subtitle,
-      intro: (ebook.intro||'').slice(0,800),
-      chapters: (ebook.chapters||[]).map(function(ch,i){ return {
-        number: i+1,
-        title: ch.title,
-        opening: (ch.opening||'').slice(0,400),
-        content: (ch.content||'').slice(0,800),
-        keyPoints: (ch.keyPoints||[])
-      };}),
-      conclusion: (ebook.conclusion||'').slice(0,500),
-      actionPlan: (ebook.actionPlan||[])
+      intro: ebook.intro || '',
+      chapters: (ebook.chapters || []).map(function(ch, i) {
+        return {
+          index: i,
+          number: i + 1,
+          title: ch.title || '',
+          opening: ch.opening || '',
+          content: ch.content || '',
+          keyPoints: ch.keyPoints || [],
+          exercise: ch.exercise || {}
+        };
+      }),
+      conclusion: ebook.conclusion || '',
+      actionPlan: ebook.actionPlan || []
     };
 
-    var msg = 'INSTRUCCION: ' + correction +
-      '\n\nCONTENIDO COMPLETO DEL EBOOK:\n' + JSON.stringify(summary);
+    var msg = 'INSTRUCCION DEL USUARIO: ' + correction +
+      '\n\nCONTENIDO COMPLETO DEL EBOOK (eres el autor, lo conoces):\n' + JSON.stringify(ebookContent);
 
-    var txt = await claudeCall(sys, msg, 1500);
+    var txt = await claudeCall(sys, msg, 2000);
     var changes = extractJSON(txt);
 
     if (changes && changes.clarify) {
@@ -1813,40 +1819,26 @@ app.post('/api/correct-ebook', async function(req, res) {
 
     if (!Array.isArray(changes)) changes = [changes];
 
-    // Función recursiva que reemplaza en TODO el objeto (split+join = reemplaza TODAS las ocurrencias)
-    function replaceInObj(obj, oldStr, newStr, globalMode) {
-      if (!obj) return false;
-      var applied = false;
-      Object.keys(obj).forEach(function(k) {
-        if (typeof obj[k] === 'string') {
-          if (obj[k].includes(oldStr)) {
-            // split+join reemplaza TODAS las ocurrencias, no solo la primera
-            obj[k] = obj[k].split(oldStr).join(newStr);
-            applied = true;
-            if (!globalMode) return; // si no es global, con encontrar una vez basta
-          }
-        } else if (Array.isArray(obj[k])) {
-          obj[k] = obj[k].map(function(item) {
-            if (typeof item === 'string' && item.includes(oldStr)) {
-              applied = true;
-              return item.split(oldStr).join(newStr);
-            }
-            if (typeof item === 'object') { replaceInObj(item, oldStr, newStr, globalMode); }
-            return item;
-          });
-        } else if (typeof obj[k] === 'object') {
-          if (replaceInObj(obj[k], oldStr, newStr, globalMode)) applied = true;
-        }
-      });
-      return applied;
-    }
-
     var updated = JSON.parse(JSON.stringify(ebook));
     var appliedSummaries = [];
+
     changes.forEach(function(change) {
-      if (!change || !change.oldText || !change.newText) return;
-      var applied = replaceInObj(updated, change.oldText, change.newText, !!change.global);
-      if (applied && change.summary) appliedSummaries.push(change.summary);
+      if (!change || !change.section || change.newValue === undefined) return;
+      var sec = change.section;
+      var newVal = change.newValue;
+      if (sec === 'title') { updated.title = newVal; }
+      else if (sec === 'subtitle') { updated.subtitle = newVal; }
+      else if (sec === 'intro') { updated.intro = newVal; }
+      else if (sec === 'conclusion') { updated.conclusion = newVal; }
+      else if (sec === 'actionPlan') { updated.actionPlan = Array.isArray(newVal) ? newVal : [newVal]; }
+      else if (sec === 'chapter') {
+        var idx = typeof change.chapterIndex === 'number' ? change.chapterIndex : 0;
+        if (updated.chapters && updated.chapters[idx]) {
+          var field = change.field || 'content';
+          updated.chapters[idx][field] = newVal;
+        }
+      }
+      if (change.summary) appliedSummaries.push(change.summary);
     });
 
     res.json({ success: true, ebook: updated, summaries: appliedSummaries });
