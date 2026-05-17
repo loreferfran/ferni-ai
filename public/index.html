@@ -2350,9 +2350,20 @@ async function runChRewrite(){
     if(!co1Data.success) throw new Error(errMsg(co1Data.error, 'Error en paso 2'));
     chData.content = co1Data.content || '';
 
-    // Paso 3 (si hay PARTE 2): contenido parte 2 — ~40s
+    // Auto-continuación si el contenido fue truncado — sin que el usuario haga nada
+    if(co1Data.truncated && !hasSplit){
+      setStatus('🔄 Capítulo largo detectado — continuando automáticamente...', false);
+      var autoPayload = Object.assign({}, basePayload, { contentOnly: true, userInstructions: part1Instructions, previousContent: chData.content });
+      var autoResp = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(autoPayload)});
+      if(autoResp.ok){
+        var autoData = await autoResp.json();
+        if(autoData.success && autoData.content) chData.content += '\n\n' + autoData.content;
+      }
+    }
+
+    // Paso 3 (si hay --- PARTE 2 --- manual): contenido parte 2 — ~40s
     if(hasSplit && part2Instructions){
-      setStatus('🔄 Paso 3/3: generando segunda parte del contenido...', false);
+      setStatus('🔄 Segunda parte del contenido...', false);
       var co2Payload = Object.assign({}, basePayload, { contentOnly: true, userInstructions: part2Instructions, previousContent: chData.content });
       var co2Resp = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(co2Payload)});
       if(!co2Resp.ok) throw new Error('HTTP ' + co2Resp.status + ' en paso 3');
