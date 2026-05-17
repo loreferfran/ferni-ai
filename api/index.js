@@ -1008,6 +1008,9 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
   var userInstructions = (req.body.userInstructions || '').trim();
   var serperContext = (req.body.serperContext || '').trim();
+  // Truncar serperContext — el contexto completo de 3 búsquedas puede ser 6000+ chars
+  // y hace que cada capítulo tome >60s (timeout Vercel). Máx 1500 chars es suficiente.
+  if (serperContext.length > 1500) serperContext = serperContext.slice(0, 1500);
   var isContinuation = req.body.isContinuation === true;
   var previousContent = (req.body.previousContent || '').trim();
   var numChapters = Math.min(Math.max(parseInt(req.body.numChapters) || 4, 4), 8);
@@ -1015,7 +1018,7 @@ app.post('/api/generate-chapter', async function(req, res) {
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
   if (serperContext) {
-    ctx += '\n\n' + serperContext + '\n\nUSO OBLIGATORIO DE DATOS WEB: cuando el contenido de arriba incluya estadísticas, cifras o datos concretos relevantes al tema, ÚSALOS en el PDF citando la fuente con "Según [nombre del sitio]". Prioriza siempre estos datos reales sobre datos genéricos o estimaciones propias.';
+    ctx += '\n\nDATOS WEB DE REFERENCIA (usar cifras reales citando la fuente):\n' + serperContext;
   }
   var isRewrite = userInstructions.length > 0;
   if (userInstructions) {
