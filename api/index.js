@@ -1145,23 +1145,59 @@ app.post('/api/generate-chapter', async function(req, res) {
       return res.status(400).json({ success: false, error: 'section invalida: ' + section });
     }
 
-    var chResult = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens, true);
-    var data = extractJSON(chResult.text);
+    // Reescrituras de capítulos (isRewrite): split en 2 llamadas para evitar truncamiento JSON
+    // El JSON puede ser demasiado largo → metadata separado + content como texto puro
+    var rwChNum = parseInt((section || '').replace('ch', ''));
+    if (isRewrite && !isNaN(rwChNum) && rwChNum >= 1 && rwChNum <= 4) {
+      var rwChKey = 'chapter' + rwChNum;
+      // Llamada 1: metadata pequeño (title, opening, keyPoints, exercise) — siempre cabe
+      var rwMetaPrompt = 'Genera SOLO title, opening, keyPoints y exercise del capitulo ' + rwChNum +
+        ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
+        ' NO incluyas el campo "content". opening: 120-150 palabras. keyPoints: array de 5 strings con datos concretos. exercise: {title, steps: array de 3 strings}.' +
+        ' ' + espInstruction +
+        JSON.stringify({[rwChKey]: {number: rwChNum, title: 'titulo max 8 palabras', opening: '120-150 palabras', keyPoints: ['dato1','dato2','dato3','dato4','dato5'], exercise: {title: 'Ejercicio practico', steps: ['Paso 1','Paso 2','Paso 3']}}});
+      var rwMetaTxt = await claudeCall(sys, ctx + '\n\n' + rwMetaPrompt, 2000);
+      var rwChData;
+      try { rwChData = (extractJSON(rwMetaTxt) || {})[rwChKey] || {}; } catch(e) { rwChData = {}; }
+      rwChData.number = rwChNum;
 
-    // Auto-extensión: si Claude fue cortado por max_tokens, continúa hasta completar el content
+      // Llamada 2: content como texto puro (sin JSON → no hay truncamiento en parser)
+      var rwContentPrompt =
+        'Escribe el CONTENIDO COMPLETO del capitulo ' + rwChNum + ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.\n\n' +
+        'INSTRUCCIONES DEL AUTOR (seguir al pie de la letra):\n' + userInstructions + '\n\n' +
+        'FORMATO: texto puro Markdown — subtitulos en **negrita**, listas con -, ejemplos concretos. SIN JSON. SIN llaves. TODO en espanol castellano.\n' +
+        'PROHIBIDO usar caracteres ASCII de cuadros (╔═╗ ║ ╚═╝ ┌─┐). Para cajas usa [HIGHLIGHT BOX: texto]. Para tablas usa [TABLE: titulo|col1|col2|dato1|dato2].';
+      var rwContentRes = await claudeCall(sys, ctx + '\n\n' + rwContentPrompt, 8000, true);
+      rwChData.content = rwContentRes.text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
+
+      // Si content sigue truncado, una extensión adicional
+      if (rwContentRes.stopReason === 'max_tokens') {
+        var rwPrev = rwChData.content.slice(-2500);
+        var rwExtRes = await claudeCall(sys, ctx + '\n\nCONTINUA el content del capitulo ' + rwChNum + '. NO repetir:\n"""\n' + rwPrev + '\n"""\nEscribe SOLO la continuacion en Markdown.', 8000, true);
+        rwChData.content += '\n\n' + rwExtRes.text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
+      }
+
+      return res.json({ success: true, section: section, data: {[rwChKey]: rwChData} });
+    }
+
+    // Generación normal (no reescritura): JSON schema con auto-extensión si se trunca
+    var chResult = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens, true);
+    var data;
+    try { data = extractJSON(chResult.text); } catch(e) { data = null; }
+
+    // Si JSON falló o content incompleto: regenerar content como texto puro
     var autoChNum = parseInt((section || '').replace('ch', ''));
-    if (!isNaN(autoChNum) && autoChNum >= 1 && autoChNum <= 4 && chResult.stopReason === 'max_tokens') {
+    if (!isNaN(autoChNum) && autoChNum >= 1 && autoChNum <= 4) {
       var autoChKey = 'chapter' + autoChNum;
-      var autoChData = (data && data[autoChKey]) || {};
-      for (var extIter = 0; extIter < 3 && chResult.stopReason === 'max_tokens'; extIter++) {
-        var prevCont = (autoChData.content || '').slice(-2500);
-        var extPrompt =
-          'El content del capitulo ' + autoChNum + ' se corto por limite de tokens. ' +
-          'ULTIMA PARTE YA ESCRITA (NO repetir — continua exactamente donde se corto):\n"""\n' + prevCont + '\n"""\n\n' +
-          'Escribe SOLO la continuacion del texto. Sin JSON. Sin repetir nada anterior. Continua con las secciones o temas pendientes.';
-        chResult = await claudeCall(sys, ctx + '\n\n' + extPrompt, 8000, true);
-        var extText = chResult.text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
-        autoChData.content = (autoChData.content || '') + '\n\n' + extText;
+      var autoChData = data && data[autoChKey];
+      if (chResult.stopReason === 'max_tokens' || !autoChData || !autoChData.content) {
+        autoChData = autoChData || {};
+        var prevContentExt = (autoChData.content || '').slice(-2500);
+        var extPromptAuto = prevContentExt
+          ? 'CONTINUA el content del capitulo ' + autoChNum + ' donde se corto. NO repetir:\n"""\n' + prevContentExt + '\n"""\nEscribe SOLO la continuacion. Texto Markdown, sin JSON.'
+          : 'Escribe el content del capitulo ' + autoChNum + ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '. Texto Markdown con subtitulos en negrita, listas, datos concretos. SIN JSON.';
+        var extResAuto = await claudeCall(sys, ctx + '\n\n' + extPromptAuto, 8000, true);
+        autoChData.content = (autoChData.content ? autoChData.content + '\n\n' : '') + extResAuto.text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
         if (!data) data = {};
         data[autoChKey] = autoChData;
       }
