@@ -647,6 +647,16 @@ select option { background: #1e2d52; }
               <input id="dir-market" type="text" placeholder="ej: United Kingdom, Canada, France, Germany..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
               <div style="font-size:11px;color:var(--muted);margin-top:5px;">El borrador se genera en Español para revisión. Al aprobar, Claude traduce al idioma elegido adaptado a este mercado exacto.</div>
             </div>
+            <div style="margin-bottom:16px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Número de capítulos</div>
+              <select id="dir-num-chapters" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                <option value="4">4 capítulos (estándar)</option>
+                <option value="5">5 capítulos</option>
+                <option value="6">6 capítulos</option>
+                <option value="7">7 capítulos</option>
+                <option value="8">8 capítulos (ebook extenso)</option>
+              </select>
+            </div>
             <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="generateDirectEbook()">⚡ Generar Ebook Premium</button>
           </div>
 
@@ -1121,7 +1131,10 @@ async function generateDirectEbook(){
     try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); }catch(e){}
 
     document.getElementById('dir-load-txt').textContent = 'Brief listo — generando ebook con Claude...';
-    S.directTopic = topic; // guardar prompt original para detección de capítulos
+    S.directTopic = topic;
+    // Leer número de capítulos del selector antes de pasar al ebook
+    var ncSel = parseInt((document.getElementById('dir-num-chapters') || {}).value) || 4;
+    S.numChapters = ncSel;
     // Resetear form para próxima vez
     setTimeout(function(){ show('dir-form'); hide('dir-loading'); hide('dir-error'); }, 500);
     // Ir al tab ebook y lanzar generación — Módulo 2: solo Claude, verificación estándar
@@ -1356,10 +1369,11 @@ async function goEbook(isModule1){
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   var verAlert = document.getElementById('eb-verify-alert');
   if(verAlert){ verAlert.style.display='none'; verAlert.innerHTML=''; }
-  // Detectar número de capítulos desde instrucciones del usuario
+  // Número de capítulos: prioriza el selector Directo (ya guardado en S.numChapters),
+  // si no hay, intenta detectar del texto de instrucciones, si no, usa 4
   var instrEl = document.getElementById('eb-user-instructions');
   var userInstructions = (instrEl && instrEl.value.trim()) || (S.ebookUserInstructions || '');
-  var nc = parseNumChapters(userInstructions);
+  var nc = S.numChapters || parseNumChapters(userInstructions) || 4;
   S.numChapters = nc;
   rebuildChapterSteps(nc);
   rebuildRewriteBtns(nc);

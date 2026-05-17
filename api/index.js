@@ -1061,8 +1061,8 @@ app.post('/api/generate-chapter', async function(req, res) {
     var schema, prompt, maxTokens;
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
-      : 'EXTENSION OBJETIVO: opening 120-150 palabras, content 900-1200 palabras con datos concretos y ejemplos practicos. Calidad sobre cantidad — cumple el JSON completo.';
-    var chMaxTokens = isRewrite ? 8000 : 2500;
+      : 'EXTENSION OBJETIVO: opening 100-130 palabras MAXIMO, content 700-850 palabras MAXIMO. Conciso y practico — cumple el JSON completo sin exceder estos limites.';
+    var chMaxTokens = isRewrite ? 8000 : 3000;
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {
