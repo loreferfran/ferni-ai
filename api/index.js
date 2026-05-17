@@ -1771,21 +1771,24 @@ app.post('/api/correct-ebook', async function(req, res) {
   var correction = req.body.correction;
   var language = req.body.language || 'Spanish';
   try {
-    var sys = 'Eres el autor que creó este ebook y conoces perfectamente su contenido.' +
-      ' El usuario pide cambios, correcciones o adiciones. Tu trabajo es aplicarlos con precisión.' +
-      ' IMPORTANTE: puedes agregar, modificar, ampliar o reescribir cualquier parte del ebook.' +
-      ' No necesitas buscar texto exacto — simplemente identifica qué sección debe cambiar y devuelve el contenido completo actualizado de esa sección.' +
-      '\n\nRESPONDE SIEMPRE con JSON puro sin markdown. Formato de cada cambio:' +
-      '\n{"section":"SECCION","chapterIndex":N,"field":"CAMPO","newValue":"contenido completo nuevo","summary":"qué cambió"}' +
-      '\nSecciones posibles:' +
-      '\n  "title" → título del ebook (field no aplica)' +
-      '\n  "subtitle" → subtítulo (field no aplica)' +
-      '\n  "intro" → introducción (field no aplica)' +
-      '\n  "chapter" → un capítulo específico, con chapterIndex (0=cap1, 1=cap2, 2=cap3, 3=cap4) y field: "title"|"opening"|"content"|"keyPoints"|"exercise"' +
-      '\n  "conclusion" → conclusión (field no aplica)' +
-      '\n  "actionPlan" → plan de acción, newValue debe ser array de 3 strings' +
-      '\nSi son varios cambios: devuelve array de objetos. Si no puedes proceder: {"clarify":"pregunta en español"}.' +
-      '\nNUNCA texto fuera del JSON. El newValue debe ser el texto COMPLETO del campo actualizado, no un fragmento.';
+    var sys = 'Eres el autor de este ebook y conoces perfectamente su contenido. El usuario te pide cambios — agregar, corregir, reescribir o ampliar cualquier parte. Aplícalos.\n\n' +
+      'RESPONDE SOLO con JSON puro. Sin markdown, sin explicaciones, sin texto fuera del JSON.\n\n' +
+      'FORMATO para un cambio:\n' +
+      '{"section":"X","chapterIndex":N,"field":"Y","newValue":"contenido completo nuevo","summary":"qué cambió"}\n\n' +
+      'FORMATO para varios cambios:\n' +
+      '[{"section":"X",...},{"section":"Y",...}]\n\n' +
+      'SECCIONES:\n' +
+      '- "title" → título (sin field)\n' +
+      '- "subtitle" → subtítulo (sin field)\n' +
+      '- "intro" → introducción completa (sin field)\n' +
+      '- "chapter" → capítulo: chapterIndex 0=cap1 1=cap2 2=cap3 3=cap4, field="title"|"opening"|"content"|"keyPoints"\n' +
+      '- "conclusion" → conclusión (sin field)\n' +
+      '- "actionPlan" → newValue debe ser array de 3 strings\n\n' +
+      'REGLAS:\n' +
+      '- newValue = texto COMPLETO del campo actualizado, nunca un fragmento\n' +
+      '- Para reescribir un capítulo entero: usa section="chapter" con field="content" y escribe el capítulo completo en newValue\n' +
+      '- Para agregar contenido a un capítulo: incluye el contenido existente + lo nuevo en newValue\n' +
+      '- Si necesitas aclaración: {"clarify":"pregunta en español"}';
 
     // Enviar el ebook completo para que Claude lo conozca en su totalidad
     var ebookContent = {
@@ -1810,8 +1813,14 @@ app.post('/api/correct-ebook', async function(req, res) {
     var msg = 'INSTRUCCION DEL USUARIO: ' + correction +
       '\n\nCONTENIDO COMPLETO DEL EBOOK (eres el autor, lo conoces):\n' + JSON.stringify(ebookContent);
 
-    var txt = await claudeCall(sys, msg, 2000);
-    var changes = extractJSON(txt);
+    var txt = await claudeCall(sys, msg, 4000);
+    var changes;
+    try {
+      changes = extractJSON(txt);
+    } catch(parseErr) {
+      console.error('correct-ebook JSON parse failed. Claude returned:', txt.slice(0, 500));
+      return res.status(500).json({ success: false, error: 'Claude no devolvió JSON válido: ' + parseErr.message });
+    }
 
     if (changes && changes.clarify) {
       return res.json({ success: false, clarify: changes.clarify });
@@ -1841,6 +1850,10 @@ app.post('/api/correct-ebook', async function(req, res) {
       if (change.summary) appliedSummaries.push(change.summary);
     });
 
+    if (appliedSummaries.length === 0) {
+      console.error('correct-ebook: changes parsed but none applied. Changes:', JSON.stringify(changes).slice(0,300));
+      return res.json({ success: false, error: 'no_changes_applied' });
+    }
     res.json({ success: true, ebook: updated, summaries: appliedSummaries });
   } catch(e) {
     console.error('correct-ebook error:', e.message);
