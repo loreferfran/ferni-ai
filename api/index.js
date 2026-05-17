@@ -66,8 +66,12 @@ const POPULATION = {
 
 function getCountryName(countryStr) {
   if (!countryStr) return 'France';
+  // Primero: si el string completo existe en REGS, usarlo directamente
+  if (REGS[countryStr]) return countryStr;
+  // Si empieza con emoji (ej: "🇬🇧 United Kingdom"), quitar el primer token
   const parts = countryStr.split(' ');
-  return parts.length > 1 ? parts.slice(1).join(' ') : countryStr;
+  if (parts.length > 1) { var rest = parts.slice(1).join(' '); if (REGS[rest]) return rest; }
+  return countryStr;
 }
 
 function getCountryContext(country) {
