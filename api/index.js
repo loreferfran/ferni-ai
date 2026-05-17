@@ -1010,6 +1010,7 @@ app.post('/api/generate-chapter', async function(req, res) {
   var serperContext = (req.body.serperContext || '').trim();
   var isContinuation = req.body.isContinuation === true;
   var previousContent = (req.body.previousContent || '').trim();
+  var numChapters = Math.min(Math.max(parseInt(req.body.numChapters) || 4, 4), 8);
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   var ctx = buildEbookContext(o, author, countryName, regs);
@@ -1061,7 +1062,7 @@ app.post('/api/generate-chapter', async function(req, res) {
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
       : 'EXTENSION OBJETIVO: opening 120-150 palabras, content 900-1200 palabras con datos concretos y ejemplos practicos. Calidad sobre cantidad — cumple el JSON completo.';
-    var chMaxTokens = isRewrite ? 8000 : 4000;
+    var chMaxTokens = isRewrite ? 8000 : 3000;
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {
@@ -1094,42 +1095,17 @@ app.post('/api/generate-chapter', async function(req, res) {
 
     } else if (section === 'outline') {
       // Paso de planificacion: Claude define exactamente que cubre cada capitulo sin repetirse
-      schema = JSON.stringify({
-        ch1: { title: 'titulo del capitulo 1', topics: ['subtema 1a exclusivo de cap 1','subtema 1b exclusivo de cap 1','subtema 1c exclusivo de cap 1','subtema 1d exclusivo de cap 1'] },
-        ch2: { title: 'titulo del capitulo 2', topics: ['subtema 2a exclusivo de cap 2','subtema 2b exclusivo de cap 2','subtema 2c exclusivo de cap 2','subtema 2d exclusivo de cap 2'] },
-        ch3: { title: 'titulo del capitulo 3', topics: ['subtema 3a exclusivo de cap 3','subtema 3b exclusivo de cap 3','subtema 3c exclusivo de cap 3','subtema 3d exclusivo de cap 3'] },
-        ch4: { title: 'titulo del capitulo 4', topics: ['subtema 4a exclusivo de cap 4','subtema 4b exclusivo de cap 4','subtema 4c exclusivo de cap 4','subtema 4d exclusivo de cap 4'] }
-      });
-      prompt = 'Planifica los 4 capitulos del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
+      var outlineSchema = {};
+      for (var oi = 1; oi <= numChapters; oi++) {
+        outlineSchema['ch' + oi] = { title: 'titulo del capitulo ' + oi, topics: ['subtema exclusivo 1 de cap ' + oi,'subtema exclusivo 2 de cap ' + oi,'subtema exclusivo 3 de cap ' + oi,'subtema exclusivo 4 de cap ' + oi] };
+      }
+      schema = JSON.stringify(outlineSchema);
+      prompt = 'Planifica los ' + numChapters + ' capitulos del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
         ' REGLA CRITICA: cada capitulo debe tener 4 subtemas UNICOS que NO aparecen en ningun otro capitulo.' +
-        ' ESTRUCTURA: si el contexto del ebook ya define contenido especifico por capitulo (ej: mini-cursos de herramientas especificas, temas concretos asignados, productos listados), respeta ESA estructura y distribuye el contenido segun lo indicado. Si el contexto NO define estructura especifica, usa esta logica generica: Cap1=fundamentos/diagnostico, Cap2=metodo paso a paso, Cap3=aplicacion avanzada/casos practicos, Cap4=resultados/mantenimiento.' +
+        ' ESTRUCTURA: si el contexto del ebook ya define contenido especifico por capitulo (ej: mini-cursos de herramientas especificas, temas concretos asignados, productos listados), respeta ESA estructura y distribuye el contenido segun lo indicado. Si el contexto NO define estructura especifica, usa esta logica generica: primer capitulo=fundamentos/diagnostico, capitulos centrales=metodo paso a paso + aplicacion avanzada + casos practicos, ultimo capitulo=resultados/mantenimiento.' +
         ' NINGUN proceso, tecnica o concepto puede repetirse entre capitulos — si algo se explica en el cap 1, el cap 2 no puede volver a explicarlo aunque cambie las palabras.' +
         ' ' + espInstruction + schema;
-      maxTokens = 1000;
-
-    } else if (section === 'ch1') {
-      var outRule1 = buildOutlineRule(1);
-      schema = JSON.stringify({chapter1:{number:1,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura impactante + dato real de ' + countryName + ' + por que es urgente resolver esto',content:'700-900 palabras: 4 subsecciones practicas con ejemplos reales de ' + countryName + ', datos numericos, lista de recursos con precios en ' + regs.currency + ', 2-3 errores comunes y como evitarlos',keyPoints:['dato numerico real de ' + countryName,'medida o tiempo concreto','consejo practico verificable','ejemplo del metodo','resultado medible'],exercise:{title:'Ejercicio practico — 30 minutos hoy',steps:['Paso 1: accion concreta con tiempo estimado','Paso 2: accion concreta con tiempo estimado','Paso 3: verificacion del resultado']}}});
-      prompt = 'Escribe el capitulo 1 del ebook.' + outRule1 + ' ' + chLimit + ' ' + espInstruction + schema;
-      maxTokens = chMaxTokens;
-
-    } else if (section === 'ch2') {
-      var outRule2 = buildOutlineRule(2);
-      schema = JSON.stringify({chapter2:{number:2,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura que conecta brevemente con el cap 1 + nuevo angulo del tema en ' + countryName,content:'700-900 palabras: 4 subsecciones con metodo paso a paso, tabla comparativa de opciones con precios en ' + regs.currency + ', errores frecuentes y soluciones, estadisticas de ' + countryName,keyPoints:['dato verificable del sector','tiempo o costo exacto','criterio de eleccion claro','ejemplo practico de ' + countryName,'resultado esperado'],exercise:{title:'Ejercicio practico — aplicar metodo',steps:['Paso 1: accion concreta','Paso 2: accion concreta','Paso 3: verificacion del avance']}}});
-      prompt = 'Escribe el capitulo 2 del ebook.' + outRule2 + ' ' + chLimit + ' ' + espInstruction + schema;
-      maxTokens = chMaxTokens;
-
-    } else if (section === 'ch3') {
-      var outRule3 = buildOutlineRule(3);
-      schema = JSON.stringify({chapter3:{number:3,title:'titulo max 8 palabras',opening:'120-150 palabras: apertura que profundiza en la transformacion con ejemplos de ' + countryName,content:'700-900 palabras: plan paso a paso con tiempos exactos, 4-5 tips expertos unicos, checklist de control, ejemplos avanzados de ' + countryName + ', precios reales en ' + regs.currency,keyPoints:['tip experto no obvio','tiempo o medida exacta','criterio de calidad verificable','ejemplo avanzado','resultado observable en dias'],exercise:{title:'Plan de accion — proximas 2 semanas',steps:['Semana 1: que hacer exactamente con resultado esperado','Semana 2: que hacer exactamente con verificacion','Control final: como saber que funciono']}}});
-      prompt = 'Escribe el capitulo 3 del ebook.' + outRule3 + ' ' + chLimit + ' ' + espInstruction + schema;
-      maxTokens = chMaxTokens;
-
-    } else if (section === 'ch4') {
-      var outRule4 = buildOutlineRule(4);
-      schema = JSON.stringify({chapter4:{number:4,title:'titulo max 8 palabras',opening:'120-150 palabras: vision del resultado final + casos reales de ' + countryName,content:'700-900 palabras: como verificar el exito (5 criterios concretos), como mantener resultados a largo plazo, errores finales a evitar, tabla resumen antes/despues, proximo nivel y recursos en ' + regs.currency,keyPoints:['logro medible concreto','indicador de exito verificable','habito de mantenimiento clave','comparacion antes/despues real','impacto en calidad de vida'],exercise:{title:'Checklist de verificacion final',steps:['Verificacion 1: criterio objetivo y como medirlo','Verificacion 2: criterio objetivo y como medirlo','Mantenimiento: que hacer cada mes para mantener resultados']}}});
-      prompt = 'Escribe el capitulo 4 del ebook.' + outRule4 + ' ' + chLimit + ' ' + espInstruction + schema;
-      maxTokens = chMaxTokens;
+      maxTokens = Math.max(1000, numChapters * 200);
 
     } else if (section === 'ending') {
       prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
@@ -1142,12 +1118,33 @@ app.post('/api/generate-chapter', async function(req, res) {
       maxTokens = 2000;
 
     } else {
-      return res.status(400).json({ success: false, error: 'section invalida: ' + section });
+      // Handler generico para ch1-ch8
+      var chNum = parseInt((section || '').replace('ch', ''));
+      if (isNaN(chNum) || chNum < 1 || chNum > 10) {
+        return res.status(400).json({ success: false, error: 'section invalida: ' + section });
+      }
+      var chKey = 'chapter' + chNum;
+      var outRuleN = buildOutlineRule(chNum);
+      var isFirstCh = chNum === 1;
+      var isLastCh = chNum === numChapters;
+      var openingInstr = isFirstCh
+        ? '120-150 palabras: apertura impactante + dato real de ' + countryName + ' + por que es urgente resolver esto'
+        : isLastCh
+          ? '120-150 palabras: vision del resultado final + conexion con lo aprendido en ' + countryName
+          : '120-150 palabras: apertura que profundiza + nuevo angulo del tema con ejemplos de ' + countryName;
+      var contentInstr = isFirstCh
+        ? '700-900 palabras: 4 subsecciones practicas, datos numericos, lista recursos con precios en ' + regs.currency + ', 2-3 errores comunes y como evitarlos'
+        : isLastCh
+          ? '700-900 palabras: como verificar el exito (5 criterios concretos), como mantener resultados, errores finales a evitar, tabla resumen antes/despues'
+          : '700-900 palabras: 4 subsecciones con metodo paso a paso, ejemplos concretos de ' + countryName + ', estadisticas verificables, errores frecuentes y soluciones';
+      schema = JSON.stringify({[chKey]:{number:chNum,title:'titulo max 8 palabras',opening:openingInstr,content:contentInstr,keyPoints:['dato numerico real','medida o tiempo concreto','consejo practico verificable','ejemplo del metodo','resultado medible'],exercise:{title:'Ejercicio practico',steps:['Paso 1: accion concreta con tiempo estimado','Paso 2: accion concreta con tiempo estimado','Paso 3: verificacion del resultado']}}});
+      prompt = 'Escribe el capitulo ' + chNum + ' del ebook.' + outRuleN + ' ' + chLimit + ' ' + espInstruction + schema;
+      maxTokens = chMaxTokens;
     }
 
     // metadataOnly: genera solo title/opening/keyPoints/exercise (sin content) — ~15s
     var moChNum = parseInt((section || '').replace('ch', ''));
-    if (req.body.metadataOnly && !isNaN(moChNum) && moChNum >= 1 && moChNum <= 4) {
+    if (req.body.metadataOnly && !isNaN(moChNum) && moChNum >= 1 && moChNum <= 10) {
       var moChKey = 'chapter' + moChNum;
       var moPrompt = 'Genera SOLO title, opening, keyPoints y exercise del capitulo ' + moChNum +
         ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
@@ -1163,7 +1160,7 @@ app.post('/api/generate-chapter', async function(req, res) {
 
     // contentOnly: genera solo el content como texto puro — ~40s, sin riesgo de JSON failure
     var coChNum = parseInt((section || '').replace('ch', ''));
-    if (req.body.contentOnly && !isNaN(coChNum) && coChNum >= 1 && coChNum <= 4) {
+    if (req.body.contentOnly && !isNaN(coChNum) && coChNum >= 1 && coChNum <= 10) {
       var prevCo = (req.body.previousContent || '').trim();
       var coPrompt = prevCo
         ? 'CONTINUA el content del capitulo ' + coChNum + '. NO repetir lo anterior:\n"""\n' + prevCo.slice(-2000) + '\n"""\n\nEscribe SOLO la continuacion. Texto Markdown — subtitulos en **negrita**, listas con -. Sin JSON. Sin repetir.'
@@ -1176,19 +1173,11 @@ app.post('/api/generate-chapter', async function(req, res) {
       return res.json({ success: true, content: coText, truncated: coResult.stopReason === 'max_tokens' });
     }
 
-    // Generación normal: JSON schema estándar
+    // Generación normal: JSON schema estándar (1 llamada — sin retry para no exceder timeout Vercel 60s)
     var chResult = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens, true);
     var data;
     try { data = extractJSON(chResult.text); } catch(e) { data = null; }
-
-    // Fallback: si JSON falló, reintentar con prompt más simple
-    if (!data) {
-      var simplePrompt = prompt.replace(/\{[\s\S]{200,}\}/, '') +
-        ' Responde UNICAMENTE con JSON valido, sin markdown, sin explicaciones. Empieza con { y termina con }.';
-      var chResult2 = await claudeCall(sys, ctx + '\n\n' + simplePrompt, maxTokens, true);
-      try { data = extractJSON(chResult2.text); } catch(e2) { data = null; }
-    }
-    if (!data) throw new Error('No se pudo generar el capítulo. Usa el botón Reintentar.');
+    if (!data) throw new Error('No se pudo parsear el capítulo. Usa el botón Reintentar.');
 
     res.json({ success: true, section: section, data: data });
   } catch (e) {

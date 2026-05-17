@@ -301,10 +301,12 @@ select option { background: #1e2d52; }
             <div style="margin-top:18px;text-align:left;min-width:270px;">
               <div class="lstep" id="ebst-header"><span class="ldot"></span><span>Portada e introducción</span></div>
               <div class="lstep" id="ebst-outline"><span class="ldot"></span><span>Planificando estructura (sin repeticiones)</span></div>
-              <div class="lstep" id="ebst-ch1"><span class="ldot"></span><span>Capítulo 1</span></div>
-              <div class="lstep" id="ebst-ch2"><span class="ldot"></span><span>Capítulo 2</span></div>
-              <div class="lstep" id="ebst-ch3"><span class="ldot"></span><span>Capítulo 3</span></div>
-              <div class="lstep" id="ebst-ch4"><span class="ldot"></span><span>Capítulo 4</span></div>
+              <div id="eb-chapter-steps">
+                <div class="lstep" id="ebst-ch1"><span class="ldot"></span><span>Capítulo 1</span></div>
+                <div class="lstep" id="ebst-ch2"><span class="ldot"></span><span>Capítulo 2</span></div>
+                <div class="lstep" id="ebst-ch3"><span class="ldot"></span><span>Capítulo 3</span></div>
+                <div class="lstep" id="ebst-ch4"><span class="ldot"></span><span>Capítulo 4</span></div>
+              </div>
               <div class="lstep" id="ebst-ending"><span class="ldot"></span><span>Conclusión y sección legal</span></div>
             </div>
             <div style="font-size:11px;color:var(--muted);margin-top:10px;" id="eb-load-txt"></div>
@@ -327,7 +329,7 @@ select option { background: #1e2d52; }
             <!-- Panel reescritura por capítulo -->
             <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
               <div style="font-weight:700;color:#00b894;font-size:12px;margin-bottom:10px;">✍️ Reescribir un capítulo específico</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+              <div id="ch-rewrite-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
                 <button onclick="openChRewrite(1)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 1</button>
                 <button onclick="openChRewrite(2)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 2</button>
                 <button onclick="openChRewrite(3)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 3</button>
@@ -1136,8 +1138,8 @@ function ebStep(id, state){
   if(!el) return;
   el.className = 'lstep' + (state ? ' '+state : '');
   var dot = el.querySelector('.ldot');
-  if(state === 'done'){ if(dot){ dot.textContent='✓'; dot.style.width='auto'; } }
-  else if(state === 'active'){ if(dot){ dot.textContent=''; dot.style.width='6px'; } }
+  if(state === 'done'){ if(dot){ dot.textContent='✓'; dot.style.width='auto'; dot.style.color=''; } }
+  else if(state === 'active'){ if(dot){ dot.textContent=''; dot.style.width='6px'; dot.style.color=''; } }
   else if(state === 'error'){ if(dot){ dot.textContent='✗'; dot.style.width='auto'; dot.style.color='var(--red)'; } }
 }
 
@@ -1208,12 +1210,16 @@ async function runEbookSteps(startFrom){
   var instrEl = document.getElementById('eb-user-instructions');
   var userInstructions = (instrEl && instrEl.value.trim()) || (S.ebookUserInstructions || '');
   S.ebookUserInstructions = userInstructions;
-  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions };
+  var nc = S.numChapters || parseNumChapters(userInstructions) || 4;
+  S.numChapters = nc;
+  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;
 
-  const allSteps = ['header','outline','ch1','ch2','ch3','ch4','ending'];
+  var chSteps = [];
+  for(var ci=1; ci<=nc; ci++) chSteps.push('ch'+ci);
+  const allSteps = ['header','outline'].concat(chSteps).concat(['ending']);
   var startIdx = allSteps.indexOf(startFrom || 'header');
   if(startIdx < 0) startIdx = 0;
 
@@ -1229,7 +1235,7 @@ async function runEbookSteps(startFrom){
     for(var si=startIdx; si<allSteps.length; si++){
       var sec = allSteps[si];
       ebStep(sec, 'active');
-      var label = sec==='outline' ? 'Planificando estructura...' : 'Escribiendo... (' + (si-1) + ' de 5)';
+      var label = sec==='header' ? 'Escribiendo portada...' : sec==='outline' ? 'Planificando estructura...' : sec==='ending' ? 'Escribiendo conclusión...' : 'Escribiendo capítulo... (' + (si-1) + ' de ' + nc + ')';
       loadEl.textContent = label;
       var chPayload = Object.assign({}, payload, { section: sec });
       if(ebookDefs) chPayload.ebookDefs = ebookDefs;
@@ -1249,7 +1255,7 @@ async function runEbookSteps(startFrom){
     const ebook={
       title:parts.header.title, subtitle:parts.header.subtitle, tagline:parts.header.tagline, intro:parts.header.intro,
       definitions:parts.header.definitions||null,
-      chapters:[parts.ch1.chapter1, parts.ch2.chapter2, parts.ch3.chapter3, parts.ch4.chapter4],
+      chapters: chSteps.map(function(s){ var n=parseInt(s.replace('ch','')); return (parts[s]||{})['chapter'+n]||null; }).filter(Boolean),
       conclusion:parts.ending.conclusion, actionPlan:parts.ending.actionPlan,
       resources:parts.ending.resources, legalSection:parts.ending.legalSection
     };
@@ -1282,12 +1288,13 @@ async function runEbookSteps(startFrom){
     hide('eb-loading');
     if(e && e.name==='AbortError'){
       show('eb-empty');
-      ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
+      allSteps.forEach(function(id){ ebStep(id,''); });
       addMsg('chat-ebook','⏹ Generación cancelada.','ferni');
     } else {
       // Error en un capítulo — mostrar botón de reintento sin perder lo ya generado
       var failedSec = (e && e.section) ? e.section : '?';
-      var failedLabel = {header:'Encabezado',outline:'Estructura',ch1:'Capítulo 1',ch2:'Capítulo 2',ch3:'Capítulo 3',ch4:'Capítulo 4',ending:'Conclusión'}[failedSec] || failedSec;
+      var chMatch = failedSec.match(/^ch(\d+)$/);
+      var failedLabel = chMatch ? ('Capítulo ' + chMatch[1]) : ({header:'Encabezado',outline:'Estructura',ending:'Conclusión'}[failedSec] || failedSec);
       ebStep(failedSec, 'error');
       S.ebookRetryFrom = failedSec;
       // Mostrar pantalla de reintento en lugar de alert
@@ -1311,19 +1318,54 @@ async function runEbookSteps(startFrom){
   }
 }
 
+function parseNumChapters(instructions) {
+  var m = (instructions || '').match(/(\d+)\s*cap[ií]tulos?/i);
+  if (m) { var n = parseInt(m[1]); if (n >= 4 && n <= 8) return n; }
+  return 4;
+}
+
+function rebuildChapterSteps(nc) {
+  var container = document.getElementById('eb-chapter-steps');
+  if (!container) return;
+  var html = '';
+  for (var i = 1; i <= nc; i++) {
+    html += '<div class="lstep" id="ebst-ch'+i+'"><span class="ldot"></span><span>Capítulo '+i+'</span></div>';
+  }
+  container.innerHTML = html;
+}
+
+function rebuildRewriteBtns(nc) {
+  var container = document.getElementById('ch-rewrite-btns');
+  if (!container) return;
+  var btStyle = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;';
+  var html = '';
+  for (var i = 1; i <= nc; i++) {
+    html += '<button onclick="openChRewrite('+i+')" style="'+btStyle+'">Cap '+i+'</button>';
+  }
+  container.innerHTML = html;
+}
+
 async function goEbook(isModule1){
   const o=S.selOpp; if(!o) return;
-  // isModule1=true → Serper+OpenAI flow (datos pre-procesados, verificación estricta)
-  // isModule1=false → Directo flow (solo Claude)
-  S.ebookIsModule1 = (isModule1 !== false); // default true si no se especifica
+  S.ebookIsModule1 = (isModule1 !== false);
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   var verAlert = document.getElementById('eb-verify-alert');
   if(verAlert){ verAlert.style.display='none'; verAlert.innerHTML=''; }
+  // Detectar número de capítulos desde instrucciones del usuario
+  var instrEl = document.getElementById('eb-user-instructions');
+  var userInstructions = (instrEl && instrEl.value.trim()) || (S.ebookUserInstructions || '');
+  var nc = parseNumChapters(userInstructions);
+  S.numChapters = nc;
+  rebuildChapterSteps(nc);
+  rebuildRewriteBtns(nc);
   // Limpiar progreso anterior al iniciar de cero
   S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
-  if(isModule1 !== false) S.ebookSerperContext = ''; // Módulo 1 no usa contexto Serper en capítulos
-  ['header','outline','ch1','ch2','ch3','ch4','ending'].forEach(function(id){ ebStep(id,''); });
+  if(isModule1 !== false) S.ebookSerperContext = '';
+  var allIds = ['header','outline'];
+  for(var i=1;i<=nc;i++) allIds.push('ch'+i);
+  allIds.push('ending');
+  allIds.forEach(function(id){ ebStep(id,''); });
   var retryDiv = document.getElementById('eb-retry-msg');
   if(retryDiv) retryDiv.innerHTML = '';
   await runEbookSteps('header');
