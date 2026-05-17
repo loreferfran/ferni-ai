@@ -2144,8 +2144,58 @@ async function sendCorrectionChat(){
     return;
   }
 
-  // Corrección de texto normal
-  addMsg('chat-ebook', '✏️ Aplicando cambios al texto...', 'ferni');
+  // Detectar si el mensaje menciona un capítulo específico → regenerar ese capítulo directamente
+  var chMatch = msg.match(/cap[ií]tulo\s*(\d)/i) || msg.match(/\bcap\.?\s*(\d)/i) || msg.match(/\b(primer|segundo|tercer|cuarto)\s+cap[ií]tulo/i);
+  var chNum = null;
+  if(chMatch){
+    if(chMatch[1] === 'primer') chNum = 1;
+    else if(chMatch[1] === 'segundo') chNum = 2;
+    else if(chMatch[1] === 'tercer') chNum = 3;
+    else if(chMatch[1] === 'cuarto') chNum = 4;
+    else chNum = parseInt(chMatch[1]);
+  }
+
+  if(chNum && chNum >= 1 && chNum <= 4){
+    // Ruta directa: regenerar el capítulo usando generate-chapter con las instrucciones del usuario
+    addMsg('chat-ebook', '🔄 Regenerando capítulo ' + chNum + ' con tus instrucciones...', 'ferni');
+    try {
+      var secId = 'ch' + chNum;
+      var chPayload = {
+        opportunity: o,
+        author: S.author || 'Ferni Guides',
+        section: secId,
+        userInstructions: msg,
+        ebookDefs: S.ebookDefs || null,
+        ebookOutline: S.ebookOutline || null
+      };
+      if(S.ebookSerperContext) chPayload.serperContext = S.ebookSerperContext;
+      var cr = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(chPayload)});
+      var cd = await cr.json();
+      if(cd.success && cd.data){
+        var chData = cd.data['chapter' + chNum];
+        if(chData && ebook.chapters && ebook.chapters[chNum-1]){
+          ebook.chapters[chNum-1] = chData;
+          if(S.finalEbook) S.finalEbook = ebook;
+          else S.ebookData = ebook;
+          S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
+          var previewDraft = document.getElementById('eb-draft-preview');
+          var previewFinal = document.getElementById('eb-final-preview');
+          if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
+          if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
+          if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+          addMsg('chat-ebook', '✅ Capítulo ' + chNum + ' regenerado con tus instrucciones. Revísalo arriba. ¿Algo más?', 'ferni');
+        }
+      } else {
+        addMsg('chat-ebook', '❌ Error regenerando el capítulo: ' + (cd.error||'desconocido'), 'ferni');
+      }
+    } catch(e){
+      addMsg('chat-ebook', '❌ Error: ' + e.message, 'ferni');
+    }
+    return;
+  }
+
+  // Sin mención de capítulo → corrección pequeña (título, intro, conclusión, etc.)
+  addMsg('chat-ebook', '✏️ Aplicando cambios...', 'ferni');
   try {
     const resp = await fetch('/api/correct-ebook', {
       method: 'POST',
@@ -2170,7 +2220,7 @@ async function sendCorrectionChat(){
       sumMsg += ' ¿Algo más?';
       addMsg('chat-ebook', sumMsg, 'ferni');
     } else {
-      addMsg('chat-ebook', '⚠️ No se pudo aplicar el cambio. Intenta siendo más específica: indica el capítulo (ej: "en el capítulo 2, agrega...") o describe exactamente qué sección quieres modificar.', 'ferni');
+      addMsg('chat-ebook', '⚠️ No pude aplicar ese cambio. Para modificar un capítulo escribe el número (ej: "en el capítulo 3..."). Para cambios globales describe qué sección afecta (título, introducción, conclusión).', 'ferni');
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');
