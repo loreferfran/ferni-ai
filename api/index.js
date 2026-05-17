@@ -1102,7 +1102,7 @@ app.post('/api/generate-chapter', async function(req, res) {
       });
       prompt = 'Planifica los 4 capitulos del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
         ' REGLA CRITICA: cada capitulo debe tener 4 subtemas UNICOS que NO aparecen en ningun otro capitulo.' +
-        ' La estructura logica debe ser: Cap1=fundamentos/diagnostico, Cap2=metodo paso a paso, Cap3=aplicacion avanzada/casos practicos, Cap4=resultados/mantenimiento.' +
+        ' ESTRUCTURA: si el contexto del ebook ya define contenido especifico por capitulo (ej: mini-cursos de herramientas especificas, temas concretos asignados, productos listados), respeta ESA estructura y distribuye el contenido segun lo indicado. Si el contexto NO define estructura especifica, usa esta logica generica: Cap1=fundamentos/diagnostico, Cap2=metodo paso a paso, Cap3=aplicacion avanzada/casos practicos, Cap4=resultados/mantenimiento.' +
         ' NINGUN proceso, tecnica o concepto puede repetirse entre capitulos — si algo se explica en el cap 1, el cap 2 no puede volver a explicarlo aunque cambie las palabras.' +
         ' ' + espInstruction + schema;
       maxTokens = 1000;
