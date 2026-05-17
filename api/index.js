@@ -388,7 +388,7 @@ function buildSmartQueries(country, niche, language) {
   return queries.slice(0, 20);
 }
 
-async function claudeCall(system, userContent, maxTokens) {
+async function claudeCall(system, userContent, maxTokens, returnFull) {
   maxTokens = maxTokens || 4000;
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -407,7 +407,9 @@ async function claudeCall(system, userContent, maxTokens) {
   if (!d.content || !Array.isArray(d.content)) {
     throw new Error('Claude API unexpected response shape: ' + JSON.stringify(d).slice(0, 200));
   }
-  return d.content.map(function(c) { return c.text || ''; }).join('');
+  var text = d.content.map(function(c) { return c.text || ''; }).join('');
+  if (returnFull) return { text: text, stopReason: d.stop_reason || 'end_turn' };
+  return text;
 }
 
 // Busqueda Google organica + People Also Ask
@@ -1014,6 +1016,7 @@ app.post('/api/generate-chapter', async function(req, res) {
   if (serperContext) {
     ctx += '\n\n' + serperContext + '\n\nUSO OBLIGATORIO DE DATOS WEB: cuando el contenido de arriba incluya estadísticas, cifras o datos concretos relevantes al tema, ÚSALOS en el PDF citando la fuente con "Según [nombre del sitio]". Prioriza siempre estos datos reales sobre datos genéricos o estimaciones propias.';
   }
+  var isRewrite = userInstructions.length > 0;
   if (userInstructions) {
     ctx += '\n\nINSTRUCCIONES ADICIONALES DEL AUTOR (obligatorio seguirlas, se suman a las reglas generales — tienen prioridad sobre cualquier regla genérica si hay conflicto):\n' + userInstructions;
   }
@@ -1055,11 +1058,10 @@ app.post('/api/generate-chapter', async function(req, res) {
 
   try {
     var schema, prompt, maxTokens;
-    var isRewrite = userInstructions.length > 0;
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
-      : 'LIMITE ESTRICTO DE EXTENSION: opening MAXIMO 150 palabras, content MAXIMO 900 palabras. La calidad premium viene de PRECISION y DENSIDAD, no de longitud. Cumple el JSON completo dentro del limite.';
-    var chMaxTokens = isRewrite ? 8000 : 4000;
+      : 'EXTENSION OBJETIVO: opening 120-150 palabras, content 900-1200 palabras con datos concretos y ejemplos practicos. Calidad sobre cantidad — cumple el JSON completo.';
+    var chMaxTokens = 8000;
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {
@@ -1143,8 +1145,28 @@ app.post('/api/generate-chapter', async function(req, res) {
       return res.status(400).json({ success: false, error: 'section invalida: ' + section });
     }
 
-    var txt = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens);
-    var data = extractJSON(txt);
+    var chResult = await claudeCall(sys, ctx + '\n\n' + prompt, maxTokens, true);
+    var data = extractJSON(chResult.text);
+
+    // Auto-extensión: si Claude fue cortado por max_tokens, continúa hasta completar el content
+    var autoChNum = parseInt((section || '').replace('ch', ''));
+    if (!isNaN(autoChNum) && autoChNum >= 1 && autoChNum <= 4 && chResult.stopReason === 'max_tokens') {
+      var autoChKey = 'chapter' + autoChNum;
+      var autoChData = (data && data[autoChKey]) || {};
+      for (var extIter = 0; extIter < 3 && chResult.stopReason === 'max_tokens'; extIter++) {
+        var prevCont = (autoChData.content || '').slice(-2500);
+        var extPrompt =
+          'El content del capitulo ' + autoChNum + ' se corto por limite de tokens. ' +
+          'ULTIMA PARTE YA ESCRITA (NO repetir — continua exactamente donde se corto):\n"""\n' + prevCont + '\n"""\n\n' +
+          'Escribe SOLO la continuacion del texto. Sin JSON. Sin repetir nada anterior. Continua con las secciones o temas pendientes.';
+        chResult = await claudeCall(sys, ctx + '\n\n' + extPrompt, 8000, true);
+        var extText = chResult.text.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
+        autoChData.content = (autoChData.content || '') + '\n\n' + extText;
+        if (!data) data = {};
+        data[autoChKey] = autoChData;
+      }
+    }
+
     res.json({ success: true, section: section, data: data });
   } catch (e) {
     console.error('generate-chapter error [' + section + ']:', e.message);
