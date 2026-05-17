@@ -324,6 +324,26 @@ select option { background: #1e2d52; }
               <div style="font-size:11px;color:var(--muted);">Haz clic en un slot para describir la imagen que quieres. DALL-E la generará y la insertará automáticamente en el PDF.</div>
             </div>
 
+            <!-- Panel reescritura por capítulo -->
+            <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
+              <div style="font-weight:700;color:#00b894;font-size:12px;margin-bottom:10px;">✍️ Reescribir un capítulo específico</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                <button onclick="openChRewrite(1)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 1</button>
+                <button onclick="openChRewrite(2)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 2</button>
+                <button onclick="openChRewrite(3)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 3</button>
+                <button onclick="openChRewrite(4)" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;">Cap 4</button>
+              </div>
+              <div id="ch-rewrite-panel" style="display:none;">
+                <div id="ch-rewrite-label" style="font-size:12px;color:var(--muted);margin-bottom:6px;"></div>
+                <textarea id="ch-rewrite-instructions" rows="3" placeholder="Describe qué debe cambiar o cómo debe quedar el capítulo. Ej: 'incluye más datos estadísticos reales', 'hazlo más práctico con ejemplos del Reino Unido', 'el tono es muy académico, simplificalo'..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(0,184,148,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                  <button onclick="runChRewrite()" style="padding:8px 20px;border-radius:8px;border:none;background:#00b894;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Regenerar capítulo</button>
+                  <button onclick="document.getElementById('ch-rewrite-panel').style.display='none'" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
+                </div>
+              </div>
+              <div id="ch-rewrite-status" style="display:none;padding:10px;border-radius:8px;background:rgba(0,184,148,0.1);color:#00b894;font-size:13px;margin-top:8px;"></div>
+            </div>
+
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:6px;">
               <button onclick="refreshDraftPreview()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(108,92,231,0.35);background:rgba(108,92,231,0.1);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">🔄 Actualizar vista previa</button>
               <button id="btn-edit-pdf" onclick="toggleEditPDF()" style="padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">✏️ Editar texto</button>
@@ -2224,6 +2244,83 @@ async function sendCorrectionChat(){
     }
   } catch(e) {
     addMsg('chat-ebook', 'Error: ' + e.message, 'ferni');
+  }
+}
+
+function openChRewrite(n){
+  S.chRewriteTarget = n;
+  var label = document.getElementById('ch-rewrite-label');
+  if(label) label.textContent = 'Instrucciones para reescribir el Capítulo ' + n + ':';
+  var ta = document.getElementById('ch-rewrite-instructions');
+  if(ta){ ta.value = ''; ta.focus(); }
+  var panel = document.getElementById('ch-rewrite-panel');
+  if(panel){ panel.style.display = 'block'; panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }
+}
+
+async function runChRewrite(){
+  var n = S.chRewriteTarget;
+  if(!n){ return; }
+  var instructions = (document.getElementById('ch-rewrite-instructions') || {}).value || '';
+  instructions = instructions.trim();
+  if(!instructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
+
+  var ebook = S.finalEbook || S.ebookData;
+  if(!ebook){ alert('No hay ebook activo. Genera el ebook primero.'); return; }
+
+  var panel = document.getElementById('ch-rewrite-panel');
+  if(panel) panel.style.display = 'none';
+
+  var statusEl = document.getElementById('ch-rewrite-status');
+  statusEl.style.background = 'rgba(0,184,148,0.1)';
+  statusEl.style.color = '#00b894';
+  statusEl.textContent = '🔄 Regenerando capítulo ' + n + '... esto puede tardar 30-60 segundos.';
+  statusEl.style.display = 'block';
+
+  var o = S.selOpp || {};
+  var secId = 'ch' + n;
+  var chPayload = {
+    opportunity: o,
+    author: S.author || 'Ferni Guides',
+    section: secId,
+    userInstructions: instructions,
+    ebookDefs: S.ebookDefs || null,
+    ebookOutline: S.ebookOutline || null
+  };
+  if(S.ebookSerperContext) chPayload.serperContext = S.ebookSerperContext;
+
+  try {
+    var cr = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(chPayload)});
+    var cd = await cr.json();
+    if(cd.success && cd.data){
+      var chData = cd.data['chapter' + n];
+      if(chData && ebook.chapters && ebook.chapters[n-1]){
+        ebook.chapters[n-1] = chData;
+        if(S.finalEbook) S.finalEbook = ebook;
+        else S.ebookData = ebook;
+        var lang = S.approvedLang || o.idioma || o.language || 'Español';
+        var countryName = S.countryName || o.pais || o.country || '';
+        S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
+        var previewDraft = document.getElementById('eb-draft-preview');
+        var previewFinal = document.getElementById('eb-final-preview');
+        if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
+        if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
+        if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+        statusEl.style.background = 'rgba(0,184,148,0.15)';
+        statusEl.textContent = '✅ Capítulo ' + n + ' reescrito con tus instrucciones. Revísalo en el PDF de arriba.';
+      } else {
+        statusEl.style.background = 'rgba(231,76,60,0.1)';
+        statusEl.style.color = '#e74c3c';
+        statusEl.textContent = '❌ El servidor no devolvió los datos del capítulo. Intenta de nuevo.';
+      }
+    } else {
+      statusEl.style.background = 'rgba(231,76,60,0.1)';
+      statusEl.style.color = '#e74c3c';
+      statusEl.textContent = '❌ Error: ' + (cd.error || 'desconocido');
+    }
+  } catch(e){
+    statusEl.style.background = 'rgba(231,76,60,0.1)';
+    statusEl.style.color = '#e74c3c';
+    statusEl.textContent = '❌ Error de red: ' + e.message;
   }
 }
 
