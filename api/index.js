@@ -1121,14 +1121,13 @@ app.post('/api/generate-chapter', async function(req, res) {
       maxTokens = Math.max(1000, numChapters * 200);
 
     } else if (section === 'ending') {
-      prompt = 'Escribe la conclusion, plan de accion, recursos y aviso legal del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
-        ' conclusion: 150-200 palabras MAXIMO inspiradoras con llamada a accion.' +
-        ' actionPlan: exactamente 3 strings cortos — accion concreta + tiempo estimado (max 30 palabras cada una).' +
-        ' resources: 3 strings cortos — recurso real disponible en ' + countryName + ' (max 20 palabras cada uno).' +
-        ' legalSection: objeto con healthDisclaimer, guarantee, dataProtection, copyright.' +
+      prompt = 'Escribe la conclusion, plan de accion y recursos del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
+        ' conclusion: 120-160 palabras inspiradoras con llamada a accion.' +
+        ' actionPlan: exactamente 3 strings — accion concreta del tema con tiempo estimado (max 25 palabras c/u).' +
+        ' resources: 3 strings — recurso real util disponible en ' + countryName + ' (max 15 palabras c/u).' +
         ' ' + espInstruction +
-        JSON.stringify({conclusion:'[texto conclusion breve]',actionPlan:['[accion 1 concreta con tiempo]','[accion 2 concreta con tiempo]','[accion 3 concreta con tiempo]'],resources:['[recurso 1]','[recurso 2]','[recurso 3]'],legalSection:{healthDisclaimer:regs.healthDisclaimer,guarantee:regs.guarantee,dataProtection:regs.dataProtection,copyright:'© '+year+' Ferni Guides | Editorial especializada en guias practicas'}});
-      maxTokens = 1400;
+        JSON.stringify({conclusion:'[texto conclusion]',actionPlan:['[accion 1]','[accion 2]','[accion 3]'],resources:['[recurso 1]','[recurso 2]','[recurso 3]']});
+      maxTokens = 900;
 
     } else {
       // Handler generico para ch1-ch8
@@ -1191,6 +1190,16 @@ app.post('/api/generate-chapter', async function(req, res) {
     var data;
     try { data = extractJSON(chResult.text); } catch(e) { data = null; }
     if (!data) throw new Error('No se pudo parsear el capítulo. Usa el botón Reintentar.');
+
+    // Para la conclusión: inyectar legalSection desde regs (no la genera Claude — ya la tenemos)
+    if (section === 'ending' && data) {
+      data.legalSection = {
+        healthDisclaimer: regs.healthDisclaimer,
+        guarantee: regs.guarantee,
+        dataProtection: regs.dataProtection,
+        copyright: '© ' + year + ' Ferni Guides | Editorial especializada en guias practicas'
+      };
+    }
 
     res.json({ success: true, section: section, data: data });
   } catch (e) {
