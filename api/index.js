@@ -1023,9 +1023,9 @@ app.post('/api/generate-chapter', async function(req, res) {
   if (serperContext) {
     ctx += '\n\nDATOS WEB DE REFERENCIA (usar cifras reales citando la fuente):\n' + serperContext;
   }
-  // topicInstructions: instrucciones completas del usuario del módulo Directo.
-  // Se pasan siempre (generación inicial + reescritura) para que Claude conozca la estructura exacta pedida.
-  if (topicInstructions) {
+  // topicInstructions: solo para capítulos (ch1-chN), no para header/outline/ending
+  var isChapterSection = /^ch\d+$/.test(section || '');
+  if (topicInstructions && isChapterSection) {
     ctx += '\n\nINSTRUCCIONES DEL AUTOR PARA ESTE EBOOK (estructura, formato y contenido OBLIGATORIO — sigue exactamente lo que se pide, tiene máxima prioridad):\n' + topicInstructions;
   }
   var isRewrite = userInstructions.length > 0;
