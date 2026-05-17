@@ -1073,9 +1073,9 @@ app.post('/api/generate-chapter', async function(req, res) {
     var chLimit = isRewrite
       ? 'SIN LIMITE DE EXTENSION: desarrolla el contenido completo segun las instrucciones del autor. No recortes ni resumas — escribe todo lo necesario aunque el capitulo sea mas largo que lo habitual.'
       : topicInstructions
-        ? 'EXTENSION OBJETIVO: opening 60-80 palabras MAXIMO, content 500-600 palabras MAXIMO. Respeta EXACTAMENTE la estructura y secciones pedidas en las instrucciones del autor — aunque seas breve en cada seccion, incluye TODAS las secciones indicadas. Cumple el JSON completo.'
+        ? 'EXTENSION OBJETIVO: opening 50-70 palabras MAXIMO, content 350-450 palabras MAXIMO. Respeta la estructura pedida en las instrucciones del autor — aunque seas breve, incluye las secciones clave. Prioriza cumplir el JSON completo sobre la extension.'
         : 'EXTENSION OBJETIVO: opening 60-80 palabras MAXIMO, content 400-500 palabras MAXIMO. Extremadamente conciso — el ebook se puede expandir capitulo por capitulo despues. Cumple el JSON completo.';
-    var chMaxTokens = isRewrite ? 8000 : (topicInstructions ? 2000 : 1800);
+    var chMaxTokens = isRewrite ? 8000 : 1800;
 
     // Llamada de continuación: solo genera texto adicional para el campo content, sin JSON
     if (isContinuation) {
