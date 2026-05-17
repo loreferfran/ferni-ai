@@ -1121,6 +1121,7 @@ async function generateDirectEbook(){
     try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); }catch(e){}
 
     document.getElementById('dir-load-txt').textContent = 'Brief listo — generando ebook con Claude...';
+    S.directTopic = topic; // guardar prompt original para detección de capítulos
     // Resetear form para próxima vez
     setTimeout(function(){ show('dir-form'); hide('dir-loading'); hide('dir-error'); }, 500);
     // Ir al tab ebook y lanzar generación — Módulo 2: solo Claude, verificación estándar
@@ -1319,8 +1320,11 @@ async function runEbookSteps(startFrom){
 }
 
 function parseNumChapters(instructions) {
-  var m = (instructions || '').match(/(\d+)\s*cap[ií]tulos?/i);
-  if (m) { var n = parseInt(m[1]); if (n >= 4 && n <= 8) return n; }
+  // Busca en instrucciones + topic del módulo Directo
+  var text = (instructions || '') + ' ' + (S.directTopic || '');
+  // Acepta: "7 capítulos", "capítulos: 7", "capítulos=7", "capítulos(7)"
+  var m = text.match(/(\d+)\s*cap[ií]tulos?|cap[ií]tulos?\s*[:=(]?\s*(\d+)/i);
+  if (m) { var n = parseInt(m[1] || m[2]); if (n >= 4 && n <= 8) return n; }
   return 4;
 }
 
