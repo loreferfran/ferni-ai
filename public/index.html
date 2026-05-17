@@ -1256,9 +1256,25 @@ async function runEbookSteps(startFrom){
       if(ebookDefs) chPayload.ebookDefs = ebookDefs;
       if(ebookOutline) chPayload.ebookOutline = ebookOutline;
       if(S.ebookSerperContext) chPayload.serperContext = S.ebookSerperContext;
-      var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
-      var sd = await sr.json();
-      if(!sd.success) throw { section: sec, message: sd.error };
+      // Auto-reintento: hasta 2 reintentos automáticos antes de mostrar error al usuario
+      var sd = null; var lastErr = null;
+      for(var attempt=0; attempt<=2; attempt++){
+        if(attempt > 0){
+          ebStep(sec,'active');
+          loadEl.textContent = 'Reintentando ' + label.replace('...','') + ' (intento '+(attempt+1)+')...';
+          await new Promise(function(r){ setTimeout(r, 4000); });
+        }
+        try{
+          var sr = await fetch('/api/generate-chapter',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chPayload),signal:abort.signal});
+          sd = await sr.json();
+          if(sd.success) break;
+          lastErr = sd.error;
+        } catch(fe){
+          if(fe && fe.name==='AbortError') throw fe;
+          lastErr = fe.message;
+        }
+      }
+      if(!sd || !sd.success) throw { section: sec, message: lastErr };
       parts[sec] = sd.data;
       S.ebookParts = parts; // guardar progreso
       if(sec==='header' && sd.data.definitions){ ebookDefs=sd.data.definitions; S.ebookDefs=ebookDefs; }

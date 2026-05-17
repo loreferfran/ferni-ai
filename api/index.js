@@ -1008,8 +1008,8 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ebookOutline = req.body.ebookOutline || null; // plan de capitulos (del step 'outline')
   var userInstructions = (req.body.userInstructions || '').trim();
   var topicInstructions = (req.body.topicInstructions || '').trim();
-  // Truncar topicInstructions si viene muy largo (prompt del usuario del módulo Directo)
-  if (topicInstructions.length > 3000) topicInstructions = topicInstructions.slice(0, 3000);
+  // Truncar topicInstructions — máx 1200 chars para no sobrepasar el límite de tiempo por capítulo
+  if (topicInstructions.length > 1200) topicInstructions = topicInstructions.slice(0, 1200);
   var serperContext = (req.body.serperContext || '').trim();
   // Truncar serperContext — el contexto completo de 3 búsquedas puede ser 6000+ chars
   // y hace que cada capítulo tome >60s (timeout Vercel). Máx 1500 chars es suficiente.
