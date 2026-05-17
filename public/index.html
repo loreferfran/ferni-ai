@@ -2286,7 +2286,7 @@ async function runChRewrite(){
   rawInstructions = rawInstructions.trim();
   if(!rawInstructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
 
-  // Detectar separador ---PARTE 2--- para dividir en 2 llamadas
+  // Detectar separador --- PARTE 2 --- para dividir el contenido en 2 llamadas
   var splitSep = /\n\s*---+\s*PARTE\s*2\s*---+\s*\n/i;
   var hasSplit = splitSep.test(rawInstructions);
   var part1Instructions = rawInstructions;
@@ -2304,8 +2304,6 @@ async function runChRewrite(){
   if(panel) panel.style.display = 'none';
 
   var statusEl = document.getElementById('ch-rewrite-status');
-  statusEl.style.background = 'rgba(0,184,148,0.1)';
-  statusEl.style.color = '#00b894';
   statusEl.style.display = 'block';
 
   var o = S.selOpp || {};
@@ -2319,48 +2317,65 @@ async function runChRewrite(){
   };
   if(S.ebookSerperContext) basePayload.serperContext = S.ebookSerperContext;
 
-  function setStatus(msg, ok){ statusEl.textContent = msg; statusEl.style.background = ok === false ? 'rgba(231,76,60,0.1)' : 'rgba(0,184,148,0.1)'; statusEl.style.color = ok === false ? '#e74c3c' : '#00b894'; }
+  function setStatus(msg, isErr){
+    statusEl.textContent = msg;
+    statusEl.style.background = isErr ? 'rgba(231,76,60,0.1)' : 'rgba(0,184,148,0.1)';
+    statusEl.style.color = isErr ? '#e74c3c' : '#00b894';
+  }
+  function errMsg(e, fallback){
+    if(!e) return fallback || 'Error desconocido';
+    if(typeof e === 'string') return e;
+    if(e.message && typeof e.message === 'string' && e.message !== '[object Object]') return e.message;
+    return JSON.stringify(e).slice(0, 200);
+  }
 
   try {
-    // — Llamada 1: genera el capítulo completo con la Parte 1 de instrucciones —
-    setStatus(hasSplit ? '🔄 Parte 1/2: generando estructura y primeras secciones...' : '🔄 Regenerando capítulo ' + n + '... esto puede tardar 30-60 segundos.', true);
-    var payload1 = Object.assign({}, basePayload, { userInstructions: part1Instructions });
-    var cr = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload1)});
-    var cd = await cr.json();
-    if(!cd.success || !cd.data) throw new Error(cd.error || 'Error en Parte 1');
-    var chData = cd.data['chapter' + n];
-    if(!chData || !ebook.chapters || !ebook.chapters[n-1]) throw new Error('El servidor no devolvió los datos del capítulo.');
+    var totalSteps = hasSplit ? 3 : 2;
 
-    // — Llamada 2 (si hay PARTE 2): obtiene continuación del content —
+    // Paso 1: metadata (title, opening, keyPoints, exercise) — ~15s
+    setStatus('🔄 Paso 1/' + totalSteps + ': generando estructura del capítulo...', false);
+    var metaPayload = Object.assign({}, basePayload, { metadataOnly: true, userInstructions: part1Instructions });
+    var metaResp = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(metaPayload)});
+    if(!metaResp.ok) throw new Error('HTTP ' + metaResp.status + ' en paso 1');
+    var metaData = await metaResp.json();
+    if(!metaData.success) throw new Error(errMsg(metaData.error, 'Error en paso 1'));
+    var chData = (metaData.data && metaData.data['chapter' + n]) || { number: n };
+
+    // Paso 2: contenido parte 1 como texto puro — ~40s
+    setStatus('🔄 Paso 2/' + totalSteps + ': generando contenido' + (hasSplit ? ' (primera parte)' : '') + '...', false);
+    var co1Payload = Object.assign({}, basePayload, { contentOnly: true, userInstructions: part1Instructions });
+    var co1Resp = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(co1Payload)});
+    if(!co1Resp.ok) throw new Error('HTTP ' + co1Resp.status + ' en paso 2');
+    var co1Data = await co1Resp.json();
+    if(!co1Data.success) throw new Error(errMsg(co1Data.error, 'Error en paso 2'));
+    chData.content = co1Data.content || '';
+
+    // Paso 3 (si hay PARTE 2): contenido parte 2 — ~40s
     if(hasSplit && part2Instructions){
-      setStatus('🔄 Parte 2/2: generando secciones restantes...', true);
-      var payload2 = Object.assign({}, basePayload, {
-        userInstructions: part2Instructions,
-        isContinuation: true,
-        previousContent: chData.content || ''
-      });
-      var cr2 = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload2)});
-      var cd2 = await cr2.json();
-      if(cd2.success && cd2.continuation){
-        chData.content = (chData.content || '') + '\n\n' + cd2.continuation;
-      }
+      setStatus('🔄 Paso 3/3: generando segunda parte del contenido...', false);
+      var co2Payload = Object.assign({}, basePayload, { contentOnly: true, userInstructions: part2Instructions, previousContent: chData.content });
+      var co2Resp = await fetch('/api/generate-chapter', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(co2Payload)});
+      if(!co2Resp.ok) throw new Error('HTTP ' + co2Resp.status + ' en paso 3');
+      var co2Data = await co2Resp.json();
+      if(co2Data.success && co2Data.content) chData.content += '\n\n' + co2Data.content;
     }
 
+    if(!ebook.chapters || !ebook.chapters[n-1]) throw new Error('El ebook no tiene un capítulo ' + n + ' para reemplazar.');
     ebook.chapters[n-1] = chData;
     if(S.finalEbook) S.finalEbook = ebook;
     else S.ebookData = ebook;
     var lang = S.approvedLang || o.idioma || o.language || 'Español';
-    var countryName = S.countryName || o.pais || o.country || '';
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
+    var cName = S.countryName || o.pais || o.country || '';
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
     var previewDraft = document.getElementById('eb-draft-preview');
     var previewFinal = document.getElementById('eb-final-preview');
     if(previewDraft) previewDraft.srcdoc = S.pdfHtml;
     if(previewFinal) previewFinal.srcdoc = S.pdfHtml;
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-    setStatus('✅ Capítulo ' + n + ' reescrito' + (hasSplit ? ' (2 partes combinadas)' : '') + '. Revísalo en el PDF de arriba.', true);
+    setStatus('✅ Capítulo ' + n + ' reescrito' + (hasSplit ? ' en 3 pasos' : '') + '. Revísalo en el PDF.', false);
 
   } catch(e){
-    setStatus('❌ Error: ' + e.message, false);
+    setStatus('❌ ' + errMsg(e, 'Error desconocido'), true);
   }
 }
 
