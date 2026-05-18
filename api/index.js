@@ -392,12 +392,13 @@ function buildSmartQueries(country, niche, language) {
   return queries.slice(0, 20);
 }
 
-async function claudeCall(system, userContent, maxTokens, returnFull) {
+async function claudeCall(system, userContent, maxTokens, returnFull, model) {
   maxTokens = maxTokens || 4000;
+  model = model || 'claude-sonnet-4-6';
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, system: system, messages: [{ role: 'user', content: userContent }] })
+    body: JSON.stringify({ model: model, max_tokens: maxTokens, system: system, messages: [{ role: 'user', content: userContent }] })
   });
   const raw = await resp.text();
   let d;
@@ -1431,11 +1432,12 @@ app.post('/api/translate-chapter', async function(req, res) {
     ' Keep it natural and fluent. Preserve all numbers, measurements, and the author name "' + author + '". Return ONLY the translated text, nothing else.';
   var sysJson = 'You are a professional literary translator. Translate the following JSON values to ' + language + mkt +
     ' RULES: preserve all JSON keys in English, translate only string values. Preserve numbers and "' + author + '". Return ONLY valid JSON, no markdown.';
+  var HAIKU = 'claude-haiku-4-5-20251001';
   async function txtTranslate(text, maxTok) {
-    return (await claudeCall(sysTxt, 'Translate this text:\n\n' + text, maxTok || 6000)).trim();
+    return (await claudeCall(sysTxt, 'Translate this text:\n\n' + text, maxTok || 4000, false, HAIKU)).trim();
   }
   async function jsonTranslate(obj, maxTok) {
-    var raw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(obj), maxTok || 3000);
+    var raw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(obj), maxTok || 2000, false, HAIKU);
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) { return obj; }
   }
