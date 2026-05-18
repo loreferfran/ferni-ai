@@ -3608,6 +3608,11 @@ function getHmEbookData(val){
 }
 
 function genHotmartFromSel(){
+  // Si ya hay ebook activo, regenerar directamente sin pasar por el selector
+  if(S.selOpp && (S.finalEbook || S.ebookData)){
+    genHotmart(S.selOpp, S.approvedLang || null, S.finalEbook || S.ebookData);
+    return;
+  }
   var val = document.getElementById('hm-ebook-sel') && document.getElementById('hm-ebook-sel').value;
   if(!val){ alert('Selecciona primero un ebook de la lista.'); return; }
   var data = getHmEbookData(val);
