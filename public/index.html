@@ -1753,30 +1753,62 @@ async function approveEbook(){
   var targetMarket = (marketEl && marketEl.value.trim()) || o.targetMarket || o.pais || o.country || '';
 
   hide('eb-content'); show('eb-loading');
-  document.getElementById('eb-load-txt').textContent = 'Traduciendo al ' + lang + ' para ' + targetMarket + '...';
+  var loadEl = document.getElementById('eb-load-txt');
+
+  // Función auxiliar: traduce una pieza, reintenta 1 vez si falla
+  async function translatePiece(piece, label) {
+    loadEl.textContent = 'Traduciendo ' + label + ' al ' + lang + '...';
+    for(var attempt = 0; attempt <= 1; attempt++) {
+      if(attempt > 0) { loadEl.textContent = 'Reintentando ' + label + '...'; await new Promise(function(r){ setTimeout(r, 3000); }); }
+      var r = await fetch('/api/translate-chapter', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ piece: piece, language: lang, targetMarket: targetMarket, author: 'Ferni Guides' })
+      });
+      var d = await r.json();
+      if(d.success) return d.translated;
+    }
+    throw new Error('Error traduciendo ' + label);
+  }
 
   try {
-    const tr = await fetch('/api/translate-custom', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ ebook: S.ebookData, language: lang, targetMarket: targetMarket, author: 'Ferni Guides' })
-    });
-    const td = await tr.json();
-    if(!td.success) throw new Error(td.error || 'Error');
-    S.finalEbook = td.ebook;
+    var eb = S.ebookData;
+    var chapters = eb.chapters || [];
+
+    // 1. Cabecera: título, subtítulo, intro
+    var tHeader = await translatePiece({ title: eb.title, subtitle: eb.subtitle, tagline: eb.tagline, intro: eb.intro }, 'introducción');
+
+    // 2. Cada capítulo por separado
+    var tChapters = [];
+    for(var i = 0; i < chapters.length; i++) {
+      var tCh = await translatePiece({ chapter: chapters[i] }, 'Capítulo ' + (i+1) + ' de ' + chapters.length);
+      tChapters.push(tCh.chapter || tCh);
+    }
+
+    // 3. Conclusión
+    var tEnd = await translatePiece({ conclusion: eb.conclusion, actionPlan: eb.actionPlan, resources: eb.resources, legalSection: eb.legalSection }, 'conclusión');
+
+    var translated = {
+      title: tHeader.title || eb.title,
+      subtitle: tHeader.subtitle || eb.subtitle,
+      tagline: tHeader.tagline || eb.tagline,
+      intro: tHeader.intro || eb.intro,
+      chapters: tChapters,
+      conclusion: tEnd.conclusion || eb.conclusion,
+      actionPlan: tEnd.actionPlan || eb.actionPlan,
+      resources: tEnd.resources || eb.resources,
+      legalSection: tEnd.legalSection || eb.legalSection
+    };
+
+    S.finalEbook = translated;
     S.approvedLang = lang;
-
-    S.pdfHtml = buildFinalPdfHtml(td.ebook, o, lang, lang, S.coverUrl, S.chapterImages);
-
+    S.pdfHtml = buildFinalPdfHtml(translated, o, lang, lang, S.coverUrl, S.chapterImages);
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
     document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
-
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
-
-    addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar. Revísalo arriba — si quieres algún ajuste escríbelo en el chat y presiona "Aplicar corrección".', 'ferni');
+    addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar.', 'ferni');
 
   } catch(e) {
     hide('eb-loading'); show('eb-content');

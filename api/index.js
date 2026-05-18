@@ -1418,6 +1418,41 @@ app.post('/api/translate-custom', async function(req, res) {
   }
 });
 
+// Traducción pieza por pieza — 1 llamada Claude por pieza, nunca supera 60s
+app.post('/api/translate-chapter', async function(req, res) {
+  var piece = req.body.piece;       // objeto a traducir (header, chapter, o conclusion)
+  var language = req.body.language;
+  var targetMarket = req.body.targetMarket || '';
+  var author = req.body.author || 'Ferni Guides';
+  if (!piece || !language) return res.status(400).json({ success: false, error: 'Faltan datos' });
+  var marketRule = targetMarket
+    ? ' TARGET MARKET: ' + targetMarket + '. Translate to ' + language + ' specifically native to ' + targetMarket + ' — use local expressions, idioms and cultural references.'
+    : '';
+  var sys = 'You are a professional literary translator expert in ' + language + (targetMarket ? ' for the ' + targetMarket + ' market' : '') + '.' +
+    ' Translate the JSON provided into ' + language + ' in a natural, fluent, market-native way.' +
+    ' RULES: 1. Most natural ' + language + ' possible — feel written originally in this language.' +
+    ' 2. Preserve EXACTLY all numbers, measurements, quantities.' +
+    ' 3. Preserve author name: ' + author + ' — do NOT translate.' +
+    ' 4. Preserve all JSON keys in English, translate only string values.' +
+    ' 5. Return ONLY valid JSON, no markdown, no extra text.' + marketRule;
+  try {
+    var raw = await claudeCall(sys, 'Translate this JSON:\n' + JSON.stringify(piece), 8000);
+    var cleaned = raw.replace(/```json|```/g, '').trim();
+    var translated;
+    try { translated = JSON.parse(cleaned); }
+    catch(e) {
+      // Intentar reparar JSON truncado
+      var fixed = cleaned.replace(/,\s*$/, '') + '"}';
+      try { translated = JSON.parse(fixed); } catch(e2) {
+        return res.status(500).json({ success: false, error: 'JSON truncado en traducción' });
+      }
+    }
+    res.json({ success: true, translated: translated });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Módulo Directo: GPT-4o genera el brief de producción sin búsqueda Serper
 app.post('/api/quick-brief', async function(req, res) {
   var topic = (req.body.topic || '').trim();
