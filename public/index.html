@@ -1433,21 +1433,22 @@ function rebuildRewriteBtns(nc) {
   var btStyle = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;';
   var html = '';
   for (var i = 1; i <= nc; i++) html += '<button onclick="openChRewrite('+i+')" style="'+btStyle+'">Cap '+i+'</button>';
+  html += '<button onclick="openChRewrite(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
   var c1 = document.getElementById('ch-rewrite-btns'); if(c1) c1.innerHTML = html;
-  // También poblar el panel de la vista final
   var html2 = '';
   for (var j = 1; j <= nc; j++) html2 += '<button onclick="openChRewriteFin('+j+')" style="'+btStyle+'">Cap '+j+'</button>';
+  html2 += '<button onclick="openChRewriteFin(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
   var c2 = document.getElementById('ch-rewrite-btns-fin'); if(c2) c2.innerHTML = html2;
 }
 
 function openChRewriteFin(n) {
   S.chRewriteTarget = n;
-  // Resaltar botón activo
   var btns = document.querySelectorAll('#ch-rewrite-btns-fin button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; });
-  if(btns[n-1]){ btns[n-1].style.background='#00b894'; btns[n-1].style.color='white'; btns[n-1].style.border='1px solid #00b894'; }
+  var activeIdx = (n === 'conclusion') ? btns.length - 1 : n - 1;
+  if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var lbl = document.getElementById('ch-rewrite-label-fin');
-  if(lbl) lbl.textContent = 'Capítulo ' + n;
+  if(lbl) lbl.textContent = (n === 'conclusion') ? 'Conclusión / Disclaimer' : 'Capítulo ' + n;
   var ta = document.getElementById('ch-rewrite-instructions-fin');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel-fin');
@@ -2630,12 +2631,12 @@ async function sendCorrectionChat(){
 
 function openChRewrite(n){
   S.chRewriteTarget = n;
-  // Destacar botón seleccionado
   var btns = document.querySelectorAll('#ch-rewrite-btns button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; b.style.fontWeight='600'; });
-  if(btns[n-1]){ btns[n-1].style.background='#00b894'; btns[n-1].style.color='white'; btns[n-1].style.border='1px solid #00b894'; }
+  var activeIdx = (n === 'conclusion') ? btns.length - 1 : n - 1;
+  if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var label = document.getElementById('ch-rewrite-label');
-  if(label) label.textContent = 'Instrucciones para el Capítulo ' + n + ':';
+  if(label) label.textContent = (n === 'conclusion') ? 'Instrucciones para la Conclusión / Disclaimer:' : 'Instrucciones para el Capítulo ' + n + ':';
   var ta = document.getElementById('ch-rewrite-instructions');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel');
@@ -2678,11 +2679,13 @@ async function runChPatch(){
   var n = S.chRewriteTarget;
   if(!n){ return; }
   var instruction = ((document.getElementById('ch-rewrite-instructions') || {}).value || '').trim();
-  if(!instruction){ alert('Escribe qué quieres corregir en el capítulo ' + n + '.'); return; }
+  if(!instruction){ alert('Escribe qué quieres corregir.'); return; }
   var ebook = S.finalEbook || S.ebookData;
-  if(!ebook || !ebook.chapters || !ebook.chapters[n-1]){ alert('No hay capítulo ' + n + ' cargado.'); return; }
-  // Guardar snapshot antes de modificar
-  saveChSnapshot(n, ebook.chapters[n-1]);
+  if(!ebook){ alert('No hay ebook cargado.'); return; }
+  var isConclusion = (n === 'conclusion');
+  if(!isConclusion && (!ebook.chapters || !ebook.chapters[n-1])){ alert('No hay capítulo ' + n + ' cargado.'); return; }
+
+  if(!isConclusion) saveChSnapshot(n, ebook.chapters[n-1]);
   var panel = document.getElementById('ch-rewrite-panel');
   if(panel) panel.style.display = 'none';
   var statusEl = document.getElementById('ch-rewrite-status');
@@ -2690,28 +2693,34 @@ async function runChPatch(){
   statusEl.style.background = 'rgba(9,132,227,0.1)';
   statusEl.style.color = '#0984e3';
 
-  // Detección de reemplazos simples: "reemplaza X por Y", "cambia X a Y", "sustituye X por Y"
-  // Se aplican directamente en el frontend sin llamar a la API
+  // Detección de reemplazos simples
   var quickMatch = instruction.match(/(?:reemplaz[ae]|cambi[ae]|sustituye?)\s+["']?(.+?)["']?\s+(?:por|a|con)\s+["']?(.+?)["']?\.?\s*$/i);
-  if (!quickMatch) {
-    // Intentar patrón "X → Y" o "X -> Y" o "X por Y"
-    quickMatch = instruction.match(/["']?(.+?)["']?\s*(?:→|->|por|a)\s*["']?(.+?)["']?\.?\s*$/i);
-  }
+  if (!quickMatch) quickMatch = instruction.match(/["']?(.+?)["']?\s*(?:→|->)\s*["']?(.+?)["']?\.?\s*$/i);
   var didQuickPatch = false;
   if (quickMatch) {
     var findStr = quickMatch[1].trim();
     var replStr = quickMatch[2].trim();
-    // Solo aplicar si la búsqueda es corta (símbolo o palabra, no frase larga) para evitar falsos positivos
     if (findStr.length <= 20 && replStr.length <= 20) {
       try {
-        var chStr = JSON.stringify(ebook.chapters[n-1]);
+        var targetObj = isConclusion
+          ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
+          : ebook.chapters[n-1];
+        var chStr = JSON.stringify(targetObj);
         var escaped = findStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         var replaced = chStr.replace(new RegExp(escaped, 'g'), replStr);
         if (replaced !== chStr) {
-          ebook.chapters[n-1] = JSON.parse(replaced);
+          var parsed = JSON.parse(replaced);
+          if (isConclusion) {
+            if(parsed.conclusion !== undefined) ebook.conclusion = parsed.conclusion;
+            if(parsed.legalSection !== undefined) ebook.legalSection = parsed.legalSection;
+            if(parsed.actionPlan !== undefined) ebook.actionPlan = parsed.actionPlan;
+            if(parsed.resources !== undefined) ebook.resources = parsed.resources;
+          } else {
+            ebook.chapters[n-1] = parsed;
+          }
           didQuickPatch = true;
         } else {
-          statusEl.textContent = '⚠️ No se encontró "' + findStr + '" en el capítulo ' + n + '.';
+          statusEl.textContent = '⚠️ No se encontró "' + findStr + '" en la sección seleccionada.';
           statusEl.style.background = 'rgba(253,203,110,0.1)'; statusEl.style.color = '#fdcb6e';
           return;
         }
@@ -2727,21 +2736,31 @@ async function runChPatch(){
     S.pdfHtml = buildFinalPdfHtml(ebook, o2, lang2, cName2, S.coverUrl, S.chapterImages||[]);
     var prev0 = document.getElementById('eb-draft-preview'); if(prev0) prev0.srcdoc = S.pdfHtml;
     var prev02 = document.getElementById('eb-final-preview'); if(prev02) prev02.srcdoc = S.pdfHtml;
-    statusEl.textContent = '✅ Corrección aplicada al instante. Si no te gusta, usa "Restaurar versión anterior".';
+    statusEl.textContent = '✅ Corrección aplicada al instante.';
     statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
     return;
   }
 
-  statusEl.textContent = '✏️ Aplicando corrección al capítulo ' + n + '...';
+  statusEl.textContent = isConclusion ? '✏️ Aplicando corrección a la conclusión...' : '✏️ Aplicando corrección al capítulo ' + n + '...';
   try {
     var o = S.selOpp || {};
+    var chapterData = isConclusion
+      ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
+      : ebook.chapters[n-1];
     var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
-      opportunity: o, chapterNumber: n, chapterData: ebook.chapters[n-1],
-      instruction: instruction, ebookDefs: S.ebookDefs || null
+      opportunity: o, chapterNumber: isConclusion ? 'conclusion' : n,
+      chapterData: chapterData, instruction: instruction, ebookDefs: S.ebookDefs || null
     })});
     var d = await r.json();
     if(!d.success) throw new Error(d.error || 'Error en corrección');
-    ebook.chapters[n-1] = d.chapter;
+    if (isConclusion) {
+      if(d.chapter.conclusion !== undefined) ebook.conclusion = d.chapter.conclusion;
+      if(d.chapter.legalSection !== undefined) ebook.legalSection = d.chapter.legalSection;
+      if(d.chapter.actionPlan !== undefined) ebook.actionPlan = d.chapter.actionPlan;
+      if(d.chapter.resources !== undefined) ebook.resources = d.chapter.resources;
+    } else {
+      ebook.chapters[n-1] = d.chapter;
+    }
     if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     var lang = S.approvedLang || o.idioma || o.language || 'Español';
@@ -2749,7 +2768,7 @@ async function runChPatch(){
     S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
     var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
     var prev2 = document.getElementById('eb-final-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
-    statusEl.textContent = '✅ Corrección aplicada y guardada. Si no te gusta, usa "Restaurar versión anterior".';
+    statusEl.textContent = '✅ Corrección aplicada y guardada.';
     statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
   } catch(e) {
     statusEl.textContent = '❌ Error: ' + (e.message || e);
