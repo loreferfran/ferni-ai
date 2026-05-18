@@ -735,6 +735,12 @@ function idbSet(key, val) {
     try { db.transaction('imgs','readwrite').objectStore('imgs').put(val, key); } catch(e){}
   });
 }
+function idbDel(key) {
+  getIDB(function(db) {
+    if (!db) return;
+    try { db.transaction('imgs','readwrite').objectStore('imgs').delete(key); } catch(e){}
+  });
+}
 function idbGet(key, cb) {
   getIDB(function(db) {
     if (!db) return cb(null);
@@ -1558,8 +1564,10 @@ function removeSlotImage(slotIndex){
   if(slotIndex === 'cover' || slotIndex === -1){
     S.coverUrl = null;
     S.coverTitle = null; S.coverSubtitle = null; S.coverHook = null;
+    if(S.currentHistId) idbDel('img_'+S.currentHistId+'_cover');
   } else {
     if(S.chapterImages) S.chapterImages[slotIndex] = null;
+    if(S.currentHistId) idbDel('img_'+S.currentHistId+'_ch'+slotIndex);
   }
   var lang = S.approvedLang || o.idioma || o.language || 'Español';
   var cName = S.countryName || o.pais || o.country || '';
