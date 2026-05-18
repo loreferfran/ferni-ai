@@ -3365,7 +3365,7 @@ async function genHotmart(o, langOverride, ebookOverride){
   try{
     const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket,ebook:ebook})});
     const d=await resp.json();
-    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart','✦ Kit Marketing listo — '+lang+' · Mercado: '+targetMarket+'. Revisa cada sección y dime si cambio algo.','ferni'); }
+    if(d.success){ S.hmKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart','✦ Kit Marketing listo — '+lang+' · Mercado: '+targetMarket+'. Revisa cada sección y dime si cambio algo.','ferni'); }
     else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit: '+d.error); }
   }catch(e){ hide('hm-loading'); show('hm-empty'); alert('Error: '+e.message); }
 }
