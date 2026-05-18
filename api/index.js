@@ -1641,7 +1641,8 @@ app.post('/api/generate-image', async function(req, res) {
     var coverInstructions = imageType === 'cover'
       ? ' IMPORTANT — THIS IS A COVER BACKGROUND IMAGE. Do NOT include any text, letters, words, numbers, titles, subtitles, logos, watermarks, or symbols of any kind. Zero text. The app will render all text on top of this image programmatically. ' + nicheComposition + ' General rules: no cropped elements, safe margins, no elements touching edges, vertical portrait composition 1024x1536, marketplace-ready premium infoproduct style, high perceived value.'
       : ' IMPORTANT SIZE AND LAYOUT INSTRUCTIONS: Image size must be exactly 1400 x 900 pixels. Landscape orientation for internal ebook page, centered composition, safe margins, balanced layout, no cropped elements, professional editorial style, optimized for PDF ebook formatting. Create a professional internal ebook image designed for the inside pages of a high-quality PDF guide. The image must be designed specifically for the inside pages of an ebook, not as a cover. Use a clean, professional, visually appealing style that matches the ebook topic. The composition must be centered, balanced, and easy to place inside a PDF page layout. Keep all important elements fully visible inside safe margins — do not crop the main subject, do not cut off objects, do not place important elements too close to the edges, avoid excessive zoom or close-up framing. Leave enough empty space around the borders to ensure the image fits naturally inside an ebook page. Do not include any text, letters, words, titles, subtitles, logos, watermarks, or promotional text. Use professional lighting, realistic details, polished composition, and premium editorial quality. Modern, clean, elegant, suitable for educational content, tutorials, guides, checklists, lessons, or informational sections. High resolution, professional publishing quality, no distorted elements, no cropped details, optimized for PDF ebook formatting and digital product presentation.';
-    var prompt = req.body.prompt + coverInstructions;
+    var noTextRule = ' ABSOLUTE RULE OVERRIDE: ZERO text in this image. No words, no letters, no numbers, no statistics, no captions, no labels, no signs with writing, no brand names written out. DALL-E cannot render readable text — any text will appear distorted and wrong. Use only visual scenes, objects, symbols, people, lighting, and color.';
+    var prompt = req.body.prompt + noTextRule + coverInstructions;
     var resp = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + OPENAI_KEY },
@@ -1720,14 +1721,15 @@ app.post('/api/generate-hotmart', async function(req, res) {
       'texts.cta_button — texto del botón de compra (máximo 5 palabras)\n\n' +
       '## SECCIÓN 2: PROMPTS DALL-E\n' +
       'Los prompts de imagen SIEMPRE en inglés (DALL-E solo entiende inglés).\n\n' +
-      'dalle_prompts.image_1 — Gancho: imagen con el miedo del público + promesa de solución. Detiene el scroll. Incluye texto en la imagen.\n' +
-      'dalle_prompts.image_2 — Mockup premium: el ebook flotando, iluminación cinematográfica, sin texto extra.\n' +
-      'dalle_prompts.image_3 — Credibilidad: autoridad + datos reales del mercado. Fuentes reales del ebook.\n' +
-      'dalle_prompts.image_4 — Beneficios: lista visual de los 4 beneficios más poderosos con iconos.\n' +
-      'dalle_prompts.image_5 — Cierre: CTA fuerte, urgencia sin agresividad, estilo premium.\n\n' +
-      'REGLAS DALL-E: paleta de colores del ebook, tipografía bold, fondo oscuro elegante, sin logos reales, sin texto distorsionado, estilo premium cinematográfico, nunca incluir precios.\n' +
-      'Cada prompt empieza con: "High quality digital marketing image for an ebook sales page."\n' +
-      'Cada prompt termina con: "No real brand logos. No distorted text. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
+      'dalle_prompts.image_1 — Gancho: escena visual del miedo o problema del público (personas frustradas, situación de estrés) + símbolo visual de transformación. Solo personas, objetos, escenas. CERO texto en imagen.\n' +
+      'dalle_prompts.image_2 — Mockup premium: el ebook físico flotando sobre fondo oscuro, iluminación cinematográfica, reflexión suave, aspecto de producto digital de lujo. CERO texto visible.\n' +
+      'dalle_prompts.image_3 — Credibilidad: escena profesional de éxito y autoridad — profesional seguro en su entorno, sala moderna, gráfico de crecimiento abstracto sin números ni palabras. Atmósfera de confianza. CERO texto, cero estadísticas, cero cifras, cero fuentes.\n' +
+      'dalle_prompts.image_4 — Beneficios: composición visual con 4 iconos o símbolos que representen los beneficios del ebook. Estilo visual sin palabras — solo formas e iconos que comuniquen resultado. CERO texto.\n' +
+      'dalle_prompts.image_5 — Cierre: escena aspiracional — persona de éxito tras resolver el problema, libertad, logro. Atmósfera premium de oportunidad. CERO texto.\n\n' +
+      'REGLA CRÍTICA: NUNCA describas texto, palabras, letras, números, estadísticas, fuentes, citas ni contenido escrito en el prompt. DALL-E SIEMPRE distorsiona el texto — queda ilegible e incorrecto. Describe SOLO escenas visuales, personas, objetos, colores, iluminación y atmósfera.\n' +
+      'REGLAS DALL-E: paleta oscura elegante, sin logos reales, estilo premium cinematográfico, nunca precios.\n' +
+      'Cada prompt empieza con: "High quality digital marketing image. ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO NUMBERS anywhere in the image."\n' +
+      'Cada prompt termina con: "No text of any kind. No written words. No statistics. No numbers. No signs. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
       'REGULACIONES MERCADO: ' + regs.legal + '. Garantía legal: ' + regs.guarantee + '.\n\n' +
       'Responde ÚNICAMENTE en JSON válido. Sin markdown. Sin explicaciones. Solo el JSON.\n' +
       'Estructura exacta: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "dalle_prompts": { "image_1":"","image_2":"","image_3":"","image_4":"","image_5":"" } }';
