@@ -824,13 +824,17 @@ function restoreEbookTab(){
   S.numChapters = nc;
   rebuildChapterSteps(nc);
   rebuildRewriteBtns(nc);
+  var _chatEb = document.getElementById('chat-area-ebook');
   if(S.finalEbook && S.selOpp){
     hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+    if(_chatEb) _chatEb.style.display = 'none';
   } else if(S.ebookData && S.selOpp){
     hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
+    if(_chatEb) _chatEb.style.display = '';
     renderDraft(S.selOpp, S.ebookData);
   } else {
     hide('eb-loading'); hide('eb-content'); hide('eb-approved'); show('eb-empty');
+    if(_chatEb) _chatEb.style.display = '';
   }
 }
 function restoreTranslateTab(){
@@ -1916,7 +1920,7 @@ async function approveEbook(){
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
-    if(chatArea) chatArea.style.display = '';
+    if(chatArea) chatArea.style.display = 'none';
     document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
