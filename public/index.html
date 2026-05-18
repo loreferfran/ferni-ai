@@ -813,7 +813,10 @@ function showTab(id,el){
   if(id==='ebook') restoreEbookTab();
   if(id==='translate') restoreTranslateTab();
   if(id==='extras' && S.extrasData){ hide('ex-empty'); hide('ex-loading'); show('ex-content'); }
-  if(id==='hotmart' && !S.hmKit) populateHmSel();
+  if(id==='hotmart'){
+    if(S.hmKit && S.selOpp){ hide('hm-empty'); hide('hm-loading'); show('hm-content'); renderHotmart(S.selOpp, S.hmKit, S.selOpp.pais||S.selOpp.country||''); }
+    else populateHmSel();
+  }
   if(id==='meta' && !S.maKit) populateMetaSel();
 }
 
@@ -3804,35 +3807,34 @@ function dlUpsell(idx){
 
 function dlHotmart(){
   if(!S.hmKit||!S.selOpp){alert('Genera el kit Hotmart primero.');return;}
-  const kit=S.hmKit; const o=S.selOpp; const author=S.author;
-  const lang = S.approvedLang || o.idioma || o.language || 'Español';
-  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;margin-bottom:20px;}h2{color:#6c5ce7;font-size:16px;margin-top:24px;margin-bottom:8px;}p,div{margin-bottom:8px;}.section{background:#f8f9ff;border-left:4px solid #6c5ce7;padding:12px 16px;margin:12px 0;border-radius:0 8px 8px 0;}.label{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;font-weight:bold;}</style></head><body>`;
-  html+=`<h1>KIT HOTMART — ${kit.productName||o.tituloEbook||o.ebookTitle}</h1>`;
-  html+=`<p><strong>Idioma:</strong> ${lang} · <strong>País:</strong> ${o.pais||o.country} · <strong>Precio:</strong> ${o.precioHotmart||o.hotmartPrice} · <strong>Autor:</strong> ${author}</p>`;
-  const s=(label,val)=>`<div class="section"><div class="label">${label}</div><div>${val}</div></div>`;
-  html+=s('Nombre del producto',kit.productName||'');
-  html+=s('Headline',kit.headline||'');
-  html+=s('Subheadline',kit.subheadline||'');
-  html+=s('Descripción corta',kit.shortDesc||'');
-  html+=s('Descripción larga',kit.longDesc||'');
-  html+=s('Beneficios',(kit.benefits||[]).map(b=>`✓ ${b}`).join('<br>'));
-  html+=s('Bullets de venta',(kit.bullets||[]).map(b=>`→ ${b}`).join('<br>'));
-  html+=s('Garantía',kit.guarantee||'');
-  html+=s('Bonus',(kit.bonus||[]).join('<br>'));
-  html+=s('Upsell',kit.upsell||'');
-  html+=s('Order Bump',kit.orderBump||'');
-  html+=s('Categoría',kit.category||'');
-  html+=s('CTA',kit.cta||'');
-  html+=`<h2>REDES SOCIALES</h2>`;
-  html+=s('Post Facebook',kit.facebookPost||'');
-  html+=s('Caption Instagram',kit.instagramCaption||'');
-  html+=s('Story Instagram',kit.instagramStory||'');
-  html+=s('Asunto Email',kit.emailSubject||'');
-  html+=s('Email Body',kit.emailBody||'');
-  html+=`</body></html>`;
-  const blob=new Blob([html],{type:'application/msword'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=`FERNI_HOTMART_${o.pais||o.country}_${lang}_${new Date().getFullYear()}.doc`; a.click();
+  var kit=S.hmKit; var o=S.selOpp; var author=S.author;
+  var lang = S.approvedLang || o.idioma || o.language || 'Español';
+  var s=function(label,val){ return val?'<div class="section"><div class="label">'+label+'</div><div>'+val+'</div></div>':''; };
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1a1a2e;line-height:1.8;font-size:14px;}h1{color:#2d3180;font-size:22px;border-bottom:3px solid #6c5ce7;padding-bottom:8px;margin-bottom:20px;}h2{color:#6c5ce7;font-size:16px;margin-top:28px;margin-bottom:8px;}.section{background:#f8f9ff;border-left:4px solid #6c5ce7;padding:12px 16px;margin:10px 0;border-radius:0 8px 8px 0;}.label{font-size:10px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;font-weight:bold;}</style></head><body>';
+  html+='<h1>KIT HOTMART — '+(kit.title||kit.productName||o.tituloEbook||o.ebookTitle||'')+'</h1>';
+  html+='<p><strong>Idioma:</strong> '+lang+' · <strong>Mercado:</strong> '+(o.pais||o.country||'')+' · <strong>Autor:</strong> '+author+'</p>';
+  html+='<h2>TEXTOS DE VENTA</h2>';
+  html+=s('Título del producto', kit.title||kit.productName||'');
+  html+=s('Subtítulo', kit.subtitle||kit.premiumSubtitle||'');
+  html+=s('Headline / Gancho', kit.headline||kit.emotionalHook||'');
+  html+=s('Descripción corta', kit.description_short||kit.shortDesc||'');
+  html+=s('Página de ventas (descripción larga)', (kit.description_long||kit.longDesc||'').replace(/\n/g,'<br>'));
+  html+=s('6 Bullets de beneficios', (kit.bullets||kit.benefits||[]).map(function(b,i){ return (i+1)+'. '+b; }).join('<br>'));
+  html+=s('Botón CTA', kit.cta_button||(Array.isArray(kit.cta)?kit.cta[0]:kit.cta)||'');
+  html+=s('Garantía', kit.guarantee_text||kit.guarantee||'');
+  if(kit.faq&&kit.faq.length){
+    html+='<h2>FAQ</h2>';
+    kit.faq.forEach(function(item,i){ html+=s('Pregunta '+(i+1), '<strong>'+(item.q||'')+'</strong><br>'+(item.a||'')); });
+  }
+  if(kit.dalle_prompts){
+    html+='<h2>PROMPTS DALL-E (imágenes)</h2>';
+    var labels=['Gancho principal','Mockup premium','Credibilidad','Beneficios','Cierre'];
+    Object.keys(kit.dalle_prompts).forEach(function(k,i){ html+=s('Imagen '+(i+1)+' — '+labels[i], kit.dalle_prompts[k]); });
+  }
+  html+='</body></html>';
+  var blob=new Blob([html],{type:'application/msword'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='FERNI_HOTMART_'+(o.pais||o.country||'')+'_'+lang+'_'+new Date().getFullYear()+'.doc'; a.click();
 }
 
 function dlMeta(){
