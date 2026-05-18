@@ -1,117 +1,106 @@
-# Progreso FERNI AI — Estado Actual (19 Mayo 2026)
+# Progreso FERNI AI — Estado Actual (19 Mayo 2026 — 19:20)
 
-## ÚLTIMOS CAMBIOS (sesión 19 Mayo — tarde)
+## ÚLTIMOS CAMBIOS (sesión 19 Mayo — tarde/noche)
+
+### Canvas API — texto perfecto en imágenes Hotmart
+- DALL-E genera solo el fondo visual (sin texto)
+- Canvas API superpone texto con fuente real, sin distorsión
+- **Auto font-size**: si el texto es largo, reduce tamaño hasta que quepa
+- **maxWidth 88%**: margen 6% cada lado, nunca toca los bordes
+- **Banner dinámico**: altura se ajusta al número de líneas
+- Mockup (image_2) también lleva text_overlay: título + subtítulo del ebook
+- Estructura Claude: `images[1..5]{ visual_prompt, text_overlay }`
+- Compatibilidad: si kit es formato antiguo (`dalle_prompts`), usa fallback automático
+
+### Hotmart kit — mejoras UI
+- Botón **↺ Regenerar kit** en cabecera (junto a "Descargar kit Word")
+- Regenerar kit usa `S.selOpp` directo si hay ebook activo — no pide selector
+- Botón **✕** rojo en cada imagen para eliminarla individualmente
+- Descarga imagen con nombre: FERNI_HOTMART_Gancho/Mockup/Credibilidad/Beneficios/Cierre.png
+- `dlHmImgDataUrl` descarga el dataURL compuesto por Canvas (imagen + texto)
 
 ### Persistencia completa — nada se pierde con Ctrl+Shift+R
 - `saveFullDataToHist` guarda `hmKit`, `maKit`, `generatedBonuses`
-- IIFE de restauración al recargar recupera `hmKit`, `maKit`, `generatedBonuses`
+- IIFE de restauración recupera `hmKit`, `maKit`, `generatedBonuses` al recargar
 - `genMeta` y `genBonuses` llaman `saveFullDataToHist` tras generar
-- `showTab('meta')` restaura vista si `S.maKit` ya existe (igual que hotmart)
+- `showTab('meta')` restaura vista si `S.maKit` ya existe
 
-### DALL-E + Canvas API — texto perfecto en imágenes Hotmart
-- **Claude** devuelve por imagen: `visual_prompt` (para DALL-E, sin texto) + `text_overlay` (texto exacto para Canvas)
-- **DALL-E** genera solo el fondo visual — cero texto
-- **Canvas API** (nativo del navegador, cero dependencias) superpone el texto de Claude con tipografía real, banner semitransparente oscuro, texto blanco
-- Doble barrera anti-texto en API: `noTextRule` añadido a TODOS los prompts antes de enviárselos a DALL-E
-- Estructura JSON Claude: `{ "texts": {...}, "images": { "image_1": { "visual_prompt": "...", "text_overlay": "..." }, ... } }`
-- Compatibilidad: si Claude devuelve `dalle_prompts` (formato viejo), se convierte automáticamente
+### DALL-E — doble barrera anti-texto
+- Prompts Claude reescritos: solo escenas visuales, sin pedir texto
+- `noTextRule` añadido en API a TODOS los prompts antes de enviar a DALL-E
+- Imagen Credibilidad: escena profesional, sin estadísticas escritas
 
-### Imágenes Hotmart — botón ✕ para eliminar
-- Cada imagen generada tiene botón rojo ✕ al lado de Regenerar
-- Al pulsar ✕ vuelve al estado vacío 🎨 y se puede regenerar
-
-### Descarga imágenes Hotmart con texto compuesto
-- `dlHmImgDataUrl` descarga la imagen ya compuesta (Canvas dataURL PNG)
-- Nombres: FERNI_HOTMART_Gancho.png, Mockup.png, Credibilidad.png, Beneficios.png, Cierre.png
-
-## COMMITS sesión 19 Mayo tarde
-- `98bfb05` — Add: botón ✕ para eliminar imagen Hotmart individualmente
-- `9620a3c` — Add: Canvas API superpone texto en imágenes Hotmart — DALL-E solo genera fondos
-- `5ba5e6c` — Fix: DALL-E cero texto — doble barrera en prompts Claude + API
-- `b347e03` — Fix: persistencia completa — hmKit, maKit, generatedBonuses sobreviven Ctrl+Shift+R
-- `745afeb` — Fix: guardar S.hmKit en localStorage al generar — sobrevive Ctrl+Shift+R
-
-## COMMITS sesión 19 Mayo mañana (referencia)
-- Correcciones panel eb-approved, sticky buttons, Conclusión/Disclaimer
-- Checklist tag en inglés
-- Moneda UK: EUR para tools, GBP solo salarios
-- Hotmart kit refactor — master prompt Claude + imágenes nombradas
-- Hotmart kit persistencia
+## COMMITS sesión 19 Mayo (todos)
+- `1349976` — Fix: Canvas texto con maxWidth y auto font-size
+- `ceb27df` — Fix: Mockup también lleva text_overlay con título y subtítulo
+- `fc7b017` — Fix: Regenerar kit usa S.selOpp directo si hay ebook activo
+- `35196d7` — Add: botón Regenerar kit en cabecera Hotmart
+- `538c951` — Fix: fallback dalle_prompts para kits formato antiguo
+- `98bfb05` — Add: botón ✕ para eliminar imagen Hotmart
+- `9620a3c` — Add: Canvas API superpone texto en imágenes Hotmart
+- `5ba5e6c` — Fix: DALL-E cero texto — doble barrera
+- `b347e03` — Fix: persistencia completa hmKit/maKit/generatedBonuses
+- `745afeb` — Fix: guardar S.hmKit en localStorage al generar
 
 ## LO QUE FUNCIONA HOY ✅
-- 7 botones de capítulos aparecen correctamente al recargar
-- ✏️ Corregir texto: reemplazos simples → instantáneo, sin API
-- 🔄 Regenerar capítulo: reescritura completa
+- Generación ebook completo (7 capítulos + conclusión + disclaimer)
+- Verificación 3 capas
+- Correcciones por capítulo (instantáneo para reemplazos simples, API para cambios complejos)
 - Snapshot + Restaurar versión anterior
-- Auto-guardado en localStorage tras cada corrección
-- Auto-restauración del ebook al recargar
-- PDF final con sticky buttons arriba (descargar, Hotmart, Meta, imágenes)
+- PDF final sticky buttons arriba
 - Correcciones en PDF final (Cap 1..N + Conclusión + Disclaimer)
-- Kit Hotmart: textos completos + 5 imágenes con Canvas overlay
-- Imágenes Hotmart: generar individual, eliminar ✕, regenerar, descargar nombrado
-- Traducción reanudable si falla a mitad
-- Persistencia total: ebook, finalEbook, hmKit, maKit, generatedBonuses sobreviven Ctrl+Shift+R
+- Traducción a 28 idiomas, reanudable si falla
+- Kit Hotmart: textos completos (título, subtítulo, headline, bullets, FAQ, garantía, CTA)
+- Kit Hotmart: 5 imágenes con Canvas overlay (texto perfecto sin distorsión)
+- Imágenes: generar, eliminar ✕, regenerar, descargar nombrado
+- Persistencia total: todo sobrevive Ctrl+Shift+R
+- Auto-restauración al recargar página
 
 ## Stack Técnico
 - **Frontend**: public/index.html (vanilla JS, sin framework)
 - **Backend**: api/index.js (Express en Vercel serverless)
-- **APIs**: Claude (ebooks + verificación + kit texts + image prompts), OpenAI GPT-4o (análisis + quick-brief), gpt-image-1 (imágenes), Serper (búsqueda web), DataForSEO (volumen keywords)
-- **Canvas API**: nativo del navegador — compone imagen DALL-E + texto, cero dependencias
-- **Deploy**: Vercel Hobby gratuito → ferni-ai.vercel.app
+- **APIs**: Claude (ebooks + kit texts + image prompts), OpenAI GPT-4o (análisis), gpt-image-1 (imágenes), Serper (búsqueda), DataForSEO (keywords)
+- **Canvas API**: nativo del navegador — compone DALL-E + texto, cero dependencias, cero costo
+- **Deploy**: Vercel Hobby → ferni-ai.vercel.app
 - **Repo**: https://github.com/loreferfran/ferni-ai
-- **Timeout Vercel Hobby**: 60s por función
-- **Storage**: localStorage (metadatos + historial) + IndexedDB (imágenes)
-
-## localStorage — Claves usadas
-| Clave | Contenido |
-|-------|-----------|
-| `ferni_pro` | Array historial completo (ebook, finalEbook, hmKit, maKit, generatedBonuses, selOpp...) |
-| `ferni_active_id` | ID del ebook activo actual |
-| `ferni_num_chapters` | Número de capítulos del ebook activo |
+- **Timeout Vercel**: 60s por función
+- **Storage**: localStorage + IndexedDB (imágenes)
 
 ## Flujo Imágenes Hotmart
 ```
-Kit Hotmart generado → Claude devuelve images[1..5]{ visual_prompt, text_overlay }
-→ Usuario pulsa imagen → genHotmartImg(idx)
-→ /api/generate-image recibe visual_prompt (sin texto)
-→ DALL-E genera fondo visual
-→ composeImageWithText() — Canvas dibuja imagen + text_overlay encima
-→ Imagen final lista para descargar
+↺ Regenerar kit → Claude devuelve images[1..5]{ visual_prompt, text_overlay }
+→ Usuario pulsa slot → DALL-E genera fondo sin texto
+→ composeImageWithText() → Canvas superpone text_overlay con fuente real
+→ Imagen final compuesta lista para descargar
 ```
 
-## Flujo Módulo 2 — Directo
-```
-Tema libre → Serper 3 búsquedas → GPT-4o brief → Claude 7 pasos
-→ verificación Capa 3 → correcciones por capítulo → PDF final
-```
-
-## Sistema de Verificación — 3 Capas
-| Capa | Dónde | Qué hace |
-|------|-------|---------|
-| 1 | buildEbookSystem() | Filtro: fuente exacta, no atribuciones genéricas |
-| 2 | espInstruction | Autorevisión antes de entregar JSON |
-| 3 | /api/verify-content | Segundo Claude audita post-generación |
+## localStorage — Claves
+| Clave | Contenido |
+|-------|-----------|
+| `ferni_pro` | Historial completo (ebook, finalEbook, hmKit, maKit, generatedBonuses, selOpp) |
+| `ferni_active_id` | ID ebook activo |
+| `ferni_num_chapters` | Número capítulos |
 
 ## Restricciones Permanentes
-- No mencionar precio del producto en PDF
+- No precio del producto en PDF
 - No inventar estadísticas sin fuente
-- No primera persona ("yo", "mi")
-- Moneda: EUR (€) para precios de herramientas, GBP (£) solo para salarios/contexto laboral británico
+- No primera persona
+- EUR (€) para herramientas, GBP (£) solo salarios UK
 - No pagar nada más que OpenAI y Anthropic antes de vender
 
 ## Pendiente
-- **Meta Ads**: igual que Hotmart — refactorizar con master prompt Claude + Canvas overlay para imágenes
-- Capítulo 3 (UK AI tools) fue sobreescrito accidentalmente — regenerar con prompt detallado
-- PDF preview aparece oscuro/vacío al restaurar desde historial — investigar
+- **Meta Ads**: refactorizar igual que Hotmart — master prompt Claude + Canvas overlay
+- PDF preview oscuro al restaurar desde historial — investigar
+- Capítulo 3 UK AI tools sobreescrito — pendiente regenerar
 
 ## Módulos / Tabs
 | Tab | Función |
 |-----|---------|
 | 🔍 Análisis | País + nicho → 10 oportunidades |
 | 📖 Ebook | Borrador → verificación → PDF |
-| 🛒 Hotmart | Kit Marketing completo + 5 imágenes Canvas |
-| 📣 Meta Ads | Anuncios + contenido RRSS (pendiente refactor) |
-| 🎁 Bonus Pack | 4 infoproductos complementarios |
+| 🛒 Hotmart | Kit completo + 5 imágenes Canvas ✅ |
+| 📣 Meta Ads | Anuncios + RRSS (pendiente refactor) |
+| 🎁 Bonus Pack | 4 infoproductos |
 | 🌍 Traducción | 28 idiomas |
 | ➡️ Directo | Tema libre → PDF |
 | 🕐 Historial | Ver, restaurar, borrar |
