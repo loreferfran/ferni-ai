@@ -426,7 +426,7 @@ select option { background: #1e2d52; }
             <div style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Para descargar: abre el PDF en Chrome → Ctrl+P → Guardar como PDF → listo para Hotmart</div>
           </div>
         </div>
-        <div class="chat-area">
+        <div class="chat-area" id="chat-area-ebook">
           <div class="chat-hdr"><div class="chat-dot"></div><div class="chat-lbl">✏️ Correcciones al PDF</div></div>
           <div class="chat-msgs" id="chat-ebook"><div class="msg ferni">Escribe aquí qué quieres cambiar en el PDF y presiona Enviar. Claude aplicará los cambios directamente en pantalla. Ejemplo: "simplifica el capítulo 2", "agrega una tabla de plantas en el cap 1", "el título no me convence, cámbialo a algo más impactante".</div></div>
           <div class="chat-inp-row">
@@ -1341,6 +1341,7 @@ async function runEbookSteps(startFrom){
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
 
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
+    var _ca2 = document.getElementById('chat-area-ebook'); if(_ca2) _ca2.style.display='';
     var langSel = document.getElementById('eb-lang-sel');
     if(langSel && o.language) langSel.value = o.language;
     var marketInp = document.getElementById('eb-market-inp');
@@ -1422,6 +1423,7 @@ async function goEbook(isModule1){
   S.ebookIsModule1 = (isModule1 !== false);
   showTab('ebook',document.querySelectorAll('.tab')[1]);
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
+  var _ca = document.getElementById('chat-area-ebook'); if(_ca) _ca.style.display='none';
   var verAlert = document.getElementById('eb-verify-alert');
   if(verAlert){ verAlert.style.display='none'; verAlert.innerHTML=''; }
   // Número de capítulos: prioriza el selector Directo (ya guardado en S.numChapters),
@@ -1741,6 +1743,8 @@ async function approveEbook(){
   var targetMarket = (marketEl && marketEl.value.trim()) || o.targetMarket || o.pais || o.country || '';
 
   hide('eb-content'); show('eb-loading');
+  var chatArea = document.getElementById('chat-area-ebook');
+  if(chatArea) chatArea.style.display = 'none';
   var loadEl = document.getElementById('eb-load-txt');
 
   // Función auxiliar: traduce una pieza, reintenta 1 vez si falla
@@ -1793,6 +1797,7 @@ async function approveEbook(){
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
+    if(chatArea) chatArea.style.display = '';
     document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
@@ -1800,6 +1805,7 @@ async function approveEbook(){
 
   } catch(e) {
     hide('eb-loading'); show('eb-content');
+    if(chatArea) chatArea.style.display = '';
     alert('Error al traducir: ' + e.message);
   }
 }
