@@ -3747,6 +3747,21 @@ function safeStr(v) {
   if (typeof v === 'object') return JSON.stringify(v);
   return String(v);
 }
+
+// Al arrancar: reconstruir botones con el número real de capítulos del ebook cargado
+(function(){
+  var eb = S.finalEbook || S.ebookData;
+  var nc = (eb && eb.chapters && eb.chapters.length) || S.numChapters || 4;
+  if(nc !== S.numChapters) S.numChapters = nc;
+  rebuildChapterSteps(nc);
+  rebuildRewriteBtns(nc);
+  // Si hay ebook activo, mostrar tab Ebook automáticamente
+  if(eb && S.selOpp){
+    var ebTab = document.querySelectorAll('.tab')[1];
+    showTab('ebook', ebTab);
+    if(ebTab) ebTab.classList.add('active');
+  }
+})();
 </script>
 </body>
 </html>
