@@ -1162,9 +1162,12 @@ app.post('/api/generate-chapter', async function(req, res) {
     var moChNum = parseInt((section || '').replace('ch', ''));
     if (req.body.metadataOnly && !isNaN(moChNum) && moChNum >= 1 && moChNum <= 10) {
       var moChKey = 'chapter' + moChNum;
-      var moPrompt = 'Genera SOLO title, opening, keyPoints y exercise del capitulo ' + moChNum +
+      var moPrompt = (userInstructions
+        ? 'INSTRUCCIONES DEL AUTOR (instruccion dominante — el titulo, opening y estructura deben reflejar EXACTAMENTE esto):\n' + userInstructions + '\n\n'
+        : '') +
+        'Genera SOLO title, opening, keyPoints y exercise del capitulo ' + moChNum +
         ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.' +
-        ' NO incluyas el campo "content". opening: 120-150 palabras. keyPoints: array de 5 strings con datos concretos. exercise: {title, steps: array de 3 strings}.' +
+        ' NO incluyas el campo "content". opening: 120-150 palabras segun las instrucciones del autor. keyPoints: array de 5 strings con datos concretos. exercise: {title, steps: array de 3 strings}.' +
         ' ' + espInstruction +
         JSON.stringify({[moChKey]: {number: moChNum, title: 'titulo max 8 palabras', opening: '120-150 palabras', keyPoints: ['dato1','dato2','dato3','dato4','dato5'], exercise: {title: 'Ejercicio practico', steps: ['Paso 1','Paso 2','Paso 3']}}});
       var moTxt = await claudeCall(sys, ctx + '\n\n' + moPrompt, 2000);
@@ -1179,9 +1182,12 @@ app.post('/api/generate-chapter', async function(req, res) {
     if (req.body.contentOnly && !isNaN(coChNum) && coChNum >= 1 && coChNum <= 10) {
       var prevCo = (req.body.previousContent || '').trim();
       var coPrompt = prevCo
-        ? 'CONTINUA el content del capitulo ' + coChNum + '. NO repetir lo anterior:\n"""\n' + prevCo.slice(-2000) + '\n"""\n\nEscribe SOLO la continuacion. Texto Markdown — subtitulos en **negrita**, listas con -. Sin JSON. Sin repetir.'
-        : 'Escribe el CONTENIDO del capitulo ' + coChNum + ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.\n\n' +
-          (userInstructions ? 'INSTRUCCIONES DEL AUTOR:\n' + userInstructions + '\n\n' : '') +
+        ? 'CONTINUA el content del capitulo ' + coChNum + '. NO repetir lo anterior:\n"""\n' + prevCo.slice(-2000) + '\n"""\n\nEscribe SOLO la continuacion. Texto Markdown — subtitulos en **negrita**, listas con -. Sin JSON. Sin repetir.' +
+          (userInstructions ? '\n\nINSTRUCCIONES DEL AUTOR (sigue aplicando):\n' + userInstructions : '')
+        : (userInstructions
+            ? 'INSTRUCCIONES DEL AUTOR (instruccion dominante — genera EXACTAMENTE esto, tiene maxima prioridad sobre cualquier otra directriz):\n' + userInstructions + '\n\n'
+            : '') +
+          'Escribe el CONTENIDO del capitulo ' + coChNum + ' del ebook sobre "' + (o.tituloEbook||o.problema||o.problem||'el tema') + '" para ' + countryName + '.\n\n' +
           'FORMATO: texto puro Markdown — subtitulos en **negrita**, listas con -. SIN JSON. TODO en espanol.\n' +
           'PROHIBIDO caracteres ASCII de cuadros (╔═╗ ║ ╚═╝ ┌─┐). Para cajas: [HIGHLIGHT BOX: texto]. Para tablas: [TABLE: titulo|col1|col2|dato1|dato2].';
       var coResult = await claudeCall(sys, ctx + '\n\n' + coPrompt, 3500, true);
