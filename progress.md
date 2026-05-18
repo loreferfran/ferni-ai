@@ -1,4 +1,11 @@
-# Progreso FERNI AI — Estado Actual (18 Mayo 2026)
+# Progreso FERNI AI — Estado Actual (19 Mayo 2026)
+
+## ÚLTIMOS CAMBIOS (sesión 19 Mayo)
+- **Traducción reanudable** — si falla en Capítulo 6, el progreso queda guardado en `S.translationProgress`. Al pulsar APROBAR de nuevo, pregunta si continuar desde donde falló. Solo paga tokens por los capítulos pendientes.
+  - Guarda header, cada capítulo y conclusión según se completan
+  - `failedAt` indica exactamente qué capítulo falló
+  - Al completar, limpia `S.translationProgress = null`
+  - Mensaje de error claro: "X capítulos ya traducidos — pulsa APROBAR para continuar desde Capítulo Y"
 
 ## ÚLTIMOS COMMITS (sesión 18 Mayo)
 - `c8cb0c7` — Fix: correcciones simples de símbolo/texto se aplican sin API — instantáneo y sin errores de parseo ✅
@@ -80,7 +87,7 @@ Tema libre → Serper 3 búsquedas → GPT-4o brief → Claude 7 pasos
 - No primera persona ("yo", "mi")
 - Moneda: EUR (€) para precios de herramientas, GBP (£) para salarios/contexto laboral británico
 
-## Pendiente para mañana
+## Pendiente
 - Capítulo 3 (UK AI tools) fue sobreescrito accidentalmente — regenerar con prompt detallado
 - Capítulo 5 (Otter.ai) estaba truncado — verificar y corregir si hace falta
 - PDF preview aparece oscuro/vacío al restaurar desde historial — investigar

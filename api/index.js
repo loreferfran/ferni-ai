@@ -1431,20 +1431,57 @@ app.post('/api/translate-chapter', async function(req, res) {
     ' Keep it natural and fluent. Preserve all numbers, measurements, and the author name "' + author + '". Return ONLY the translated text, nothing else.';
   var sysJson = 'You are a professional literary translator. Translate the following JSON values to ' + language + mkt +
     ' RULES: preserve all JSON keys in English, translate only string values. Preserve numbers and "' + author + '". Return ONLY valid JSON, no markdown.';
+  async function txtTranslate(text, maxTok) {
+    return (await claudeCall(sysTxt, 'Translate this text:\n\n' + text, maxTok || 6000)).trim();
+  }
+  async function jsonTranslate(obj, maxTok) {
+    var raw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(obj), maxTok || 3000);
+    var cleaned = raw.replace(/```json|```/g, '').trim();
+    try { return JSON.parse(cleaned); } catch(e) { return obj; }
+  }
+
   try {
-    // Si la pieza tiene campo "content" muy largo, separarlo y traducirlo como texto plano
+    // Caso 1: capítulo con content largo → paralelo: content txt + metadatos JSON
     if (piece.chapter && piece.chapter.content && piece.chapter.content.length > 800) {
       var ch = piece.chapter;
-      var contentRaw = await claudeCall(sysTxt, 'Translate this text:\n\n' + ch.content, 8000);
       var metaPiece = { chapter: { number: ch.number, title: ch.title, opening: ch.opening, keyPoints: ch.keyPoints, exercise: ch.exercise } };
-      var metaRaw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(metaPiece), 3000);
-      var metaCleaned = metaRaw.replace(/```json|```/g, '').trim();
-      var meta;
-      try { meta = JSON.parse(metaCleaned); } catch(e) { meta = metaPiece; }
-      var result = Object.assign({}, meta.chapter || meta, { content: contentRaw.trim() });
+      var chResults = await Promise.all([
+        txtTranslate(ch.content, 8000),
+        jsonTranslate(metaPiece, 3000)
+      ]);
+      var result = Object.assign({}, chResults[1].chapter || chResults[1], { content: chResults[0] });
       return res.json({ success: true, translated: { chapter: result } });
     }
-    // Para piezas pequeñas (header, conclusión, capítulos sin content largo): traducir como JSON
+
+    // Caso 2: pieza de cabecera — paralelo: intro como texto + title/subtitle/tagline como JSON
+    if (piece.intro !== undefined) {
+      var headerResults = await Promise.all([
+        piece.intro && piece.intro.length > 100
+          ? txtTranslate(piece.intro, 6000)
+          : Promise.resolve(piece.intro || ''),
+        jsonTranslate({ title: piece.title, subtitle: piece.subtitle, tagline: piece.tagline }, 1500)
+      ]);
+      return res.json({ success: true, translated: Object.assign({}, headerResults[1], { intro: headerResults[0] }) });
+    }
+
+    // Caso 3: pieza de conclusión — paralelo: cada campo largo como texto, resources como JSON
+    if (piece.conclusion !== undefined || piece.actionPlan !== undefined || piece.legalSection !== undefined) {
+      var conclusionPromises = [
+        piece.conclusion ? txtTranslate(piece.conclusion, 6000) : Promise.resolve(''),
+        piece.actionPlan ? txtTranslate(piece.actionPlan, 5000) : Promise.resolve(''),
+        piece.legalSection ? txtTranslate(piece.legalSection, 3000) : Promise.resolve(''),
+        piece.resources ? jsonTranslate({ resources: piece.resources }, 3000) : Promise.resolve({})
+      ];
+      var conclusionResults = await Promise.all(conclusionPromises);
+      var outConclusion = {};
+      if (piece.conclusion !== undefined) outConclusion.conclusion = conclusionResults[0];
+      if (piece.actionPlan !== undefined) outConclusion.actionPlan = conclusionResults[1];
+      if (piece.legalSection !== undefined) outConclusion.legalSection = conclusionResults[2];
+      if (piece.resources !== undefined) outConclusion.resources = (conclusionResults[3] && conclusionResults[3].resources) || piece.resources;
+      return res.json({ success: true, translated: outConclusion });
+    }
+
+    // Caso 4: pieza pequeña genérica → JSON completo
     var raw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(piece), 8000);
     var cleaned = raw.replace(/```json|```/g, '').trim();
     var translated;
