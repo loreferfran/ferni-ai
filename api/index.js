@@ -1218,6 +1218,37 @@ app.post('/api/generate-chapter', async function(req, res) {
   }
 });
 
+// Corrección quirúrgica: aplica solo el cambio pedido sin reescribir el capítulo
+app.post('/api/patch-chapter', async function(req, res) {
+  try {
+    var o = req.body.opportunity || {};
+    var chapterNumber = parseInt(req.body.chapterNumber) || 1;
+    var chapterData = req.body.chapterData || {};
+    var instruction = (req.body.instruction || '').trim();
+    var ebookDefs = req.body.ebookDefs || null;
+    if (!instruction) return res.status(400).json({ success: false, error: 'Instrucción vacía' });
+    var countryName = getCountryName(o.pais || o.country || 'France');
+    var regs = getRegs(countryName);
+    var defsRule = ebookDefs ? ' NOMBRES FIJOS DEL EBOOK — no los cambies: ' + JSON.stringify(ebookDefs) + '.' : '';
+    var sys = buildEbookSystem(countryName, regs);
+    var chJson = JSON.stringify(chapterData, null, 2);
+    var prompt = 'Tienes el Capítulo ' + chapterNumber + ' de un ebook. Aplica EXACTAMENTE esta corrección y NADA MÁS:\n\n' +
+      'CORRECCIÓN: ' + instruction + '\n\n' +
+      'REGLAS ESTRICTAS:\n- Aplica SOLO el cambio indicado. NO reescribas ni mejores nada más.\n' +
+      '- Mantén TODO: contenido, estructura, ejemplos, tablas, formato, emojis, exactamente igual.\n' +
+      '- Modifica únicamente lo que la corrección pide explícitamente.\n' + defsRule + '\n\n' +
+      'CAPÍTULO ACTUAL:\n' + chJson + '\n\n' +
+      'Devuelve el mismo JSON con solo la corrección aplicada. Sin markdown. Empieza con { y termina con }.';
+    var result = await claudeCall(sys, prompt, 3000);
+    var patched;
+    try { patched = extractJSON(result); } catch(e) { patched = null; }
+    if (!patched) return res.status(500).json({ success: false, error: 'No se pudo parsear. Intenta de nuevo.' });
+    res.json({ success: true, chapter: Object.assign({}, chapterData, patched) });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // Endpoint separado para cada parte - evita timeout de Vercel
 app.post('/api/generate-ebook-p1', async function(req, res) {
   var o = req.body.opportunity;

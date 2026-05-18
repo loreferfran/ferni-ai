@@ -338,12 +338,20 @@ select option { background: #1e2d52; }
               <div id="ch-rewrite-panel" style="display:none;">
                 <div id="ch-rewrite-label" style="font-size:12px;color:var(--muted);margin-bottom:6px;"></div>
                 <textarea id="ch-rewrite-instructions" rows="5" placeholder="Describe qué debe cambiar. Para capítulos muy largos, divide en 2 llamadas usando el separador:&#10;&#10;[instrucciones parte 1 — primeras secciones]&#10;&#10;--- PARTE 2 ---&#10;&#10;[instrucciones parte 2 — secciones restantes]" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(0,184,148,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;"></textarea>
-                <div style="display:flex;gap:8px;margin-top:8px;">
+                <div style="font-size:11px;color:var(--muted);margin-top:8px;margin-bottom:6px;">
+                  <strong style="color:#00b894;">✏️ Corregir texto</strong> — aplica solo el cambio indicado, sin tocar el resto del capítulo (ideal para precios, errores, palabras).<br>
+                  <strong style="color:#00b894;">🔄 Regenerar</strong> — reescribe el capítulo completo con nuevas instrucciones.
+                </div>
+                <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+                  <button onclick="runChPatch()" style="padding:8px 20px;border-radius:8px;border:none;background:#0984e3;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Corregir texto</button>
                   <button onclick="runChRewrite()" style="padding:8px 20px;border-radius:8px;border:none;background:#00b894;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 Regenerar capítulo</button>
                   <button onclick="document.getElementById('ch-rewrite-panel').style.display='none'" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
                 </div>
               </div>
               <div id="ch-rewrite-status" style="display:none;padding:10px;border-radius:8px;background:rgba(0,184,148,0.1);color:#00b894;font-size:13px;margin-top:8px;"></div>
+              <div id="ch-undo-bar" style="display:none;margin-top:6px;padding:8px 12px;border-radius:8px;background:rgba(253,203,110,0.1);border:1px solid rgba(253,203,110,0.4);font-size:12px;color:#fdcb6e;display:none;">
+                ↩ <span id="ch-undo-label">Versión anterior guardada</span> — <button onclick="undoChPatch()" style="background:none;border:none;color:#fdcb6e;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:inherit;">Restaurar versión anterior</button>
+              </div>
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:6px;">
@@ -2356,12 +2364,87 @@ function openChRewrite(n){
   if(panel){ panel.style.display = 'block'; panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }
 }
 
+function saveChSnapshot(n, chapterData){
+  if(!S.chapterSnapshots) S.chapterSnapshots = {};
+  S.chapterSnapshots[n] = JSON.parse(JSON.stringify(chapterData));
+  var undoBar = document.getElementById('ch-undo-bar');
+  var undoLabel = document.getElementById('ch-undo-label');
+  if(undoBar){ undoBar.style.display = 'block'; }
+  if(undoLabel){ undoLabel.textContent = 'Versión anterior del Capítulo ' + n + ' guardada'; }
+  S.chSnapshotTarget = n;
+}
+
+function undoChPatch(){
+  var n = S.chSnapshotTarget;
+  if(!n || !S.chapterSnapshots || !S.chapterSnapshots[n]){ alert('No hay versión anterior guardada.'); return; }
+  var ebook = S.finalEbook || S.ebookData;
+  if(!ebook || !ebook.chapters){ return; }
+  ebook.chapters[n-1] = S.chapterSnapshots[n];
+  if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+  var o = S.selOpp || {};
+  var lang = S.approvedLang || o.idioma || o.language || 'Español';
+  var cName = S.countryName || o.pais || o.country || '';
+  S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
+  var prev = document.getElementById('eb-draft-preview');
+  if(prev) prev.srcdoc = S.pdfHtml;
+  var prev2 = document.getElementById('eb-approved-preview');
+  if(prev2) prev2.srcdoc = S.pdfHtml;
+  var undoBar = document.getElementById('ch-undo-bar');
+  if(undoBar) undoBar.style.display = 'none';
+  var statusEl = document.getElementById('ch-rewrite-status');
+  if(statusEl){ statusEl.style.display = 'block'; statusEl.textContent = '↩ Capítulo ' + n + ' restaurado a la versión anterior.'; statusEl.style.background='rgba(253,203,110,0.1)'; statusEl.style.color='#fdcb6e'; }
+  delete S.chapterSnapshots[n];
+}
+
+async function runChPatch(){
+  var n = S.chRewriteTarget;
+  if(!n){ return; }
+  var instruction = ((document.getElementById('ch-rewrite-instructions') || {}).value || '').trim();
+  if(!instruction){ alert('Escribe qué quieres corregir en el capítulo ' + n + '.'); return; }
+  var ebook = S.finalEbook || S.ebookData;
+  if(!ebook || !ebook.chapters || !ebook.chapters[n-1]){ alert('No hay capítulo ' + n + ' cargado.'); return; }
+  // Guardar snapshot antes de modificar
+  saveChSnapshot(n, ebook.chapters[n-1]);
+  var panel = document.getElementById('ch-rewrite-panel');
+  if(panel) panel.style.display = 'none';
+  var statusEl = document.getElementById('ch-rewrite-status');
+  statusEl.style.display = 'block';
+  statusEl.textContent = '✏️ Aplicando corrección al capítulo ' + n + '...';
+  statusEl.style.background = 'rgba(9,132,227,0.1)';
+  statusEl.style.color = '#0984e3';
+  try {
+    var o = S.selOpp || {};
+    var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+      opportunity: o, chapterNumber: n, chapterData: ebook.chapters[n-1],
+      instruction: instruction, ebookDefs: S.ebookDefs || null
+    })});
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error || 'Error en corrección');
+    ebook.chapters[n-1] = d.chapter;
+    if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+    var lang = S.approvedLang || o.idioma || o.language || 'Español';
+    var cName = S.countryName || o.pais || o.country || '';
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
+    var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
+    var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+    statusEl.textContent = '✅ Corrección aplicada. Si no te gusta, usa "Restaurar versión anterior".';
+    statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
+  } catch(e) {
+    statusEl.textContent = '❌ Error: ' + (e.message || e);
+    statusEl.style.background = 'rgba(231,76,60,0.1)'; statusEl.style.color = '#e74c3c';
+  }
+}
+
 async function runChRewrite(){
   var n = S.chRewriteTarget;
   if(!n){ return; }
   var rawInstructions = (document.getElementById('ch-rewrite-instructions') || {}).value || '';
   rawInstructions = rawInstructions.trim();
   if(!rawInstructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
+
+  // Guardar snapshot del capítulo actual antes de regenerar
+  var ebookSnap = S.finalEbook || S.ebookData;
+  if(ebookSnap && ebookSnap.chapters && ebookSnap.chapters[n-1]) saveChSnapshot(n, ebookSnap.chapters[n-1]);
 
   // Detectar separador --- PARTE 2 --- para dividir el contenido en 2 llamadas
   var splitSep = /\n\s*---+\s*PARTE\s*2\s*---+\s*\n/i;
