@@ -2356,8 +2356,12 @@ async function sendCorrectionChat(){
 
 function openChRewrite(n){
   S.chRewriteTarget = n;
+  // Destacar botón seleccionado
+  var btns = document.querySelectorAll('#ch-rewrite-btns button');
+  btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; b.style.fontWeight='600'; });
+  if(btns[n-1]){ btns[n-1].style.background='#00b894'; btns[n-1].style.color='white'; btns[n-1].style.border='1px solid #00b894'; }
   var label = document.getElementById('ch-rewrite-label');
-  if(label) label.textContent = 'Instrucciones para reescribir el Capítulo ' + n + ':';
+  if(label) label.textContent = 'Instrucciones para el Capítulo ' + n + ':';
   var ta = document.getElementById('ch-rewrite-instructions');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel');
