@@ -324,6 +324,26 @@ select option { background: #1e2d52; }
               <div style="font-weight:700;color:var(--accent);margin-bottom:10px;">🖼️ Imágenes del PDF</div>
               <div id="img-slots" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px;"></div>
               <div style="font-size:11px;color:var(--muted);">Haz clic en un slot para describir la imagen que quieres. DALL-E la generará y la insertará automáticamente en el PDF.</div>
+              <button onclick="openCoverTextPanel()" style="margin-top:8px;padding:6px 14px;border-radius:7px;border:1px solid rgba(108,92,231,0.4);background:rgba(108,92,231,0.1);color:var(--accent);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;">✏️ Editar texto de la portada</button>
+              <!-- Panel texto portada — aparece tras generar la imagen de portada -->
+              <div id="cover-text-panel" style="display:none;margin-top:12px;padding:12px;background:rgba(108,92,231,0.1);border:1px solid rgba(108,92,231,0.4);border-radius:8px;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;">✍️ Texto de la portada — escribe lo que quieres que aparezca sobre la imagen</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div>
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px;">Título principal</div>
+                    <input id="cover-title-inp" type="text" placeholder="Ej: Guía AI para Trabajadores del Reino Unido 2026" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid rgba(108,92,231,0.3);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;">
+                  </div>
+                  <div>
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px;">Subtítulo</div>
+                    <input id="cover-subtitle-inp" type="text" placeholder="Ej: 8 herramientas para trabajar más rápido y ganar más" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid rgba(108,92,231,0.3);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;">
+                  </div>
+                  <div>
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:1px;">Hook (frase inferior)</div>
+                    <input id="cover-hook-inp" type="text" placeholder="Ej: El método que ya usan miles de profesionales en UK" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid rgba(108,92,231,0.3);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;">
+                  </div>
+                  <button onclick="applyCoverText()" style="padding:9px 20px;border-radius:8px;border:none;background:var(--accent);color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;">✅ Aplicar texto a la portada</button>
+                </div>
+              </div>
             </div>
 
             <!-- Panel reescritura por capítulo -->
@@ -1580,6 +1600,15 @@ async function generateSlotImage(slotIndex, slotName, description){
     if(slotIndex === 'cover'){
       S.coverUrl = url;
       if(S.currentHistId) idbSet('img_'+S.currentHistId+'_cover', url);
+      // Mostrar panel de texto de portada pre-relleno con datos del ebook
+      var eb2 = ebook || S.ebookData || S.finalEbook || {};
+      var cpanel = document.getElementById('cover-text-panel');
+      if(cpanel){
+        document.getElementById('cover-title-inp').value = S.coverTitle || eb2.title || '';
+        document.getElementById('cover-subtitle-inp').value = S.coverSubtitle || eb2.subtitle || '';
+        document.getElementById('cover-hook-inp').value = S.coverHook || eb2.tagline || '';
+        cpanel.style.display = 'block';
+      }
     } else {
       if(!S.chapterImages) S.chapterImages = [];
       S.chapterImages[slotIndex] = url;
@@ -1606,6 +1635,35 @@ function getCountryNameFront(s){
   return p.length>1?p.slice(1).join(' '):s;
 }
 
+function openCoverTextPanel(){
+  var eb = S.finalEbook || S.ebookData || {};
+  var panel = document.getElementById('cover-text-panel');
+  if(!panel) return;
+  document.getElementById('cover-title-inp').value = S.coverTitle || eb.title || '';
+  document.getElementById('cover-subtitle-inp').value = S.coverSubtitle || eb.subtitle || '';
+  document.getElementById('cover-hook-inp').value = S.coverHook || eb.tagline || '';
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function applyCoverText(){
+  var title = (document.getElementById('cover-title-inp').value || '').trim();
+  var subtitle = (document.getElementById('cover-subtitle-inp').value || '').trim();
+  var hook = (document.getElementById('cover-hook-inp').value || '').trim();
+  if(!title){ alert('Escribe al menos el título.'); return; }
+  S.coverTitle = title;
+  S.coverSubtitle = subtitle;
+  S.coverHook = hook;
+  var ebook = S.finalEbook || S.ebookData;
+  var o = S.selOpp || {};
+  var lang = S.approvedLang || o.idioma || o.language || 'Español';
+  var cName = S.countryName || o.pais || o.country || '';
+  S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
+  var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
+  var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  document.getElementById('cover-text-panel').style.display = 'none';
+  addMsg('chat-ebook', '✅ Texto de portada actualizado en el PDF.', 'ferni');
+}
 
 function saveEbookToHist(histId, ebook){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
@@ -2099,13 +2157,16 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     html += '<img src="' + coverUrl + '" alt="portada" onerror="this.style.display=\'none\'" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;">';
     // Bloque superior: TÍTULO (grande, dominante) + SUBTÍTULO (justo debajo, con espacio)
     html += '<div style="position:absolute;top:0;left:0;right:0;height:52%;background:linear-gradient(to bottom,rgba(0,0,0,0.80) 0%,rgba(0,0,0,0.40) 70%,rgba(0,0,0,0) 100%);display:flex;flex-direction:column;justify-content:flex-start;align-items:center;text-align:center;padding:42px 44px 0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-    html += '<h1 style="color:white;font-size:' + tpl.titleSize + ';font-weight:900;line-height:1.2;text-shadow:0 2px 16px rgba(0,0,0,1),0 0 40px rgba(0,0,0,0.7);margin:0 0 14px 0;">' + (eb.title||'') + '</h1>';
-    html += '<div style="color:rgba(255,255,255,0.88);font-size:15px;font-style:italic;text-shadow:0 1px 10px rgba(0,0,0,0.95);line-height:1.4;">' + (eb.subtitle||'') + '</div>';
+    var cvTitle = S.coverTitle || eb.title || '';
+    var cvSubtitle = S.coverSubtitle || eb.subtitle || '';
+    var cvHook = S.coverHook || eb.tagline || '';
+    html += '<h1 style="color:white;font-size:' + tpl.titleSize + ';font-weight:900;line-height:1.2;text-shadow:0 2px 16px rgba(0,0,0,1),0 0 40px rgba(0,0,0,0.7);margin:0 0 14px 0;">' + cvTitle + '</h1>';
+    html += '<div style="color:rgba(255,255,255,0.88);font-size:15px;font-style:italic;text-shadow:0 1px 10px rgba(0,0,0,0.95);line-height:1.4;">' + cvSubtitle + '</div>';
     html += '</div>';
     // Bloque inferior: HOOK (pequeño, emocional, elegante)
-    if(eb.tagline){
+    if(cvHook){
       html += '<div style="position:absolute;bottom:0;left:0;right:0;height:28%;background:linear-gradient(to top,rgba(0,0,0,0.78) 0%,rgba(0,0,0,0) 100%);display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:0 44px 38px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-      html += '<div style="color:' + tpl.hookColor + ';font-size:13px;font-weight:600;letter-spacing:0.3px;text-shadow:0 1px 8px rgba(0,0,0,0.95);font-style:italic;">' + eb.tagline + '</div>';
+      html += '<div style="color:' + tpl.hookColor + ';font-size:13px;font-weight:600;letter-spacing:0.3px;text-shadow:0 1px 8px rgba(0,0,0,0.95);font-style:italic;">' + cvHook + '</div>';
       html += '</div>';
     }
     html += '</div>';
