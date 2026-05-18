@@ -1232,14 +1232,29 @@ app.post('/api/patch-chapter', async function(req, res) {
     var defsRule = ebookDefs ? ' NOMBRES FIJOS DEL EBOOK — no los cambies: ' + JSON.stringify(ebookDefs) + '.' : '';
     var sys = buildEbookSystem(countryName, regs);
     var chJson = JSON.stringify(chapterData, null, 2);
-    var prompt = 'Tienes el Capítulo ' + chapterNumber + ' de un ebook. Aplica EXACTAMENTE esta corrección y NADA MÁS:\n\n' +
-      'CORRECCIÓN: ' + instruction + '\n\n' +
-      'REGLAS ESTRICTAS:\n- Aplica SOLO el cambio indicado. NO reescribas ni mejores nada más.\n' +
-      '- Mantén TODO: contenido, estructura, ejemplos, tablas, formato, emojis, exactamente igual.\n' +
-      '- Modifica únicamente lo que la corrección pide explícitamente.\n' + defsRule + '\n\n' +
-      'CAPÍTULO ACTUAL:\n' + chJson + '\n\n' +
-      'Devuelve el mismo JSON con solo la corrección aplicada. Sin markdown. Empieza con { y termina con }.';
-    var result = await claudeCall(sys, prompt, 3000);
+    // Para correcciones pequeñas (solo texto, no contenido largo), extraer solo el campo relevante
+    var isSimplePatch = /signo|símbolo|£|€|\$|precio|reemplaz|cambi/i.test(instruction) && !/reescrib|regenera|amplia|expande/i.test(instruction);
+    var prompt;
+    if (isSimplePatch) {
+      // Modo ligero: aplicar la corrección campo por campo para evitar truncamiento
+      prompt = 'Aplica EXACTAMENTE esta corrección al JSON del capítulo y devuelve el JSON completo corregido:\n\n' +
+        'CORRECCIÓN: ' + instruction + '\n\n' +
+        'REGLAS:\n- Solo modifica lo que la corrección pide. NO cambies nada más.\n' +
+        '- Devuelve el JSON COMPLETO con la corrección aplicada.\n' +
+        '- Sin markdown, sin explicaciones. Solo el JSON. Empieza con { y termina con }.\n' + defsRule + '\n\n' +
+        'CAPÍTULO:\n' + chJson;
+    } else {
+      prompt = 'Tienes el Capítulo ' + chapterNumber + ' de un ebook. Aplica EXACTAMENTE esta corrección y NADA MÁS:\n\n' +
+        'CORRECCIÓN: ' + instruction + '\n\n' +
+        'REGLAS ESTRICTAS:\n- Aplica SOLO el cambio indicado. NO reescribas ni mejores nada más.\n' +
+        '- Mantén TODO: contenido, estructura, ejemplos, tablas, formato, emojis, exactamente igual.\n' +
+        '- Modifica únicamente lo que la corrección pide explícitamente.\n' + defsRule + '\n\n' +
+        'CAPÍTULO ACTUAL:\n' + chJson + '\n\n' +
+        'Devuelve el mismo JSON con solo la corrección aplicada. Sin markdown. Empieza con { y termina con }.';
+    }
+    // Usar suficientes tokens para devolver el capítulo completo (puede ser grande)
+    var patchTokens = Math.min(8000, Math.max(4000, Math.ceil(chJson.length / 3)));
+    var result = await claudeCall(sys, prompt, patchTokens);
     var patched;
     try { patched = extractJSON(result); } catch(e) { patched = null; }
     if (!patched) return res.status(500).json({ success: false, error: 'No se pudo parsear. Intenta de nuevo.' });
