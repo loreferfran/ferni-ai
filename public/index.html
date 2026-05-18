@@ -2426,12 +2426,13 @@ async function runChPatch(){
     if(!d.success) throw new Error(d.error || 'Error en corrección');
     ebook.chapters[n-1] = d.chapter;
     if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+    if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     var lang = S.approvedLang || o.idioma || o.language || 'Español';
     var cName = S.countryName || o.pais || o.country || '';
     S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
     var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
     var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
-    statusEl.textContent = '✅ Corrección aplicada. Si no te gusta, usa "Restaurar versión anterior".';
+    statusEl.textContent = '✅ Corrección aplicada y guardada. Si no te gusta, usa "Restaurar versión anterior".';
     statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
   } catch(e) {
     statusEl.textContent = '❌ Error: ' + (e.message || e);
