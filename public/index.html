@@ -785,6 +785,11 @@ function showTab(id,el){
 }
 
 function restoreEbookTab(){
+  var eb = S.finalEbook || S.ebookData;
+  var nc = S.numChapters || (eb && eb.chapters && eb.chapters.length) || 4;
+  S.numChapters = nc;
+  rebuildChapterSteps(nc);
+  rebuildRewriteBtns(nc);
   if(S.finalEbook && S.selOpp){
     hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
   } else if(S.ebookData && S.selOpp){
@@ -3587,11 +3592,15 @@ function loadAndDraft(id){
   const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.ebook) return;
   loadHistData(e);
   S.ebookData = e.ebook;
+  S.currentHistId = e.id;
   var numCh=(e.ebook.chapters||[]).length;
+  S.numChapters = numCh;
+  rebuildChapterSteps(numCh);
+  rebuildRewriteBtns(numCh);
   showTab('ebook', document.querySelectorAll('.tab')[1]);
   restoreImagesIDB(e.id, numCh, function(imgs){
     applyIDBImages(e.id, e.ebook, imgs);
-    setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0], e.ebook); }, 100);
+    setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0]||e.selOpp, e.ebook); }, 100);
   });
 }
 
