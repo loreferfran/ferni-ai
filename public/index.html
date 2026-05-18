@@ -482,13 +482,12 @@ select option { background: #1e2d52; }
             <div id="hm-images-box" class="section-card">
               <div class="section-card-title">🖼️ 6 Imágenes de marketing (Hotmart · Meta · Instagram · Facebook)</div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Haz clic para generar · Clic derecho → Guardar · Úsalas en todas las plataformas</div>
-              <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
-                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:8px;">Mockup ebook</div></div>
-                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:8px;">Hero Hotmart</div></div>
-                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:8px;">Ad Facebook</div></div>
-                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:8px;">Post Instagram</div></div>
-                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:8px;">Story / Reel</div></div>
-                <div class="ad-img" onclick="genHotmartImg(5)" id="himg5"><div>🎨</div><div style="font-size:8px;">Meta Ads</div></div>
+              <div id="hm-images-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+                <div class="ad-img" onclick="genHotmartImg(0)" id="himg0"><div>🎨</div><div style="font-size:8px;">Gancho</div></div>
+                <div class="ad-img" onclick="genHotmartImg(1)" id="himg1"><div>🎨</div><div style="font-size:8px;">Mockup</div></div>
+                <div class="ad-img" onclick="genHotmartImg(2)" id="himg2"><div>🎨</div><div style="font-size:8px;">Credibilidad</div></div>
+                <div class="ad-img" onclick="genHotmartImg(3)" id="himg3"><div>🎨</div><div style="font-size:8px;">Beneficios</div></div>
+                <div class="ad-img" onclick="genHotmartImg(4)" id="himg4"><div>🎨</div><div style="font-size:8px;">Cierre</div></div>
               </div>
             </div>
             <div id="hm-body"></div>
@@ -3352,17 +3351,18 @@ function dlFinalEbook(){
   if(S.fmt==='epub') alert('Para EPUB (Amazon KDP):\n1. Descarga Calibre gratis en calibre-ebook.com\n2. Importa el archivo .doc\n3. Convierte a EPUB\n4. El EPUB cumplirá los requisitos básicos de Amazon KDP\n\nTambién puedes usar Amazon KDP directamente — acepta archivos .doc');
 }
 
-async function genHotmart(o, langOverride){
+async function genHotmart(o, langOverride, ebookOverride){
   o=o||S.selOpp; if(!o) return;
   const lang = langOverride || S.approvedLang || o.idioma || o.language || 'Español';
   const marketInp = document.getElementById('hm-market-inp');
   const targetMarket = (marketInp && marketInp.value.trim()) || o.pais || o.country || '';
+  const ebook = ebookOverride || S.finalEbook || S.ebookData || null;
   show('hm-loading'); hide('hm-empty');
-  document.getElementById('hm-load-txt').textContent = 'Generando textos para ' + targetMarket + ' en ' + lang + '...';
+  document.getElementById('hm-load-txt').textContent = 'Analizando ebook y generando kit para ' + targetMarket + ' en ' + lang + '...';
   try{
-    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket})});
+    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket,ebook:ebook})});
     const d=await resp.json();
-    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart',`✦ Kit Marketing listo — ${lang} · Mercado: ${targetMarket}. Revisa cada sección y dime si cambio algo.`,'ferni'); }
+    if(d.success){ S.hmKit=d.kit; hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart','✦ Kit Marketing listo — '+lang+' · Mercado: '+targetMarket+'. Revisa cada sección y dime si cambio algo.','ferni'); }
     else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit: '+d.error); }
   }catch(e){ hide('hm-loading'); show('hm-empty'); alert('Error: '+e.message); }
 }
@@ -3370,37 +3370,35 @@ async function genHotmart(o, langOverride){
 function renderHotmart(o,kit,targetMarket){
   const lang = S.approvedLang || o.idioma || o.language || 'Español';
   const market = targetMarket || o.pais || o.country || '';
-  document.getElementById('hm-lang').textContent=`${lang} · ${market}`;
-  const str=v=>{ if(!v) return '—'; if(typeof v==='object') return Object.values(v).filter(x=>x).join(' · '); return String(v); };
-  const f=(icon,l,v)=>`<div class="fc"><div class="fc-label">${icon} ${l}</div><div class="fc-val">${str(v)}</div></div>`;
-  const fa=(icon,l,arr)=>f(icon,l,(arr||[]).map((x,i)=>`${i+1}. ${typeof x==='object'?(x.objection||x.q?`<b>${x.objection||x.q}</b><br>${x.answer||x.a}`:JSON.stringify(x)):x}`).join('<br><br>'));
-  document.getElementById('hm-body').innerHTML=
-    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🛒 HOTMART — Listado del producto</div>'+
-    f('📌','Título del producto',kit.productName||o.tituloEbook||o.ebookTitle)+
-    f('✨','Subtítulo premium',kit.premiumSubtitle||kit.subheadline||'')+
-    f('💥','Hook emocional',kit.emotionalHook||kit.headline||o.promesaEbook||'')+
-    f('🎯','Promesa de transformación',kit.transformationPromise||'')+
-    f('📝','Descripción corta (listing)',kit.shortDesc||'')+
-    f('📄','Descripción larga (página de ventas)',kit.longDesc||'')+
-    f('👤','Público objetivo',kit.targetAudience||'')+
-    f('📂','Categoría Hotmart',kit.category||'')+
-    f('💰','Precio sugerido',kit.pricing||o.precioHotmart||o.hotmartPrice)+
-    f('🛡','Garantía',kit.guarantee||'')+
-    fa('✅','Beneficios clave',kit.benefits)+
-    fa('⭐','Destacados del producto',kit.highlights)+
-    fa('🎁','Bonus sugeridos para ofrecer (crear y subir a Hotmart)',kit.bonus)+
-    (kit.bonus&&kit.bonus.length?`<div style="margin-top:6px;"><button class="btn btn-p" style="font-size:12px;padding:8px 16px;" onclick="genBonuses()">✦ Generar estos bonos con Claude</button></div><div id="hm-bonus-generated" style="margin-top:10px;"></div>`:'')+
-    fa('⬆️','Ideas de upsell — infoproductos PDF que podrías crear y vender aparte',Array.isArray(kit.upsell)?kit.upsell:[kit.upsell])+
-    '<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px;padding-left:4px;">💡 Claude sugiere ebooks complementarios para vender como upsell. Son PDFs que puedes generar igual que el ebook principal.</div>'+
-    (kit.upsell&&(Array.isArray(kit.upsell)?kit.upsell.length:kit.upsell)?`<div style="margin-top:6px;"><button class="btn btn-p" style="font-size:12px;padding:8px 16px;" onclick="genUpsells()">✦ Generar estos upsells con Claude</button></div><div id="hm-upsell-generated" style="margin-top:10px;"></div>`:'')+
-    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🚀 ESTRATEGIA DE CONVERSIÓN</div>'+
-    fa('👆','CTAs variaciones',Array.isArray(kit.cta)?kit.cta:[kit.cta])+
-    fa('⚡','Ángulos de urgencia',kit.urgencyAngles)+
-    fa('🛡','Manejo de objeciones',kit.objectionHandling)+
-    fa('🔎','Keywords SEO / Marketplace',kit.seoKeywords)+
-    fa('🖼️','Ideas de título para thumbnail',kit.thumbnailTitleIdeas)+
-    f('💎','Posicionamiento emocional',kit.emotionalPositioning||'')+
-    fa('❓','FAQ',kit.faq);
+  document.getElementById('hm-lang').textContent = lang + ' · ' + market;
+  const f = function(icon,l,v){
+    if(!v) return '';
+    var val = typeof v === 'object' ? Object.values(v).filter(function(x){return x;}).join(' · ') : String(v);
+    return '<div class="fc"><div class="fc-label">'+icon+' '+l+'</div><div class="fc-val">'+val+'</div></div>';
+  };
+  const fa = function(icon,l,arr){
+    if(!arr||!arr.length) return '';
+    var val = arr.map(function(x,i){
+      if(typeof x==='object') return '<b>'+(x.q||x.objection||'')+'</b><br>'+(x.a||x.answer||'');
+      return (i+1)+'. '+x;
+    }).join('<br><br>');
+    return '<div class="fc"><div class="fc-label">'+icon+' '+l+'</div><div class="fc-val">'+val+'</div></div>';
+  };
+  document.getElementById('hm-body').innerHTML =
+    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🛒 HOTMART — TEXTOS DE VENTA</div>' +
+    f('📌','Título del producto', kit.title || kit.productName || o.tituloEbook || '') +
+    f('✨','Subtítulo', kit.subtitle || kit.premiumSubtitle || '') +
+    f('💥','Gancho principal (headline)', kit.headline || kit.emotionalHook || '') +
+    f('📝','Descripción corta', kit.description_short || kit.shortDesc || '') +
+    f('📄','Página de ventas (descripción larga)', kit.description_long || kit.longDesc || '') +
+    fa('✅','6 Bullets de beneficios', kit.bullets || kit.benefits) +
+    fa('❓','FAQ (5 preguntas)', kit.faq) +
+    f('🛡','Texto de garantía', kit.guarantee_text || kit.guarantee || '') +
+    f('👆','Botón CTA', kit.cta_button || (Array.isArray(kit.cta) ? kit.cta[0] : kit.cta) || '') +
+    '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">🎨 PROMPTS DALL-E — Listos para generar imágenes</div>' +
+    (kit.dalle_prompts ? Object.keys(kit.dalle_prompts).map(function(k,i){
+      return f('🖼️', 'Imagen '+(i+1)+' — '+['Gancho','Mockup premium','Credibilidad','Beneficios','Cierre'][i], kit.dalle_prompts[k]);
+    }).join('') : '');
 }
 
 async function genCover(){
@@ -3461,13 +3459,14 @@ async function genHotmartImg(idx){
   el.innerHTML='<div style="font-size:18px;">⏳</div><div style="font-size:9px;">Generando...</div>';
   try{
     const o=S.selOpp;
-    const prompts=buildHotmartImgPrompts(o);
-    const prompt=prompts[idx]||prompts[0];
-    // idx 3 = Instagram feed (square), idx 4 = Instagram story (portrait/cover), rest = landscape chapter
-    const imageType = idx===4 ? 'cover' : 'chapter';
+    // Usar prompt de Claude si está disponible, si no fallback al generador local
+    var prompt = (S.hmKit && S.hmKit.dalle_prompts && S.hmKit.dalle_prompts['image_'+(idx+1)])
+      || buildHotmartImgPrompts(o)[idx] || '';
+    // Tamaños: 0=landscape, 1=square, 2=landscape, 3=square, 4=portrait
+    const imageType = (idx===1||idx===3) ? 'chapter' : idx===4 ? 'cover' : 'chapter';
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType,niche:o?(o.nicho||o.niche||o.problema||''):''})});
     const d=await resp.json();
-    if(d.success){ el.innerHTML=`<img src="${d.url}" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" /><div style="font-size:8px;color:#aaa;margin-top:3px;text-align:center;">Clic derecho → Guardar</div>`; }
+    if(d.success){ el.innerHTML='<img src="'+d.url+'" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" /><div style="font-size:8px;color:#aaa;margin-top:3px;text-align:center;">Clic derecho → Guardar</div>'; }
     else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error</div>'; }
 }
@@ -3527,7 +3526,7 @@ function genHotmartFromSel(){
   if(!val){ alert('Selecciona primero un ebook de la lista.'); return; }
   var data = getHmEbookData(val);
   if(!data || !data.opp){ alert('No se encontraron datos del ebook seleccionado.'); return; }
-  genHotmart(data.opp, data.lang);
+  genHotmart(data.opp, data.lang, data.ebook);
 }
 
 // Poblar selector de ebooks disponibles para Meta Ads

@@ -1681,33 +1681,65 @@ app.post('/api/generate-hotmart', async function(req, res) {
   var author = req.body.author;
   var language = req.body.language;
   var targetMarket = req.body.targetMarket || '';
+  var ebook = req.body.ebook || null;
   var countryName = targetMarket || getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
   function safeParseKit(raw) {
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) {
-      var fixed = cleaned; if (!fixed.endsWith('}')) fixed += '"}';
-      try { return JSON.parse(fixed); } catch(e2) { throw new Error('JSON truncado en kit Hotmart'); }
+      try { return JSON.parse(cleaned + '"}}}'); } catch(e2) { throw new Error('JSON truncado en kit Hotmart'); }
     }
   }
   try {
-    var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle) +
-      ' | Promise: ' + (o.promesaEbook || o.ebookPromise) +
-      ' | Topic: ' + (o.problema || o.problem) +
-      ' | Type: ' + (o.tipoDemanda || 'learning') +
-      ' | Audience: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) +
-      ' | Market: ' + countryName +
-      ' | Price: ' + (o.precioHotmart || o.hotmartPrice) +
-      ' | Author: ' + author +
-      ' | Emotional driver: ' + (o.emocion || o.emotion) +
-      ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain);
+    // Ebook condensado: solo lo que Claude necesita para escribir el copy
+    var ebookCtx = ebook ? {
+      title: ebook.title || '',
+      subtitle: ebook.subtitle || '',
+      tagline: ebook.tagline || '',
+      intro: (ebook.intro || '').substring(0, 600),
+      chapters: (ebook.chapters || []).map(function(ch) {
+        return { number: ch.number, title: ch.title, opening: (ch.opening||'').substring(0,200), keyPoints: ch.keyPoints||[] };
+      }),
+      conclusion: (ebook.conclusion || '').substring(0, 400),
+      actionPlan: ebook.actionPlan || [],
+      resources: ebook.resources || []
+    } : { title: o.tituloEbook||o.ebookTitle||'', topic: o.problema||o.problem||'', promise: o.promesaEbook||o.ebookPromise||'' };
 
-    var hmSection1 = 'HOTMART PRODUCT LISTING — Generate JSON with: productName (compelling title string), premiumSubtitle (string), emotionalHook (1 powerful sentence string), shortDesc (100 words max string), longDesc (persuasive 250 words string), transformationPromise (string), benefits (array 6 strings), highlights (array 4 strings), targetAudience (string), category (string), pricing (PLAIN STRING with amount and currency, e.g. "27 EUR" or "19 USD" — NOT an object), guarantee (PLAIN STRING e.g. "7-day money back guarantee" — NOT an object), bonus (array 3 strings — short names of bonus digital PDF items to include), upsell (array 2 strings — CRITICAL: suggest ONLY additional ebooks or PDF guides that could be created as a premium upsell digital product — NEVER suggest services, consultations, coaching programs, courses requiring personal delivery, or anything that is not a downloadable PDF — example format: "Advanced Guide: [specific topic]" or "Complete Workbook: [specific topic]").';
-    var hmSection2 = 'HOTMART ADVANCED STRATEGY — Generate JSON with: cta (array 3 different CTAs), urgencyAngles (array 3 urgency hooks), objectionHandling (array 3, each object with objection and answer), seoKeywords (array 8 marketplace keywords), thumbnailTitleIdeas (array 3 short catchy titles), emotionalPositioning (brand positioning statement), faq (array 3, each object with q and a).';
+    var sys = 'Eres el director creativo y copywriter senior de una agencia de marketing digital especializada en infoproductos. Tu trabajo es analizar un ebook y generar TODO lo necesario para venderlo en plataformas de venta digital, en una sola respuesta estructurada en JSON.\n\n' +
+      '## SECCIÓN 1: TEXTOS DE VENTA\n' +
+      'Genera TODO en el idioma exacto del ebook. Si el ebook es en inglés UK, genera en inglés UK. Si es en italiano, genera en italiano.\n' +
+      'El idioma indicado en IDIOMA DEL EBOOK es la referencia única.\n\n' +
+      'texts.title — título del producto (máximo 60 caracteres)\n' +
+      'texts.subtitle — subtítulo vendedor (máximo 100 caracteres)\n' +
+      'texts.headline — frase gancho que activa miedo o urgencia\n' +
+      'texts.description_short — descripción de 50 palabras máximo\n' +
+      'texts.description_long — página de ventas 300-400 palabras: gancho emocional → problema → agitación → solución → beneficios → prueba social → CTA\n' +
+      'texts.bullets — array de 6 bullets: "Verbo + resultado concreto + sin [objeción]"\n' +
+      'texts.faq — array de 5 objetos {q, a}\n' +
+      'texts.guarantee_text — texto de garantía 14 días\n' +
+      'texts.cta_button — texto del botón de compra (máximo 5 palabras)\n\n' +
+      '## SECCIÓN 2: PROMPTS DALL-E\n' +
+      'Los prompts de imagen SIEMPRE en inglés (DALL-E solo entiende inglés).\n\n' +
+      'dalle_prompts.image_1 — Gancho: imagen con el miedo del público + promesa de solución. Detiene el scroll. Incluye texto en la imagen.\n' +
+      'dalle_prompts.image_2 — Mockup premium: el ebook flotando, iluminación cinematográfica, sin texto extra.\n' +
+      'dalle_prompts.image_3 — Credibilidad: autoridad + datos reales del mercado. Fuentes reales del ebook.\n' +
+      'dalle_prompts.image_4 — Beneficios: lista visual de los 4 beneficios más poderosos con iconos.\n' +
+      'dalle_prompts.image_5 — Cierre: CTA fuerte, urgencia sin agresividad, estilo premium.\n\n' +
+      'REGLAS DALL-E: paleta de colores del ebook, tipografía bold, fondo oscuro elegante, sin logos reales, sin texto distorsionado, estilo premium cinematográfico, nunca incluir precios.\n' +
+      'Cada prompt empieza con: "High quality digital marketing image for an ebook sales page."\n' +
+      'Cada prompt termina con: "No real brand logos. No distorted text. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
+      'REGULACIONES MERCADO: ' + regs.legal + '. Garantía legal: ' + regs.guarantee + '.\n\n' +
+      'Responde ÚNICAMENTE en JSON válido. Sin markdown. Sin explicaciones. Solo el JSON.\n' +
+      'Estructura exacta: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "dalle_prompts": { "image_1":"","image_2":"","image_3":"","image_4":"","image_5":"" } }';
 
-    var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection1), userMsg, 5000));
-    var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, hmSection2), userMsg, 5000));
-    res.json({ success: true, kit: Object.assign({}, p1, p2) });
+    var userMsg = 'IDIOMA DEL EBOOK: ' + language + '\nMERCADO: ' + countryName + '\nAUTOR: ' + author + '\n\nEBOOK:\n' + JSON.stringify(ebookCtx, null, 2);
+
+    var result = safeParseKit(await claudeCall(sys, userMsg, 7000));
+    var texts = result.texts || {};
+    var dalle = result.dalle_prompts || {};
+    // Kit unificado: textos al nivel raíz + dalle_prompts para imágenes
+    var kit = Object.assign({}, texts, { dalle_prompts: dalle });
+    res.json({ success: true, kit: kit });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
