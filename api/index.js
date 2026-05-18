@@ -1419,32 +1419,39 @@ app.post('/api/translate-custom', async function(req, res) {
 });
 
 // Traducción pieza por pieza — 1 llamada Claude por pieza, nunca supera 60s
+// Si la pieza tiene "content" largo, lo traduce como texto plano por separado
 app.post('/api/translate-chapter', async function(req, res) {
-  var piece = req.body.piece;       // objeto a traducir (header, chapter, o conclusion)
+  var piece = req.body.piece;
   var language = req.body.language;
   var targetMarket = req.body.targetMarket || '';
   var author = req.body.author || 'Ferni Guides';
   if (!piece || !language) return res.status(400).json({ success: false, error: 'Faltan datos' });
-  var marketRule = targetMarket
-    ? ' TARGET MARKET: ' + targetMarket + '. Translate to ' + language + ' specifically native to ' + targetMarket + ' — use local expressions, idioms and cultural references.'
-    : '';
-  var sys = 'You are a professional literary translator expert in ' + language + (targetMarket ? ' for the ' + targetMarket + ' market' : '') + '.' +
-    ' Translate the JSON provided into ' + language + ' in a natural, fluent, market-native way.' +
-    ' RULES: 1. Most natural ' + language + ' possible — feel written originally in this language.' +
-    ' 2. Preserve EXACTLY all numbers, measurements, quantities.' +
-    ' 3. Preserve author name: ' + author + ' — do NOT translate.' +
-    ' 4. Preserve all JSON keys in English, translate only string values.' +
-    ' 5. Return ONLY valid JSON, no markdown, no extra text.' + marketRule;
+  var mkt = targetMarket ? ' for the ' + targetMarket + ' market — use native expressions and cultural references specific to ' + targetMarket + '.' : '.';
+  var sysTxt = 'You are a professional literary translator. Translate the following text to ' + language + mkt +
+    ' Keep it natural and fluent. Preserve all numbers, measurements, and the author name "' + author + '". Return ONLY the translated text, nothing else.';
+  var sysJson = 'You are a professional literary translator. Translate the following JSON values to ' + language + mkt +
+    ' RULES: preserve all JSON keys in English, translate only string values. Preserve numbers and "' + author + '". Return ONLY valid JSON, no markdown.';
   try {
-    var raw = await claudeCall(sys, 'Translate this JSON:\n' + JSON.stringify(piece), 8000);
+    // Si la pieza tiene campo "content" muy largo, separarlo y traducirlo como texto plano
+    if (piece.chapter && piece.chapter.content && piece.chapter.content.length > 800) {
+      var ch = piece.chapter;
+      var contentRaw = await claudeCall(sysTxt, 'Translate this text:\n\n' + ch.content, 8000);
+      var metaPiece = { chapter: { number: ch.number, title: ch.title, opening: ch.opening, keyPoints: ch.keyPoints, exercise: ch.exercise } };
+      var metaRaw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(metaPiece), 3000);
+      var metaCleaned = metaRaw.replace(/```json|```/g, '').trim();
+      var meta;
+      try { meta = JSON.parse(metaCleaned); } catch(e) { meta = metaPiece; }
+      var result = Object.assign({}, meta.chapter || meta, { content: contentRaw.trim() });
+      return res.json({ success: true, translated: { chapter: result } });
+    }
+    // Para piezas pequeñas (header, conclusión, capítulos sin content largo): traducir como JSON
+    var raw = await claudeCall(sysJson, 'Translate this JSON:\n' + JSON.stringify(piece), 8000);
     var cleaned = raw.replace(/```json|```/g, '').trim();
     var translated;
     try { translated = JSON.parse(cleaned); }
     catch(e) {
-      // Intentar reparar JSON truncado
-      var fixed = cleaned.replace(/,\s*$/, '') + '"}';
-      try { translated = JSON.parse(fixed); } catch(e2) {
-        return res.status(500).json({ success: false, error: 'JSON truncado en traducción' });
+      try { translated = JSON.parse(cleaned + '"}'); } catch(e2) {
+        return res.status(500).json({ success: false, error: 'JSON truncado — intenta de nuevo' });
       }
     }
     res.json({ success: true, translated: translated });
