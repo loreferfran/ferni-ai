@@ -1437,10 +1437,12 @@ function rebuildRewriteBtns(nc) {
   var html = '';
   for (var i = 1; i <= nc; i++) html += '<button onclick="openChRewrite('+i+')" style="'+btStyle+'">Cap '+i+'</button>';
   html += '<button onclick="openChRewrite(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
+  html += '<button onclick="openChRewrite(\'disclaimer\')" style="'+btStyle+'">Disclaimer</button>';
   var c1 = document.getElementById('ch-rewrite-btns'); if(c1) c1.innerHTML = html;
   var html2 = '';
   for (var j = 1; j <= nc; j++) html2 += '<button onclick="openChRewriteFin('+j+')" style="'+btStyle+'">Cap '+j+'</button>';
   html2 += '<button onclick="openChRewriteFin(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
+  html2 += '<button onclick="openChRewriteFin(\'disclaimer\')" style="'+btStyle+'">Disclaimer</button>';
   var c2 = document.getElementById('ch-rewrite-btns-fin'); if(c2) c2.innerHTML = html2;
 }
 
@@ -1448,10 +1450,10 @@ function openChRewriteFin(n) {
   S.chRewriteTarget = n;
   var btns = document.querySelectorAll('#ch-rewrite-btns-fin button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; });
-  var activeIdx = (n === 'conclusion') ? btns.length - 1 : n - 1;
+  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : n - 1;
   if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var lbl = document.getElementById('ch-rewrite-label-fin');
-  if(lbl) lbl.textContent = (n === 'conclusion') ? 'Conclusión / Disclaimer' : 'Capítulo ' + n;
+  if(lbl) lbl.textContent = n === 'disclaimer' ? 'Disclaimer / Aviso Legal' : n === 'conclusion' ? 'Conclusión' : 'Capítulo ' + n;
   var ta = document.getElementById('ch-rewrite-instructions-fin');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel-fin');
@@ -2636,10 +2638,10 @@ function openChRewrite(n){
   S.chRewriteTarget = n;
   var btns = document.querySelectorAll('#ch-rewrite-btns button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; b.style.fontWeight='600'; });
-  var activeIdx = (n === 'conclusion') ? btns.length - 1 : n - 1;
+  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : n - 1;
   if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var label = document.getElementById('ch-rewrite-label');
-  if(label) label.textContent = (n === 'conclusion') ? 'Instrucciones para la Conclusión / Disclaimer:' : 'Instrucciones para el Capítulo ' + n + ':';
+  if(label) label.textContent = n === 'disclaimer' ? 'Instrucciones para el Disclaimer / Aviso Legal:' : n === 'conclusion' ? 'Instrucciones para la Conclusión:' : 'Instrucciones para el Capítulo ' + n + ':';
   var ta = document.getElementById('ch-rewrite-instructions');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel');
@@ -2686,9 +2688,10 @@ async function runChPatch(){
   var ebook = S.finalEbook || S.ebookData;
   if(!ebook){ alert('No hay ebook cargado.'); return; }
   var isConclusion = (n === 'conclusion');
-  if(!isConclusion && (!ebook.chapters || !ebook.chapters[n-1])){ alert('No hay capítulo ' + n + ' cargado.'); return; }
+  var isDisclaimer = (n === 'disclaimer');
+  if(!isConclusion && !isDisclaimer && (!ebook.chapters || !ebook.chapters[n-1])){ alert('No hay capítulo ' + n + ' cargado.'); return; }
 
-  if(!isConclusion) saveChSnapshot(n, ebook.chapters[n-1]);
+  if(!isConclusion && !isDisclaimer) saveChSnapshot(n, ebook.chapters[n-1]);
   var panel = document.getElementById('ch-rewrite-panel');
   if(panel) panel.style.display = 'none';
   var statusEl = document.getElementById('ch-rewrite-status');
@@ -2705,7 +2708,9 @@ async function runChPatch(){
     var replStr = quickMatch[2].trim();
     if (findStr.length <= 20 && replStr.length <= 20) {
       try {
-        var targetObj = isConclusion
+        var targetObj = isDisclaimer
+          ? { legalSection: ebook.legalSection }
+          : isConclusion
           ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
           : ebook.chapters[n-1];
         var chStr = JSON.stringify(targetObj);
@@ -2744,19 +2749,23 @@ async function runChPatch(){
     return;
   }
 
-  statusEl.textContent = isConclusion ? '✏️ Aplicando corrección a la conclusión...' : '✏️ Aplicando corrección al capítulo ' + n + '...';
+  statusEl.textContent = isDisclaimer ? '✏️ Aplicando corrección al disclaimer...' : isConclusion ? '✏️ Aplicando corrección a la conclusión...' : '✏️ Aplicando corrección al capítulo ' + n + '...';
   try {
     var o = S.selOpp || {};
-    var chapterData = isConclusion
+    var chapterData = isDisclaimer
+      ? { legalSection: ebook.legalSection }
+      : isConclusion
       ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
       : ebook.chapters[n-1];
     var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
-      opportunity: o, chapterNumber: isConclusion ? 'conclusion' : n,
+      opportunity: o, chapterNumber: isDisclaimer ? 'disclaimer' : isConclusion ? 'conclusion' : n,
       chapterData: chapterData, instruction: instruction, ebookDefs: S.ebookDefs || null
     })});
     var d = await r.json();
     if(!d.success) throw new Error(d.error || 'Error en corrección');
-    if (isConclusion) {
+    if (isDisclaimer) {
+      if(d.chapter.legalSection !== undefined) ebook.legalSection = d.chapter.legalSection;
+    } else if (isConclusion) {
       if(d.chapter.conclusion !== undefined) ebook.conclusion = d.chapter.conclusion;
       if(d.chapter.legalSection !== undefined) ebook.legalSection = d.chapter.legalSection;
       if(d.chapter.actionPlan !== undefined) ebook.actionPlan = d.chapter.actionPlan;
