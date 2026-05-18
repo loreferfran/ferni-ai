@@ -705,6 +705,7 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
       else if(entry.ebook){ S.ebookData = entry.ebook; }
       if(entry.numChapters) S.numChapters = entry.numChapters;
       else if(entry.ebook && entry.ebook.chapters) S.numChapters = entry.ebook.chapters.length;
+      else { var _nc=parseInt(localStorage.getItem('ferni_num_chapters')||'0'); if(_nc>0) S.numChapters=_nc; }
     }
   } catch(e){}
 })();
@@ -1157,7 +1158,7 @@ async function generateDirectEbook(){
       opp: opp, opps: [opp], selOpp: opp
     };
     S.history.unshift(entry);
-    try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); }catch(e){}
+    try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', histId); }catch(e){}
 
     document.getElementById('dir-load-txt').textContent = 'Brief listo — generando ebook con Claude...';
     S.directTopic = topic;
@@ -1609,22 +1610,43 @@ function getCountryNameFront(s){
 function saveEbookToHist(histId, ebook){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
   if(idx>=0){
+    var nc = ebook && ebook.chapters ? ebook.chapters.length : 0;
     S.history[idx].ebook=ebook;
-    if(ebook && ebook.chapters) S.history[idx].numChapters = ebook.chapters.length;
-    try{ localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', histId); }catch(e){}
+    if(nc) S.history[idx].numChapters = nc;
+    // Guardar metadata pequeña primero (nunca falla por tamaño)
+    try{ localStorage.setItem('ferni_active_id', histId); if(nc) localStorage.setItem('ferni_num_chapters', String(nc)); }catch(e){}
+    // Intentar guardar historial completo; si falla por cuota, eliminar ebooks de entradas viejas
+    try{
+      localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));
+    } catch(e){
+      // Cuota excedida — quitar ebook de entradas más antiguas para liberar espacio
+      for(var j=S.history.length-1; j>=0; j--){
+        if(j !== idx && S.history[j].ebook){ delete S.history[j].ebook; delete S.history[j].finalEbook; delete S.history[j].pdfHtml; }
+        try{ localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30))); break; }catch(e2){}
+      }
+    }
   }
 }
 function saveFullDataToHist(histId){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
   if(idx>=0){
-    if(S.ebookData) S.history[idx].ebook=S.ebookData;
+    var nc = (S.ebookData && S.ebookData.chapters ? S.ebookData.chapters.length : 0) || S.numChapters || 0;
+    if(S.ebookData){ S.history[idx].ebook=S.ebookData; if(nc) S.history[idx].numChapters=nc; }
     if(S.finalEbook) S.history[idx].finalEbook=S.finalEbook;
     if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
-    try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){}
+    try{ localStorage.setItem('ferni_active_id', histId); if(nc) localStorage.setItem('ferni_num_chapters', String(nc)); }catch(e){}
+    try{
+      localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));
+    } catch(e){
+      for(var j=S.history.length-1; j>=0; j--){
+        if(j !== idx && S.history[j].ebook){ delete S.history[j].ebook; delete S.history[j].finalEbook; delete S.history[j].pdfHtml; }
+        try{ localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30))); break; }catch(e2){}
+      }
+    }
   }
 }
 
@@ -3751,7 +3773,8 @@ function safeStr(v) {
 // Al arrancar: reconstruir botones con el número real de capítulos del ebook cargado
 (function(){
   var eb = S.finalEbook || S.ebookData;
-  var nc = (eb && eb.chapters && eb.chapters.length) || S.numChapters || 4;
+  var savedNc = parseInt(localStorage.getItem('ferni_num_chapters')||'0');
+  var nc = (eb && eb.chapters && eb.chapters.length) || S.numChapters || savedNc || 4;
   if(nc !== S.numChapters) S.numChapters = nc;
   rebuildChapterSteps(nc);
   rebuildRewriteBtns(nc);
