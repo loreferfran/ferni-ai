@@ -1442,6 +1442,10 @@ function rebuildRewriteBtns(nc) {
 
 function openChRewriteFin(n) {
   S.chRewriteTarget = n;
+  // Resaltar botón activo
+  var btns = document.querySelectorAll('#ch-rewrite-btns-fin button');
+  btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; });
+  if(btns[n-1]){ btns[n-1].style.background='#00b894'; btns[n-1].style.color='white'; btns[n-1].style.border='1px solid #00b894'; }
   var lbl = document.getElementById('ch-rewrite-label-fin');
   if(lbl) lbl.textContent = 'Capítulo ' + n;
   var ta = document.getElementById('ch-rewrite-instructions-fin');
