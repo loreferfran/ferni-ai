@@ -1849,8 +1849,10 @@ async function approveEbook(){
 
     S.finalEbook = translated;
     S.approvedLang = lang;
+    // Guardar traducción al historial ANTES de buildFinalPdfHtml — así no se pierde si algo falla
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     S.pdfHtml = buildFinalPdfHtml(translated, o, lang, lang, S.coverUrl, S.chapterImages);
-    S.translationProgress = null; // limpiar progreso solo si buildFinalPdfHtml no falló
+    S.translationProgress = null;
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');
