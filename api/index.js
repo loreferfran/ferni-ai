@@ -1443,15 +1443,39 @@ app.post('/api/translate-chapter', async function(req, res) {
   }
 
   try {
-    // Caso 1: capítulo con content largo → paralelo: content txt + metadatos JSON
+    // Caso 1: capítulo con content largo → paralelo: content txt + metadatos como texto con marcadores
     if (piece.chapter && piece.chapter.content && piece.chapter.content.length > 800) {
       var ch = piece.chapter;
-      var metaPiece = { chapter: { number: ch.number, title: ch.title, opening: ch.opening, keyPoints: ch.keyPoints, exercise: ch.exercise } };
+      // Metadatos como texto estructurado con marcadores — más fiable que JSON para arrays
+      var keyPointsText = Array.isArray(ch.keyPoints) ? ch.keyPoints.join('\n') : (ch.keyPoints || '');
+      var exerciseText = typeof ch.exercise === 'object' ? JSON.stringify(ch.exercise) : (ch.exercise || '');
+      var metaBlock = '===TITLE===\n' + (ch.title||'') +
+        '\n===OPENING===\n' + (ch.opening||'') +
+        '\n===KEYPOINTS===\n' + keyPointsText +
+        '\n===EXERCISE===\n' + exerciseText;
       var chResults = await Promise.all([
         txtTranslate(ch.content, 8000),
-        jsonTranslate(metaPiece, 3000)
+        txtTranslate(metaBlock, 6000)
       ]);
-      var result = Object.assign({}, chResults[1].chapter || chResults[1], { content: chResults[0] });
+      // Parsear metadatos por marcadores
+      var metaStr = chResults[1];
+      function extractSection(str, tag) {
+        var re = new RegExp('===' + tag + '===\\n([\\s\\S]*?)(?====|$)');
+        var m = str.match(re); return m ? m[1].trim() : '';
+      }
+      var translatedTitle = extractSection(metaStr, 'TITLE') || ch.title;
+      var translatedOpening = extractSection(metaStr, 'OPENING') || ch.opening;
+      var kpRaw = extractSection(metaStr, 'KEYPOINTS') || keyPointsText;
+      var translatedKeyPoints = Array.isArray(ch.keyPoints)
+        ? kpRaw.split('\n').filter(function(l){ return l.trim(); })
+        : kpRaw;
+      var exRaw = extractSection(metaStr, 'EXERCISE') || exerciseText;
+      var translatedExercise = ch.exercise;
+      if (typeof ch.exercise === 'object') {
+        try { translatedExercise = JSON.parse(exRaw); } catch(e) { translatedExercise = exRaw; }
+      } else { translatedExercise = exRaw; }
+      var result = { number: ch.number, title: translatedTitle, opening: translatedOpening,
+        keyPoints: translatedKeyPoints, exercise: translatedExercise, content: chResults[0] };
       return res.json({ success: true, translated: { chapter: result } });
     }
 
