@@ -1,139 +1,149 @@
-# Progreso FERNI AI — Estado Actual (16 Mayo 2026)
+# Progreso FERNI AI — Estado Actual (18 Mayo 2026)
 
-## ÚLTIMOS COMMITS (sesión 16 Mayo)
-- `014b29b` — Add: Serper en Módulo Directo — datos reales de web como contexto para Claude
-- `41e407e` — Fix: historial — botones no clickeables por IDs sin comillas en onclick
-- `2ad5817` — Fix: restricción permanente — prohibido mencionar precio del producto en el PDF
-- `6e7c4b5` — Fix: historial muestra undefined — fallbacks para entradas antiguas y Módulo Directo
-- `5e9ff28` — Add: verificación de hechos en 3 capas para ambos módulos
-- `b4a5c6c` — Enhance: dynamic niche palettes + visual tag parser + chapter retry system
+## ÚLTIMOS COMMITS (sesión 18 Mayo)
+- `7462a0c` — Fix: 7 chapter buttons — save numChapters to tiny localStorage key, survive quota overflow
+
+## COMMITS sesión 17 Mayo (referencia)
+- `9bc6e33` — Fix: rebuildRewriteBtns al final del script — después de que todas las funciones estén definidas
+- `932aeb3` — Fix: outline respeta estructura del tema (mini-cursos, herramientas específicas)
+- `326687f` — Add: auto-continuación cuando capítulo es largo — sin intervención del usuario
+- `95e7b28` — Fix: arquitectura correcta — 1 llamada Claude por request, frontend orquesta
+- `f4add48` — Fix: truncamiento JSON en reescritura — split metadata+content sin JSON
+- `012d176` — Fix: capítulos de cualquier tamaño — auto-extensión + max_tokens igualados
+- `49845e5` — Fix: reescritura capítulo — 2 llamadas para contenido largo + sanitizar ASCII
+- `3ac8932` — Add: panel reescritura por capítulo — openChRewrite() + runChRewrite()
+
+## COMMITS sesión 16 Mayo (referencia)
+- `014b29b` — Add: Serper en Módulo Directo
+- `41e407e` — Fix: historial botones clickeables
+- `2ad5817` — Fix: restricción permanente precio del producto
+- `5e9ff28` — Add: verificación de hechos 3 capas
+- `b4a5c6c` — Enhance: paletas dinámicas + parser visual + retry por capítulo
+
+## Causa raíz del bug "4 capítulos" (RESUELTO en 7462a0c)
+El ebook de 7 capítulos es demasiado grande para localStorage (límite ~5MB).
+`saveEbookToHist` fallaba silenciosamente en el `try/catch` → `ferni_active_id` nunca se guardaba
+→ al recargar, auto-restore no encontraba el ebook activo → `nc = 4` (default hardcodeado).
+
+**Solución triple:**
+1. Guardar `ferni_active_id` y `ferni_num_chapters` en localStorage ANTES del JSON grande (nunca fallan)
+2. Si el JSON grande falla por cuota, eliminar ebooks de entradas viejas y reintentar
+3. Auto-restore y IIFE final usan `ferni_num_chapters` como fallback
+4. `generateDirectEbook` guarda `ferni_active_id` inmediatamente al crear la entrada (no esperar al fin del ebook)
 
 ## Stack Técnico
 - **Frontend**: public/index.html (vanilla JS, sin framework)
 - **Backend**: api/index.js (Express en Vercel serverless)
-- **APIs**: Claude (ebooks + traducción + Marketing Kit + verificación), OpenAI GPT-4o (análisis + quick-brief), gpt-image-1 (imágenes), Serper (búsqueda + Módulo Directo), DataForSEO (volumen real)
-- **Deploy**: Vercel → ferni-ai.vercel.app (auto-deploy desde GitHub master)
+- **APIs**: Claude (ebooks + verificación), OpenAI GPT-4o (análisis + quick-brief), gpt-image-1 (imágenes), Serper (búsqueda web), DataForSEO (volumen keywords)
+- **Deploy**: Vercel Hobby gratuito → ferni-ai.vercel.app
 - **Repo**: https://github.com/loreferfran/ferni-ai
+- **Timeout Vercel Hobby**: 60s por función → arquitectura: 1 llamada Claude = 1 request
 
-## Flujo Módulo 1 — Automático con Serper (DEFINITIVO)
+## Flujo Módulo 1 — Automático
 ```
-1. Usuario elige país + nicho → EJECUTAR ANÁLISIS
-2. Serper busca (Google + Reddit + YouTube + Amazon + Quora + Pinterest + TikTok + Hotmart/Udemy)
-3. Google Trends real con fallback a Serper
-4. DataForSEO consulta volumen real de Google Ads
-5. OpenAI GPT-4o analiza → 10 oportunidades con scoreMonetizacion
-6. Usuario selecciona oportunidad → Generar borrador ebook
-7. Claude genera en 7 pasos: header → outline → ch1 → ch2 → ch3 → ch4 → ending
-8. Preview borrador en ESPAÑOL
-9. Verificación automática Capa 3 (segundo Claude audita datos y fuentes)
-10. Correcciones via chat → imágenes → APROBAR → traducción → PDF final
+País + nicho → Serper → DataForSEO → GPT-4o → 10 oportunidades
+→ selección → Claude 7 pasos (header/outline/ch1-4/ending)
+→ verificación Capa 3 → chat correcciones → imágenes → PDF final
 ```
 
-## Flujo Módulo 2 — Directo (ACTUALIZADO — 16 Mayo)
+## Flujo Módulo 2 — Directo
 ```
-1. Usuario escribe tema + elige país
-2. Serper busca 3 queries (~3 búsquedas): topic+país, topic+estadísticas, topic+guía expertos
-3. GPT-4o genera el brief con datos reales de Serper como contexto
-4. S.ebookSerperContext guarda los snippets de Serper
-5. Claude genera cada capítulo recibiendo los snippets como contexto adicional
-   → Instrucción: "cita datos reales con Según [nombre del sitio]"
-6. Preview borrador en ESPAÑOL
-7. Verificación automática Capa 3
-8. Correcciones → imágenes → APROBAR → traducción → PDF final
+Tema libre (con instrucciones detalladas) → Serper 3 búsquedas
+→ GPT-4o brief → Claude 7 pasos → verificación → PDF final
 ```
-**Nota:** si Serper falla, el flujo continúa sin contexto web sin bloquearse.
 
-## Sistema de Verificación de Hechos — 3 Capas
-### Módulo 1 → isModule1=true (modo estricto — datos pasaron por OpenAI)
-### Módulo 2 → isModule1=false (modo estándar — solo Claude)
+## Panel Reescritura por Capítulo
+Botones Cap 1-N → abre textarea con instrucciones.
 
+### Dos modos de corrección:
+- **✏️ Corregir texto** → `runChPatch()` → `/api/patch-chapter` → solo aplica el cambio indicado (~15s)
+  - Guarda snapshot antes de modificar → botón "Restaurar versión anterior" aparece
+  - Auto-guarda en historial + actualiza PDF
+- **🔄 Regenerar capítulo** → `runChRewrite()` → reescribe el capítulo completo con instrucciones (~60s)
+
+### Flujo reescritura completa (3 requests separados, cada uno <60s):
+1. `metadataOnly` → title, opening, keyPoints, exercise (~15s)
+2. `contentOnly` → content como Markdown puro (~40s)
+   - Si `truncated:true` → auto-continuación sin que el usuario haga nada
+3. (opcional) `contentOnly` con `--- PARTE 2 ---` para capítulos muy largos
+
+### Separador para capítulos muy largos:
+```
+[instrucciones primeras secciones]
+
+--- PARTE 2 ---
+
+[instrucciones secciones restantes]
+```
+
+## Sistema de Verificación — 3 Capas
 | Capa | Dónde | Qué hace |
 |------|-------|---------|
-| Capa 1 | buildEbookSystem() — system prompt | Filtro interno: fuente exacta, no atribuciones genéricas, no proyecciones como hechos |
-| Capa 2 | espInstruction — fin de cada capítulo | Autorevisión antes de entregar JSON: fuentes, atribuciones, herramientas activas |
-| Capa 3 | /api/verify-content — segundo Claude | Auditoría post-generación, muestra alerta en UI antes de APROBAR |
+| 1 | buildEbookSystem() | Filtro: fuente exacta, no atribuciones genéricas |
+| 2 | espInstruction | Autorevisión antes de entregar JSON |
+| 3 | /api/verify-content | Segundo Claude audita post-generación |
 
-## Restricciones Permanentes en System Prompt
-- **No mencionar precio del producto**: prohibido "pagaste X", "este libro cuesta X", etc.
-- **No inventar estadísticas**: solo fuente exacta + año, estimación con rango, o eliminar
-- **No primera persona**: nunca "yo", "mi", "he"
-- **No experiencias personales inventadas**
-- **Idioma**: siempre en español en Fase 1, sin excepciones
+## Restricciones Permanentes
+- No mencionar precio del producto en PDF
+- No inventar estadísticas sin fuente
+- No primera persona ("yo", "mi")
+- Todo en español en Fase 1
+- Moneda: EUR (€) para precios de herramientas, GBP (£) para salarios/contexto laboral británico
 
-## Sistema de Paletas Dinámicas por Nicho
-`getNichePalette(o)` detecta nicho por keywords → paleta CSS completa:
+## Sanitizador ASCII en PDF
+`sanitizeAsciiBoxes()` en `preProcessTags()`:
+convierte ╔═╗/┌─┐ a divs HTML. Claude usa [HIGHLIGHT BOX] en rewrites.
 
-| Nicho | Colores | Tipografía |
-|-------|---------|------------|
-| beauty/skincare/yoga/wellness | Rosa/nude #C96B6B | Georgia serif |
-| fitness/gym/nutrición/salud | Naranja/verde #E8630A | Arial sans-serif |
-| lifestyle/cocina/productividad | Mint/cyan #00B894 | Georgia serif |
-| business/AI/tech/digital | Navy/oro #1B2A4A | Arial sans-serif |
-| default | Morado Ferni #6c5ce7 | Georgia serif |
+## generate-chapter — Flags disponibles
+| Flag | Uso | Tiempo |
+|------|-----|--------|
+| `section: ch1-chN` | generación normal JSON | ~40s |
+| `metadataOnly: true` | solo metadata sin content | ~15s |
+| `contentOnly: true` | solo content texto Markdown | ~40s |
+| `contentOnly + previousContent` | continuación del content | ~40s |
+| `chMaxTokens = 8000` | rewrites; 1800 generación normal | — |
 
-Todas las variables CSS usan `P.xxx` — incluyendo vis-* elements.
+## localStorage — Claves usadas
+| Clave | Tamaño | Contenido |
+|-------|--------|-----------|
+| `ferni_pro` | Grande (~5MB) | Array historial completo (puede fallar si ebooks grandes) |
+| `ferni_active_id` | Tiny | ID del ebook activo actual |
+| `ferni_num_chapters` | Tiny | Número de capítulos del ebook activo |
 
-## Parser de Elementos Visuales
-Claude genera tags → buildFinalPdfHtml() los renderiza como HTML:
-`[TABLE]` `[BAR CHART]` `[LINE CHART]` `[HIGHLIGHT BOX]` `[CHECKLIST]` `[ICON + TITLE]`
+## Paletas Dinámicas por Nicho
+`getNichePalette(o)` → 5 paletas via `P.xxx`:
+beauty/yoga → rosa | fitness → naranja | lifestyle → mint | business/AI → navy | default → morado
 
-## Sistema de Retry por Capítulo
-- `runEbookSteps(startFrom)` — si falla CH3, CH1+CH2 se preservan
-- `S.ebookParts` guarda progreso capítulo por capítulo
-- `retryEbook()` reintenta desde el punto de falla
-- `resetEbookFull()` empieza de cero
-
-## Historial (Tab 🕐) — Fixes aplicados
-- IDs del Módulo Directo son strings `dir_123` — se requería comillas en onclick
-- Fix: todos los onclick con `'${e.id}'` + comparaciones con `String(h.id)===String(id)`
-- Fix: entradas antiguas y Módulo Directo muestran datos con fallbacks (no más "undefined")
-- Botones 🗑 🖼 📊 funcionan correctamente
-
-## Módulos / Tabs de la App
+## Módulos / Tabs
 | Tab | Función |
 |-----|---------|
-| 🔍 Análisis | País + nicho → 10 oportunidades rankeadas |
-| 📖 Ebook | Generar borrador → verificación automática → aprobar → PDF final |
-| 🛒 Hotmart | Kit Marketing: textos + 6 imágenes + bonos + upsells |
-| 📣 Meta Ads | Anuncios Meta + contenido Facebook + Instagram |
+| 🔍 Análisis | País + nicho → 10 oportunidades |
+| 📖 Ebook | Borrador → verificación → PDF |
+| 🛒 Hotmart | Kit Marketing completo |
+| 📣 Meta Ads | Anuncios + contenido RRSS |
 | 🎁 Bonus Pack | 4 infoproductos complementarios |
-| 🌍 Traducción | 28 idiomas con mercado específico |
-| ➡️ Directo | Tema libre + Serper + Claude → PDF |
-| 🕐 Historial | Ver, restaurar y borrar ebooks anteriores |
+| 🌍 Traducción | 28 idiomas |
+| ➡️ Directo | Tema libre → PDF |
+| 🕐 Historial | Ver, restaurar, borrar |
 
-## Consumo Serper
-- **Módulo 1**: ~11 búsquedas por análisis
-- **Módulo 2**: ~3 búsquedas por PDF generado
-- **Free tier**: 2,500 búsquedas/mes → ~220 análisis Módulo 1 o ~830 PDFs Módulo 2
-- Ambos módulos no se usan en paralelo → el consumo no se duplica
+## Variables de Entorno Vercel
+CLAUDE_API_KEY ✅ | OPENAI_API_KEY ✅ | SERPER_API_KEY ✅ | DATAFORSEO_LOGIN ✅ | DATAFORSEO_PASSWORD ✅
 
-## Variables de Entorno en Vercel
-- CLAUDE_API_KEY ✅
-- OPENAI_API_KEY ✅
-- SERPER_API_KEY ✅
-- DATAFORSEO_LOGIN ✅
-- DATAFORSEO_PASSWORD ✅
+## Pendiente
+- Capítulo 3 (UK AI tools) fue sobreescrito accidentalmente — necesita regenerarse con el prompt detallado de mini-cursos AI
+- Capítulo 5 (Otter.ai) estaba truncado — puede necesitar corrección
+- PDF preview a veces aparece vacío/oscuro después de restaurar desde historial
 
-## Estado de Archivos Clave
-**api/index.js**: búsqueda, análisis GPT-4o, generación Claude 7 pasos, correcciones,
-imágenes gpt-image-1, translate-custom, generate-hotmart, generate-meta, generate-extras,
-generate-bonuses, quick-brief **(ahora con Serper)**, verify-content, buildEbookSystem,
-buildEbookContext, buildMarketingSystemPrompt
-
-**public/index.html**: UI completa + IndexedDB + getNichePalette() + buildFinalPdfHtml()
-con P.xxx + preProcessTags() + renderVisualTag() + runEbookSteps() + retryEbook() +
-buildVerificationContent() + runVerification() + renderHist() **(IDs con comillas)**
-+ genDirecto() **(guarda serperContext)** + goEbook(isModule1)
-
-## Pendiente / Próxima Sesión
-- 🔄 Probar Módulo Directo completo: tema → Serper → GPT-4o → Claude con datos reales → verificación
-- 🔄 Verificar que Claude cita fuentes reales de Serper en los capítulos
-- 🔄 Probar paletas: ebook skincare (rosa) vs business (navy)
-- 🔄 Probar tags visuales [TABLE], [BAR CHART] en PDF real
-- 🔄 Probar retry de capítulo sin perder lo anterior
-- 🔄 Verificar que historial funciona (botones clickeables, sin undefined)
+## Ebook UK AI tools — Prompt Módulo Directo usado
+```
+Guía completa de herramientas AI para trabajadores del Reino Unido 2026.
+CONTENIDO OBLIGATORIO: mini-cursos de ChatGPT, Claude, Copilot, Gemini,
+Canva AI, Otter.ai, Midjourney y Perplexity.
+ESTRUCTURA: exactamente 2 herramientas AI por capítulo.
+Cada mini-curso: qué es, configuración en UK, 3 casos de uso,
+prompts listos para usar, errores comunes.
+```
 
 ## Cómo Continuar en un Nuevo Chat
 1. Abrir VS Code en este workspace
-2. Escribir exactamente: **"continuar desde progress.md"**
-3. Claude leerá este archivo y tendrá todo el contexto
+2. Escribir: **"continuar desde progress.md"**
