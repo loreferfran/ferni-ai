@@ -1825,8 +1825,11 @@ async function approveEbook(){
     // 3. Conclusión — omitir si ya está traducida
     var tEnd;
     if(tp.conclusion) {
+      // Si la conclusión cacheada tiene actionPlan como string (bug antiguo), descartarla
+      if(tp.conclusion && typeof tp.conclusion.actionPlan === 'string') tp.conclusion = null;
       tEnd = tp.conclusion;
-    } else {
+    }
+    if(!tEnd) {
       tEnd = await translatePiece({ conclusion: eb.conclusion, actionPlan: eb.actionPlan, resources: eb.resources, legalSection: eb.legalSection }, 'conclusión');
       tp.conclusion = tEnd;
     }
@@ -1843,10 +1846,10 @@ async function approveEbook(){
       legalSection: tEnd.legalSection || eb.legalSection
     };
 
-    S.translationProgress = null; // limpiar progreso al completar
     S.finalEbook = translated;
     S.approvedLang = lang;
     S.pdfHtml = buildFinalPdfHtml(translated, o, lang, lang, S.coverUrl, S.chapterImages);
+    S.translationProgress = null; // limpiar progreso solo si buildFinalPdfHtml no falló
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 
     hide('eb-loading'); hide('eb-content'); show('eb-approved');

@@ -1466,18 +1466,22 @@ app.post('/api/translate-chapter', async function(req, res) {
       return res.json({ success: true, translated: Object.assign({}, headerResults[1], { intro: headerResults[0] }) });
     }
 
-    // Caso 3: pieza de conclusión — paralelo: cada campo largo como texto, resources como JSON
+    // Caso 3: pieza de conclusión — conclusion/legalSection como texto, actionPlan/resources como JSON (son arrays)
     if (piece.conclusion !== undefined || piece.actionPlan !== undefined || piece.legalSection !== undefined) {
       var conclusionPromises = [
-        piece.conclusion ? txtTranslate(piece.conclusion, 6000) : Promise.resolve(''),
-        piece.actionPlan ? txtTranslate(piece.actionPlan, 5000) : Promise.resolve(''),
-        piece.legalSection ? txtTranslate(piece.legalSection, 3000) : Promise.resolve(''),
-        piece.resources ? jsonTranslate({ resources: piece.resources }, 3000) : Promise.resolve({})
+        piece.conclusion && typeof piece.conclusion === 'string'
+          ? txtTranslate(piece.conclusion, 6000) : Promise.resolve(piece.conclusion || ''),
+        piece.actionPlan !== undefined
+          ? jsonTranslate({ actionPlan: piece.actionPlan }, 4000) : Promise.resolve({}),
+        piece.legalSection && typeof piece.legalSection === 'string'
+          ? txtTranslate(piece.legalSection, 3000) : Promise.resolve(piece.legalSection || ''),
+        piece.resources !== undefined
+          ? jsonTranslate({ resources: piece.resources }, 3000) : Promise.resolve({})
       ];
       var conclusionResults = await Promise.all(conclusionPromises);
       var outConclusion = {};
       if (piece.conclusion !== undefined) outConclusion.conclusion = conclusionResults[0];
-      if (piece.actionPlan !== undefined) outConclusion.actionPlan = conclusionResults[1];
+      if (piece.actionPlan !== undefined) outConclusion.actionPlan = (conclusionResults[1] && conclusionResults[1].actionPlan) || piece.actionPlan;
       if (piece.legalSection !== undefined) outConclusion.legalSection = conclusionResults[2];
       if (piece.resources !== undefined) outConclusion.resources = (conclusionResults[3] && conclusionResults[3].resources) || piece.resources;
       return res.json({ success: true, translated: outConclusion });
