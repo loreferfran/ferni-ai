@@ -1624,7 +1624,7 @@ function removeSlotImage(slotIndex){
   var cName = S.countryName || o.pais || o.country || '';
   S.pdfHtml = buildFinalPdfHtml(ebook||{}, o, lang, cName, S.coverUrl, S.chapterImages||[]);
   var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
-  var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+  var prev2 = document.getElementById('eb-final-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
   renderImgSlots(ebook);
   if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 }
@@ -1726,7 +1726,7 @@ function applyCoverText(){
   var cName = S.countryName || o.pais || o.country || '';
   S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
   var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
-  var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+  var prev2 = document.getElementById('eb-final-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
   if(S.currentHistId) saveFullDataToHist(S.currentHistId);
   document.getElementById('cover-text-panel').style.display = 'none';
   addMsg('chat-ebook', '✅ Texto de portada actualizado en el PDF.', 'ferni');
@@ -1910,6 +1910,7 @@ async function approveEbook(){
     document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
+    rebuildRewriteBtns(translated.chapters ? translated.chapters.length : 7);
     addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar.', 'ferni');
 
   } catch(e) {
@@ -2660,7 +2661,7 @@ function undoChPatch(){
   S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
   var prev = document.getElementById('eb-draft-preview');
   if(prev) prev.srcdoc = S.pdfHtml;
-  var prev2 = document.getElementById('eb-approved-preview');
+  var prev2 = document.getElementById('eb-final-preview');
   if(prev2) prev2.srcdoc = S.pdfHtml;
   var undoBar = document.getElementById('ch-undo-bar');
   if(undoBar) undoBar.style.display = 'none';
@@ -2721,7 +2722,7 @@ async function runChPatch(){
     var cName2 = S.countryName || o2.pais || o2.country || '';
     S.pdfHtml = buildFinalPdfHtml(ebook, o2, lang2, cName2, S.coverUrl, S.chapterImages||[]);
     var prev0 = document.getElementById('eb-draft-preview'); if(prev0) prev0.srcdoc = S.pdfHtml;
-    var prev02 = document.getElementById('eb-approved-preview'); if(prev02) prev02.srcdoc = S.pdfHtml;
+    var prev02 = document.getElementById('eb-final-preview'); if(prev02) prev02.srcdoc = S.pdfHtml;
     statusEl.textContent = '✅ Corrección aplicada al instante. Si no te gusta, usa "Restaurar versión anterior".';
     statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
     return;
@@ -2743,7 +2744,7 @@ async function runChPatch(){
     var cName = S.countryName || o.pais || o.country || '';
     S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
     var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
-    var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+    var prev2 = document.getElementById('eb-final-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
     statusEl.textContent = '✅ Corrección aplicada y guardada. Si no te gusta, usa "Restaurar versión anterior".';
     statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
   } catch(e) {
