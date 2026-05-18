@@ -2460,9 +2460,52 @@ async function runChPatch(){
   if(panel) panel.style.display = 'none';
   var statusEl = document.getElementById('ch-rewrite-status');
   statusEl.style.display = 'block';
-  statusEl.textContent = '✏️ Aplicando corrección al capítulo ' + n + '...';
   statusEl.style.background = 'rgba(9,132,227,0.1)';
   statusEl.style.color = '#0984e3';
+
+  // Detección de reemplazos simples: "reemplaza X por Y", "cambia X a Y", "sustituye X por Y"
+  // Se aplican directamente en el frontend sin llamar a la API
+  var quickMatch = instruction.match(/(?:reemplaz[ae]|cambi[ae]|sustituye?)\s+["']?(.+?)["']?\s+(?:por|a|con)\s+["']?(.+?)["']?\.?\s*$/i);
+  if (!quickMatch) {
+    // Intentar patrón "X → Y" o "X -> Y" o "X por Y"
+    quickMatch = instruction.match(/["']?(.+?)["']?\s*(?:→|->|por|a)\s*["']?(.+?)["']?\.?\s*$/i);
+  }
+  var didQuickPatch = false;
+  if (quickMatch) {
+    var findStr = quickMatch[1].trim();
+    var replStr = quickMatch[2].trim();
+    // Solo aplicar si la búsqueda es corta (símbolo o palabra, no frase larga) para evitar falsos positivos
+    if (findStr.length <= 20 && replStr.length <= 20) {
+      try {
+        var chStr = JSON.stringify(ebook.chapters[n-1]);
+        var escaped = findStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var replaced = chStr.replace(new RegExp(escaped, 'g'), replStr);
+        if (replaced !== chStr) {
+          ebook.chapters[n-1] = JSON.parse(replaced);
+          didQuickPatch = true;
+        } else {
+          statusEl.textContent = '⚠️ No se encontró "' + findStr + '" en el capítulo ' + n + '.';
+          statusEl.style.background = 'rgba(253,203,110,0.1)'; statusEl.style.color = '#fdcb6e';
+          return;
+        }
+      } catch(e2) { didQuickPatch = false; }
+    }
+  }
+  if (didQuickPatch) {
+    if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+    if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
+    var o2 = S.selOpp || {};
+    var lang2 = S.approvedLang || o2.idioma || o2.language || 'Español';
+    var cName2 = S.countryName || o2.pais || o2.country || '';
+    S.pdfHtml = buildFinalPdfHtml(ebook, o2, lang2, cName2, S.coverUrl, S.chapterImages||[]);
+    var prev0 = document.getElementById('eb-draft-preview'); if(prev0) prev0.srcdoc = S.pdfHtml;
+    var prev02 = document.getElementById('eb-approved-preview'); if(prev02) prev02.srcdoc = S.pdfHtml;
+    statusEl.textContent = '✅ Corrección aplicada al instante. Si no te gusta, usa "Restaurar versión anterior".';
+    statusEl.style.background = 'rgba(0,184,148,0.1)'; statusEl.style.color = '#00b894';
+    return;
+  }
+
+  statusEl.textContent = '✏️ Aplicando corrección al capítulo ' + n + '...';
   try {
     var o = S.selOpp || {};
     var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
