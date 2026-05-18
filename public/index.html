@@ -3519,7 +3519,7 @@ async function genHotmartImg(idx){
   try{
     const o=S.selOpp;
     var imgData = (S.hmKit && S.hmKit.images && S.hmKit.images['image_'+(idx+1)]) || {};
-    var prompt = imgData.visual_prompt || '';
+    var prompt = imgData.visual_prompt || (S.hmKit && S.hmKit.dalle_prompts && S.hmKit.dalle_prompts['image_'+(idx+1)]) || '';
     var textOverlay = imgData.text_overlay || '';
     if(!prompt){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Sin prompt — regenera el kit</div>'; return; }
     const imageType = idx===4 ? 'cover' : 'chapter';
