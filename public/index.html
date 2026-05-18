@@ -692,6 +692,22 @@ select option { background: #1e2d52; }
 <script>
 const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
+// Auto-restaurar ebook activo al recargar — busca la entrada más reciente con borrador
+(function(){
+  try {
+    var lastId = localStorage.getItem('ferni_active_id');
+    var entry = lastId && S.history.find(function(h){ return h.id === lastId; });
+    if(!entry) entry = S.history.find(function(h){ return h.ebook || h.finalEbook; });
+    if(entry && (entry.ebook || entry.finalEbook)){
+      S.currentHistId = entry.id;
+      S.selOpp = entry.selOpp || (entry.opps && entry.opps[0]) || null;
+      if(entry.finalEbook){ S.finalEbook = entry.finalEbook; }
+      else if(entry.ebook){ S.ebookData = entry.ebook; }
+      if(entry.numChapters) S.numChapters = entry.numChapters;
+      else if(entry.ebook && entry.ebook.chapters) S.numChapters = entry.ebook.chapters.length;
+    }
+  } catch(e){}
+})();
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
 
@@ -1587,7 +1603,11 @@ function getCountryNameFront(s){
 
 function saveEbookToHist(histId, ebook){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
-  if(idx>=0){ S.history[idx].ebook=ebook; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
+  if(idx>=0){
+    S.history[idx].ebook=ebook;
+    if(ebook && ebook.chapters) S.history[idx].numChapters = ebook.chapters.length;
+    try{ localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', histId); }catch(e){}
+  }
 }
 function saveFullDataToHist(histId){
   var idx=S.history.findIndex(function(h){return h.id===histId;});
