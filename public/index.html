@@ -732,6 +732,9 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
       if(entry.numChapters) S.numChapters = entry.numChapters;
       else if(entry.ebook && entry.ebook.chapters) S.numChapters = entry.ebook.chapters.length;
       else { var _nc=parseInt(localStorage.getItem('ferni_num_chapters')||'0'); if(_nc>0) S.numChapters=_nc; }
+      if(entry.hmKit) S.hmKit = entry.hmKit;
+      if(entry.maKit) S.maKit = entry.maKit;
+      if(entry.generatedBonuses) S.generatedBonuses = entry.generatedBonuses;
     }
   } catch(e){}
 })();
@@ -817,7 +820,10 @@ function showTab(id,el){
     if(S.hmKit && S.selOpp){ hide('hm-empty'); hide('hm-loading'); show('hm-content'); renderHotmart(S.selOpp, S.hmKit, S.selOpp.pais||S.selOpp.country||''); }
     else populateHmSel();
   }
-  if(id==='meta' && !S.maKit) populateMetaSel();
+  if(id==='meta'){
+    if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
+    else populateMetaSel();
+  }
 }
 
 function restoreEbookTab(){
@@ -1776,6 +1782,8 @@ function saveFullDataToHist(histId){
     if(S.finalEbook) S.history[idx].finalEbook=S.finalEbook;
     if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
+    if(S.maKit) S.history[idx].maKit=S.maKit;
+    if(S.generatedBonuses && S.generatedBonuses.length) S.history[idx].generatedBonuses=S.generatedBonuses;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -3621,7 +3629,7 @@ async function genMeta(o, langOverride){
   try{
     const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,language:lang})});
     const d=await resp.json();
-    if(d.success){ S.maKit=d.kit; hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
+    if(d.success){ S.maKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
     else{ hide('ma-loading'); show('ma-empty'); alert('Error generando kit Meta Ads: '+d.error); }
   }catch(e){ hide('ma-loading'); show('ma-empty'); alert('Error: '+e.message); }
 }
@@ -3702,6 +3710,7 @@ async function genBonuses(){
     const d=await resp.json();
     if(!d.success){box.innerHTML='<div style="color:red;font-size:12px;">Error: '+d.error+'</div>';return;}
     S.generatedBonuses=d.bonuses;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     box.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-top:10px;border-top:1px solid var(--border);">✅ Bonos generados — descarga cada uno como PDF</div>'+
     d.bonuses.map(function(b,i){
       return '<div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">'+
