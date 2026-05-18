@@ -414,16 +414,18 @@ select option { background: #1e2d52; }
           </div><!-- /eb-content -->
 
           <div id="eb-approved" class="hidden">
-            <div class="row-hd"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
-            <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-              <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
-              <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
-              <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
-              <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
-            </div>
+            <!-- Barra sticky: siempre visible aunque se haga scroll en el PDF -->
+            <div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+              <div class="row-hd" style="margin-bottom:8px;"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
+              <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
+                <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
+                <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
+                <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
+              </div>
 
             <!-- Panel corrección por capítulo en vista final -->
-            <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:10px;">
+            <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;">
               <div style="font-weight:700;color:#00b894;font-size:12px;margin-bottom:8px;">✍️ Corregir un capítulo del PDF final</div>
               <div id="ch-rewrite-btns-fin" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
               <div id="ch-rewrite-panel-fin" style="display:none;">
@@ -437,6 +439,7 @@ select option { background: #1e2d52; }
               </div>
               <div id="ch-rewrite-status-fin" style="display:none;padding:10px;border-radius:8px;background:rgba(0,184,148,0.1);color:#00b894;font-size:13px;margin-top:8px;"></div>
             </div>
+            </div><!-- /sticky bar -->
 
             <iframe id="eb-final-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <div style="font-size:11px;color:var(--muted);margin-top:6px;">💡 Para descargar: Ctrl+P → Guardar como PDF → listo para Hotmart</div>
