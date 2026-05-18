@@ -3476,25 +3476,74 @@ async function dlHmImg(url, fname){
   } catch(e){ window.open(url,'_blank'); }
 }
 
+async function composeImageWithText(imgUrl, textOverlay){
+  return new Promise(function(resolve){
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      if(textOverlay && textOverlay.trim()){
+        var lines = textOverlay.trim().split('\n');
+        var bannerH = Math.round(img.height * (lines.length > 1 ? 0.22 : 0.14));
+        var bannerY = img.height - bannerH;
+        // fondo semitransparente oscuro
+        ctx.fillStyle = 'rgba(0,0,0,0.62)';
+        ctx.fillRect(0, bannerY, img.width, bannerH);
+        // texto
+        var fontSize = Math.round(img.height * 0.055);
+        ctx.font = 'bold '+fontSize+'px Arial, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 6;
+        var totalTextH = lines.length * (fontSize * 1.3);
+        var startY = bannerY + (bannerH - totalTextH) / 2 + fontSize;
+        lines.forEach(function(line, i){
+          ctx.fillText(line.trim(), img.width/2, startY + i * fontSize * 1.3);
+        });
+      }
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = function(){ resolve(imgUrl); }; // fallback sin texto
+    img.src = imgUrl;
+  });
+}
+
 async function genHotmartImg(idx){
   const el=document.getElementById('himg'+idx);
-  el.onclick=null; // bloquear clic mientras genera
+  el.onclick=null;
   el.innerHTML='<div style="font-size:18px;">⏳</div><div style="font-size:9px;">Generando...</div>';
   try{
     const o=S.selOpp;
-    var prompt = (S.hmKit && S.hmKit.dalle_prompts && S.hmKit.dalle_prompts['image_'+(idx+1)])
-      || buildHotmartImgPrompts(o)[idx] || '';
-    const imageType = (idx===1||idx===3) ? 'chapter' : idx===4 ? 'cover' : 'chapter';
+    var imgData = (S.hmKit && S.hmKit.images && S.hmKit.images['image_'+(idx+1)]) || {};
+    var prompt = imgData.visual_prompt || '';
+    var textOverlay = imgData.text_overlay || '';
+    if(!prompt){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Sin prompt — regenera el kit</div>'; return; }
+    const imageType = idx===4 ? 'cover' : 'chapter';
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType,niche:o?(o.nicho||o.niche||o.problema||''):''})});
     const d=await resp.json();
     if(d.success){
       var labels=['Gancho','Mockup','Credibilidad','Beneficios','Cierre'];
       var fname='FERNI_HOTMART_'+labels[idx]+'.png';
-      el.innerHTML='<img src="'+d.url+'" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" />'+
-        '<button onclick="dlHmImg(\''+d.url+'\',\''+fname+'\')" style="margin-top:4px;width:100%;padding:4px;border-radius:6px;border:none;background:#0984e3;color:white;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">⬇ '+fname+'</button>'+
+      // Canvas superpone el texto de Claude
+      var finalUrl = await composeImageWithText(d.url, textOverlay);
+      el.innerHTML='<img src="'+finalUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" />'+
+        '<button onclick="dlHmImgDataUrl(\'himg'+idx+'\',\''+fname+'\')" style="margin-top:4px;width:100%;padding:4px;border-radius:6px;border:none;background:#0984e3;color:white;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">⬇ '+fname+'</button>'+
         '<button onclick="genHotmartImg('+idx+')" style="margin-top:3px;width:100%;padding:4px;border-radius:6px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:10px;cursor:pointer;font-family:inherit;">↺ Regenerar</button>';
     } else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error — <span style="cursor:pointer;text-decoration:underline;" onclick="genHotmartImg('+idx+')">Reintentar</span></div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error — <span style="cursor:pointer;text-decoration:underline;" onclick="genHotmartImg('+idx+')">Reintentar</span></div>'; }
+}
+
+function dlHmImgDataUrl(elId, fname){
+  var img = document.querySelector('#'+elId+' img');
+  if(!img){ return; }
+  var a = document.createElement('a');
+  a.href = img.src; // dataURL del canvas
+  a.download = fname;
+  a.click();
 }
 
 // Poblar selector de ebooks disponibles para Kit Marketing (Hotmart)

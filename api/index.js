@@ -1719,28 +1719,34 @@ app.post('/api/generate-hotmart', async function(req, res) {
       'texts.faq — array de 5 objetos {q, a}\n' +
       'texts.guarantee_text — texto de garantía 14 días\n' +
       'texts.cta_button — texto del botón de compra (máximo 5 palabras)\n\n' +
-      '## SECCIÓN 2: PROMPTS DALL-E\n' +
-      'Los prompts de imagen SIEMPRE en inglés (DALL-E solo entiende inglés).\n\n' +
-      'dalle_prompts.image_1 — Gancho: escena visual del miedo o problema del público (personas frustradas, situación de estrés) + símbolo visual de transformación. Solo personas, objetos, escenas. CERO texto en imagen.\n' +
-      'dalle_prompts.image_2 — Mockup premium: el ebook físico flotando sobre fondo oscuro, iluminación cinematográfica, reflexión suave, aspecto de producto digital de lujo. CERO texto visible.\n' +
-      'dalle_prompts.image_3 — Credibilidad: escena profesional de éxito y autoridad — profesional seguro en su entorno, sala moderna, gráfico de crecimiento abstracto sin números ni palabras. Atmósfera de confianza. CERO texto, cero estadísticas, cero cifras, cero fuentes.\n' +
-      'dalle_prompts.image_4 — Beneficios: composición visual con 4 iconos o símbolos que representen los beneficios del ebook. Estilo visual sin palabras — solo formas e iconos que comuniquen resultado. CERO texto.\n' +
-      'dalle_prompts.image_5 — Cierre: escena aspiracional — persona de éxito tras resolver el problema, libertad, logro. Atmósfera premium de oportunidad. CERO texto.\n\n' +
-      'REGLA CRÍTICA: NUNCA describas texto, palabras, letras, números, estadísticas, fuentes, citas ni contenido escrito en el prompt. DALL-E SIEMPRE distorsiona el texto — queda ilegible e incorrecto. Describe SOLO escenas visuales, personas, objetos, colores, iluminación y atmósfera.\n' +
-      'REGLAS DALL-E: paleta oscura elegante, sin logos reales, estilo premium cinematográfico, nunca precios.\n' +
-      'Cada prompt empieza con: "High quality digital marketing image. ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO NUMBERS anywhere in the image."\n' +
-      'Cada prompt termina con: "No text of any kind. No written words. No statistics. No numbers. No signs. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
+      '## SECCIÓN 2: IMÁGENES (visual_prompt + text_overlay)\n' +
+      'Para cada imagen define DOS campos:\n' +
+      '  visual_prompt: descripción en inglés del fondo visual para DALL-E. CERO texto en la imagen — solo escenas, personas, objetos, colores, iluminación. DALL-E no puede renderizar texto legible.\n' +
+      '  text_overlay: texto exacto que la app pondrá encima de la imagen con Canvas API. Máximo 2 líneas separadas por \\n. Usa el idioma del ebook.\n\n' +
+      'images.image_1 — Gancho: visual=escena del problema/frustración del público. text_overlay=frase de impacto que activa el miedo o la urgencia (1-2 líneas).\n' +
+      'images.image_2 — Mockup: visual=ebook premium flotando, fondo oscuro, iluminación cinematográfica. text_overlay="" (sin texto — solo el producto).\n' +
+      'images.image_3 — Credibilidad: visual=profesional de éxito en entorno moderno, atmósfera de autoridad. text_overlay=estadística o dato de fuente real del ebook (ej: "94% of UK Employers\\nRequire AI Skills — LinkedIn 2024").\n' +
+      'images.image_4 — Beneficios: visual=composición con 4 símbolos o iconos abstractos que representen los beneficios. text_overlay=los 4 beneficios clave (1 por línea, máximo 2 líneas condensadas).\n' +
+      'images.image_5 — Cierre: visual=escena aspiracional de éxito y libertad. text_overlay=CTA poderoso (ej: "Start Today\\nJoin 50,000+ UK Professionals").\n\n' +
+      'REGLA CRÍTICA visual_prompt: NUNCA describas texto, letras, números, estadísticas ni contenido escrito. Describe SOLO escenas visuales, personas, objetos, colores, iluminación.\n' +
+      'Cada visual_prompt empieza con: "High quality digital marketing image. NO TEXT NO WORDS NO LETTERS anywhere."\n' +
+      'Cada visual_prompt termina con: "No text. No signs. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
       'REGULACIONES MERCADO: ' + regs.legal + '. Garantía legal: ' + regs.guarantee + '.\n\n' +
       'Responde ÚNICAMENTE en JSON válido. Sin markdown. Sin explicaciones. Solo el JSON.\n' +
-      'Estructura exacta: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "dalle_prompts": { "image_1":"","image_2":"","image_3":"","image_4":"","image_5":"" } }';
+      'Estructura exacta: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "images": { "image_1":{"visual_prompt":"","text_overlay":""},"image_2":{"visual_prompt":"","text_overlay":""},"image_3":{"visual_prompt":"","text_overlay":""},"image_4":{"visual_prompt":"","text_overlay":""},"image_5":{"visual_prompt":"","text_overlay":""} } }';
 
     var userMsg = 'IDIOMA DEL EBOOK: ' + language + '\nMERCADO: ' + countryName + '\nAUTOR: ' + author + '\n\nEBOOK:\n' + JSON.stringify(ebookCtx, null, 2);
 
     var result = safeParseKit(await claudeCall(sys, userMsg, 7000));
     var texts = result.texts || {};
-    var dalle = result.dalle_prompts || {};
-    // Kit unificado: textos al nivel raíz + dalle_prompts para imágenes
-    var kit = Object.assign({}, texts, { dalle_prompts: dalle });
+    var images = result.images || {};
+    // Compatibilidad: si Claude devuelve dalle_prompts (formato viejo), convertir
+    if (!Object.keys(images).length && result.dalle_prompts) {
+      Object.keys(result.dalle_prompts).forEach(function(k) {
+        images[k] = { visual_prompt: result.dalle_prompts[k], text_overlay: '' };
+      });
+    }
+    var kit = Object.assign({}, texts, { images: images });
     res.json({ success: true, kit: kit });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
