@@ -2065,7 +2065,8 @@ function buildFinalPdfHtml(eb, o, lang, countryName, coverUrl, chapterImages){
     }
     if(tag === 'CHECKLIST') {
       var items = parts.filter(function(p){ return p.length > 0; });
-      return '<div class="vis-checklist"><div class="vc-title">✅ Lista de verificación</div><ul>'+
+      var checklistLabel = (lang && lang.toLowerCase().indexOf('english') !== -1) ? 'Checklist' : 'Lista de verificación';
+      return '<div class="vis-checklist"><div class="vc-title">✅ '+checklistLabel+'</div><ul>'+
         items.map(function(it){ return '<li>'+it+'</li>'; }).join('')+'</ul></div>';
     }
     if(tag === 'ICON + TITLE') {
