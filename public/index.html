@@ -3532,9 +3532,20 @@ async function genHotmartImg(idx){
       var finalUrl = await composeImageWithText(d.url, textOverlay);
       el.innerHTML='<img src="'+finalUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:9px;" />'+
         '<button onclick="dlHmImgDataUrl(\'himg'+idx+'\',\''+fname+'\')" style="margin-top:4px;width:100%;padding:4px;border-radius:6px;border:none;background:#0984e3;color:white;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700;">⬇ '+fname+'</button>'+
-        '<button onclick="genHotmartImg('+idx+')" style="margin-top:3px;width:100%;padding:4px;border-radius:6px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:10px;cursor:pointer;font-family:inherit;">↺ Regenerar</button>';
+        '<div style="display:flex;gap:4px;margin-top:3px;">'+
+        '<button onclick="genHotmartImg('+idx+')" style="flex:1;padding:4px;border-radius:6px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:10px;cursor:pointer;font-family:inherit;">↺ Regenerar</button>'+
+        '<button onclick="clearHmImg('+idx+')" style="padding:4px 8px;border-radius:6px;border:1px solid rgba(255,80,80,0.4);background:rgba(255,80,80,0.1);color:#ff5555;font-size:10px;cursor:pointer;font-family:inherit;">✕</button>'+
+        '</div>';
     } else{ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error — <span style="cursor:pointer;text-decoration:underline;" onclick="genHotmartImg('+idx+')">Reintentar</span></div>'; }
   }catch(e){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Error — <span style="cursor:pointer;text-decoration:underline;" onclick="genHotmartImg('+idx+')">Reintentar</span></div>'; }
+}
+
+function clearHmImg(idx){
+  var labels=['Gancho','Mockup','Credibilidad','Beneficios','Cierre'];
+  var el=document.getElementById('himg'+idx);
+  if(!el) return;
+  el.innerHTML='<div>🎨</div><div style="font-size:8px;">'+labels[idx]+'</div>';
+  el.onclick=function(){ genHotmartImg(idx); };
 }
 
 function dlHmImgDataUrl(elId, fname){
