@@ -1518,7 +1518,7 @@ function renderImgSlots(ebook){
   var html = '';
   // Slot portada — forma portrait (2:3)
   var coverInner = S.coverUrl
-    ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.coverUrl+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">🔄 Regenerar</div></div>'
+    ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.coverUrl+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;display:flex;"><span onclick="event.stopPropagation();removeSlotImage('cover')" style="flex:1;background:rgba(180,0,0,0.75);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">✕ Quitar</span><span style="flex:1;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">🔄 Cambiar</span></div></div>'
     : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#6c5ce7,#a29bfe);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:24px;">🖼️</span><span style="font-size:9px;color:white;text-align:center;">Clic para<br>generar</span></div>';
   html += '<div class="img-slot" data-slot="cover" data-name="Portada" style="cursor:pointer;border:2px dashed rgba(108,92,231,0.6);border-radius:8px;overflow:hidden;width:80px;height:113px;flex-shrink:0;">' +
     coverInner + '</div>';
@@ -1526,7 +1526,7 @@ function renderImgSlots(ebook){
   // Slots capítulos — forma cuadrada
   chapters.forEach(function(ch, i){
     var imgInner = (S.chapterImages && S.chapterImages[i])
-      ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.chapterImages[i]+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;">🔄 Regenerar</div></div>'
+      ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.chapterImages[i]+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;display:flex;"><span onclick="event.stopPropagation();removeSlotImage(i)" style="flex:1;background:rgba(180,0,0,0.75);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">✕ Quitar</span><span style="flex:1;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">🔄 Cambiar</span></div></div>'
       : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#00b894,#00cec9);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:20px;">🖼️</span><span style="font-size:9px;color:white;">Cap '+(i+1)+'</span></div>';
     var chName = (ch.title||'Capítulo '+(i+1)).replace(/'/g,'');
     html += '<div class="img-slot" data-slot="'+i+'" data-name="Cap '+(i+1)+': '+chName.slice(0,15)+'" style="cursor:pointer;border:2px dashed rgba(0,184,148,0.4);border-radius:8px;overflow:hidden;width:100px;height:100px;flex-shrink:0;">' +
@@ -1560,6 +1560,24 @@ function renderImgSlots(ebook){
     var idx = slotId === 'cover' ? 'cover' : parseInt(slotId);
     openImgDialog(idx, slotName);
   };
+}
+
+function removeSlotImage(slotIndex){
+  var ebook = S.finalEbook || S.ebookData;
+  var o = S.selOpp || {};
+  if(slotIndex === 'cover'){
+    S.coverUrl = null;
+    S.coverTitle = null; S.coverSubtitle = null; S.coverHook = null;
+  } else {
+    if(S.chapterImages) S.chapterImages[slotIndex] = null;
+  }
+  var lang = S.approvedLang || o.idioma || o.language || 'Español';
+  var cName = S.countryName || o.pais || o.country || '';
+  S.pdfHtml = buildFinalPdfHtml(ebook||{}, o, lang, cName, S.coverUrl, S.chapterImages||[]);
+  var prev = document.getElementById('eb-draft-preview'); if(prev) prev.srcdoc = S.pdfHtml;
+  var prev2 = document.getElementById('eb-approved-preview'); if(prev2) prev2.srcdoc = S.pdfHtml;
+  renderImgSlots(ebook);
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
 }
 
 // Abrir diálogo para describir imagen
