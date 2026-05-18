@@ -860,6 +860,7 @@ function buildEbookSystem(countryName, regs) {
     ' (3) TONO: experto cercano. NUNCA primera persona. "Los expertos", "Se recomienda", "Los profesionales de ' + countryName + '".' +
     ' (4) RESULTADO: el lector DEBE poder ejecutar SIN ayuda y ver resultado visible en 7 dias o menos.' +
     ' (5) LOCALIZACION: ejemplos, precios, medidas, referencias TODAS para ' + countryName + ' en ' + (regs.currency || 'EUR') + '.' +
+    (countryName === 'United Kingdom' ? ' REGLA MONEDA UK: Los precios de herramientas de software, suscripciones digitales y aplicaciones online DEBEN mostrarse en EUR (€). Usa GBP (£) SOLO para salarios, sueldos, y datos del mercado laboral britanico. NUNCA uses GBP para precios de software o herramientas.' : '') +
     '\n\nNORMAS DE FORMATO (el PDF usa estas normas):' +
     '\n  LISTAS: usa viñetas asi (una por linea): • Elemento 1 • Elemento 2' +
     '\n  TABLAS: formato markdown: | Columna A | Columna B | fila1 | fila2 |' +
