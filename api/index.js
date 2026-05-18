@@ -1724,7 +1724,7 @@ app.post('/api/generate-hotmart', async function(req, res) {
       '  visual_prompt: descripción en inglés del fondo visual para DALL-E. CERO texto en la imagen — solo escenas, personas, objetos, colores, iluminación. DALL-E no puede renderizar texto legible.\n' +
       '  text_overlay: texto exacto que la app pondrá encima de la imagen con Canvas API. Máximo 2 líneas separadas por \\n. Usa el idioma del ebook.\n\n' +
       'images.image_1 — Gancho: visual=escena del problema/frustración del público. text_overlay=frase de impacto que activa el miedo o la urgencia (1-2 líneas).\n' +
-      'images.image_2 — Mockup: visual=ebook premium flotando, fondo oscuro, iluminación cinematográfica. text_overlay="" (sin texto — solo el producto).\n' +
+      'images.image_2 — Mockup: visual=ebook premium flotando sobre fondo oscuro, iluminación cinematográfica, reflexión suave. text_overlay=título del ebook en línea 1 + subtítulo en línea 2 (para que parezca la portada impresa del producto).\n' +
       'images.image_3 — Credibilidad: visual=profesional de éxito en entorno moderno, atmósfera de autoridad. text_overlay=estadística o dato de fuente real del ebook (ej: "94% of UK Employers\\nRequire AI Skills — LinkedIn 2024").\n' +
       'images.image_4 — Beneficios: visual=composición con 4 símbolos o iconos abstractos que representen los beneficios. text_overlay=los 4 beneficios clave (1 por línea, máximo 2 líneas condensadas).\n' +
       'images.image_5 — Cierre: visual=escena aspiracional de éxito y libertad. text_overlay=CTA poderoso (ej: "Start Today\\nJoin 50,000+ UK Professionals").\n\n' +
