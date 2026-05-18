@@ -318,7 +318,36 @@ select option { background: #1e2d52; }
               <span class="badge bgold">✍️ En español · Pendiente traducción</span>
             </div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Revisa el PDF abajo. Usa el chat de texto para correcciones. Usa el panel de imágenes para insertar fotos. Cuando estés lista presiona APROBAR.</div>
-            
+
+            <!-- Bloque APROBAR arriba — sin scroll -->
+            <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:12px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+              <select id="eb-lang-sel" style="flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                <option value="">-- Idioma destino --</option>
+                <option value="English">🇬🇧 Inglés</option>
+                <option value="French">🇫🇷 Francés</option>
+                <option value="Italian">🇮🇹 Italiano</option>
+                <option value="German">🇩🇪 Alemán</option>
+                <option value="Portuguese">🇧🇷 Portugués</option>
+                <option value="Spanish">🇪🇸 Español</option>
+                <option value="Dutch">🇳🇱 Holandés</option>
+                <option value="Polish">🇵🇱 Polaco</option>
+                <option value="Swedish">🇸🇪 Sueco</option>
+                <option value="Norwegian">🇳🇴 Noruego</option>
+                <option value="Danish">🇩🇰 Danés</option>
+                <option value="Finnish">🇫🇮 Finlandés</option>
+                <option value="Greek">🇬🇷 Griego</option>
+                <option value="Romanian">🇷🇴 Rumano</option>
+                <option value="Turkish">🇹🇷 Turco</option>
+                <option value="Russian">🇷🇺 Ruso</option>
+                <option value="Arabic">🇸🇦 Árabe</option>
+                <option value="Chinese Simplified">🇨🇳 Chino</option>
+                <option value="Japanese">🇯🇵 Japonés</option>
+                <option value="Korean">🇰🇷 Coreano</option>
+              </select>
+              <input id="eb-market-inp" type="text" placeholder="Mercado: UK, USA, Canada, France..." style="flex:1;min-width:160px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+              <button onclick="approveEbook()" style="padding:9px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,#00b894,#00cec9);color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">✅ APROBAR y traducir</button>
+            </div>
+
             <!-- Panel de imágenes -->
             <div id="img-panel" style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
               <div style="font-weight:700;color:var(--accent);margin-bottom:10px;">🖼️ Imágenes del PDF</div>
@@ -382,48 +411,7 @@ select option { background: #1e2d52; }
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <!-- Alerta de verificación de hechos (Capa 3) -->
             <div id="eb-verify-alert" style="display:none;margin-bottom:12px;"></div>
-            <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
-              <div style="font-weight:700;color:var(--accent);margin-bottom:8px;">🌍 Paso final: idioma + mercado del PDF</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">El borrador está en español. Al aprobar, Claude lo traduce adaptado al mercado exacto.</div>
-              <select id="eb-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;width:100%;margin-bottom:8px;">
-                <option value="">-- Selecciona idioma destino --</option>
-                <option value="English">🇬🇧 Inglés (English)</option>
-                <option value="French">🇫🇷 Francés (Français)</option>
-                <option value="Italian">🇮🇹 Italiano (Italiano)</option>
-                <option value="German">🇩🇪 Alemán (Deutsch)</option>
-                <option value="Portuguese">🇧🇷 Portugués (Português)</option>
-                <option value="Spanish">🇪🇸 Español de España</option>
-                <option value="Dutch">🇳🇱 Holandés (Nederlands)</option>
-                <option value="Polish">🇵🇱 Polaco (Polski)</option>
-                <option value="Swedish">🇸🇪 Sueco (Svenska)</option>
-                <option value="Norwegian">🇳🇴 Noruego (Norsk)</option>
-                <option value="Danish">🇩🇰 Danés (Dansk)</option>
-                <option value="Finnish">🇫🇮 Finlandés (Suomi)</option>
-                <option value="Greek">🇬🇷 Griego (Ελληνικά)</option>
-                <option value="Romanian">🇷🇴 Rumano (Română)</option>
-                <option value="Hungarian">🇭🇺 Húngaro (Magyar)</option>
-                <option value="Czech">🇨🇿 Checo (Čeština)</option>
-                <option value="Turkish">🇹🇷 Turco (Türkçe)</option>
-                <option value="Russian">🇷🇺 Ruso (Русский)</option>
-                <option value="Arabic">🇸🇦 Árabe (العربية)</option>
-                <option value="Hebrew">🇮🇱 Hebreo (עברית)</option>
-                <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
-                <option value="Chinese Simplified">🇨🇳 Chino Simplificado (中文简体)</option>
-                <option value="Chinese Traditional">🇹🇼 Chino Tradicional (中文繁體)</option>
-                <option value="Japanese">🇯🇵 Japonés (日本語)</option>
-                <option value="Korean">🇰🇷 Coreano (한국어)</option>
-                <option value="Thai">🇹🇭 Tailandés (ภาษาไทย)</option>
-                <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
-                <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
-              </select>
-              <input id="eb-market-inp" type="text" placeholder="Mercado objetivo — ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:4px;" />
-              <div style="font-size:10px;color:var(--muted);margin-bottom:10px;">Inglés para Canada ≠ UK ≠ USA — Claude adapta modismos, referencias y tono al mercado exacto</div>
-              <div class="btn-row" style="margin:0;">
-                <button class="btn btn-g" style="font-size:14px;padding:10px 20px;" onclick="approveEbook()">✅ APROBAR y traducir</button>
-                <button class="btn btn-s" onclick="regenEbook()" title="Regenera todo desde cero — consume créditos completos de Claude">↺ Regenerar todo (costoso)</button>
-              </div>
-            </div>
-          </div>
+            
           <div id="eb-approved" class="hidden">
             <div class="row-hd"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">👇 Revisa el PDF final aquí. Pide correcciones en el chat de abajo antes de descargar.</div>
