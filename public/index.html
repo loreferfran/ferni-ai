@@ -422,6 +422,7 @@ select option { background: #1e2d52; }
                 <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
                 <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
                 <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
+                <button class="btn btn-s" style="font-size:13px;background:rgba(0,120,0,0.15);border-color:rgba(0,180,0,0.4);color:#00b894;" onclick="dlCoverImage()">🖼️ Descargar portada</button>
               </div>
 
             <!-- Panel corrección por capítulo en vista final -->
@@ -1587,7 +1588,7 @@ function renderImgSlots(ebook){
   var html = '';
   // Slot portada — forma portrait (2:3)
   var coverInner = S.coverUrl
-    ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.coverUrl+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;display:flex;"><span onclick="event.stopPropagation();removeSlotImage(-1)" data-action="remove" style="flex:1;background:rgba(180,0,0,0.75);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">✕ Quitar</span><span style="flex:1;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">🔄 Cambiar</span></div></div>'
+    ? '<div style="position:relative;width:100%;height:100%;"><img src="'+S.coverUrl+'" style="width:100%;height:100%;object-fit:contain;background:#000;display:block;"><div style="position:absolute;bottom:0;left:0;right:0;display:flex;flex-direction:column;"><span onclick="event.stopPropagation();dlCoverImage()" style="background:rgba(0,120,0,0.85);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;font-weight:700;">⬇ Descargar</span><div style="display:flex;"><span onclick="event.stopPropagation();removeSlotImage(-1)" data-action="remove" style="flex:1;background:rgba(180,0,0,0.75);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">✕ Quitar</span><span style="flex:1;background:rgba(0,0,0,0.6);color:white;font-size:8px;text-align:center;padding:3px;cursor:pointer;">🔄 Cambiar</span></div></div></div>'
     : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#6c5ce7,#a29bfe);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;"><span style="font-size:24px;">🖼️</span><span style="font-size:9px;color:white;text-align:center;">Clic para<br>generar</span></div>';
   html += '<div class="img-slot" data-slot="cover" data-name="Portada" style="cursor:pointer;border:2px dashed rgba(108,92,231,0.6);border-radius:8px;overflow:hidden;width:80px;height:113px;flex-shrink:0;">' +
     coverInner + '</div>';
@@ -3474,6 +3475,151 @@ async function dlHmImg(url, fname){
     a.download = fname;
     a.click();
   } catch(e){ window.open(url,'_blank'); }
+}
+
+function dlCoverImage(){
+  var url = S.coverUrl;
+  if(!url){ alert('No hay imagen de portada guardada.'); return; }
+  if(url.startsWith('data:')){
+    // base64 → Blob → descarga (más fiable que href=dataUrl directa)
+    try {
+      var parts = url.split(',');
+      var mime = parts[0].match(/:(.*?);/)[1];
+      var byteStr = atob(parts[1]);
+      var ab = new ArrayBuffer(byteStr.length);
+      var ia = new Uint8Array(ab);
+      for(var i=0;i<byteStr.length;i++) ia[i] = byteStr.charCodeAt(i);
+      var blob = new Blob([ab], {type: mime});
+      var blobUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = blobUrl; a.download = 'portada_ebook.jpg';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 3000);
+    } catch(e) { alert('Error al descargar: ' + e.message); }
+  } else {
+    // URL externa — descarga directa
+    var a = document.createElement('a');
+    a.href = url; a.download = 'portada_ebook.jpg'; a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+}
+
+async function composeCoverFull(imgUrl, title, subtitle, hook, tpl){
+  return new Promise(function(resolve){
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){
+      var W = img.width, H = img.height;
+      var canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      var hookColor = (tpl && tpl.hookColor) || '#fdcb6e';
+      var pdfTitlePx = parseInt((tpl && tpl.titleSize) || '34', 10);
+      var scale = W / 794; // escala desde ancho PDF típico
+      var maxW = W * 0.85;
+
+      // Gradiente superior (52% altura)
+      var topH = H * 0.52;
+      var topGrad = ctx.createLinearGradient(0, 0, 0, topH);
+      topGrad.addColorStop(0, 'rgba(0,0,0,0.80)');
+      topGrad.addColorStop(0.70, 'rgba(0,0,0,0.40)');
+      topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, W, topH);
+
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(0,0,0,1)';
+      ctx.shadowBlur = Math.round(16 * scale);
+
+      if(title){
+        var fs = Math.round(pdfTitlePx * scale);
+        var minFs = Math.round(fs * 0.55);
+        ctx.font = 'bold ' + fs + 'px Arial, sans-serif';
+        while(fs > minFs && ctx.measureText(title).width > maxW){
+          fs -= 2;
+          ctx.font = 'bold ' + fs + 'px Arial, sans-serif';
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.textBaseline = 'top';
+        ctx.fillText(title, W / 2, Math.round(42 * scale), maxW);
+
+        if(subtitle){
+          var subY = Math.round(42 * scale) + fs * 1.25 + Math.round(14 * scale);
+          ctx.font = 'italic ' + Math.round(15 * scale) + 'px Arial, sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.88)';
+          ctx.shadowBlur = Math.round(10 * scale);
+          ctx.fillText(subtitle, W / 2, subY, maxW);
+        }
+      }
+
+      if(hook){
+        var botH = H * 0.28;
+        var botY = H - botH;
+        var botGrad = ctx.createLinearGradient(0, botY, 0, H);
+        botGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        botGrad.addColorStop(1, 'rgba(0,0,0,0.78)');
+        ctx.fillStyle = botGrad;
+        ctx.fillRect(0, botY, W, botH);
+        ctx.font = 'italic bold ' + Math.round(13 * scale) + 'px Arial, sans-serif';
+        ctx.fillStyle = hookColor;
+        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+        ctx.shadowBlur = Math.round(8 * scale);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(hook, W / 2, H - Math.round(38 * scale), maxW);
+      }
+
+      try {
+        resolve(canvas.toDataURL('image/jpeg', 0.92));
+      } catch(e) {
+        resolve(imgUrl);
+      }
+    };
+    img.onerror = function(){ resolve(imgUrl); };
+    img.src = imgUrl;
+  });
+}
+
+async function downloadCoverComposed(){
+  if(!S.coverUrl){ alert('No hay imagen de portada generada.'); return; }
+  var eb = S.finalEbook || S.ebookData || {};
+  var tpl = getCoverTemplate(S.selOpp || {});
+
+  // Fuentes de texto en orden de prioridad: S vars → ebook data → inputs del panel
+  var titleInp = document.getElementById('cover-title-inp');
+  var subtitleInp = document.getElementById('cover-subtitle-inp');
+  var hookInp = document.getElementById('cover-hook-inp');
+  var title    = S.coverTitle    || eb.title    || (titleInp    && titleInp.value.trim())    || '';
+  var subtitle = S.coverSubtitle || eb.subtitle || (subtitleInp && subtitleInp.value.trim()) || '';
+  var hook     = S.coverHook     || eb.tagline  || (hookInp     && hookInp.value.trim())     || '';
+
+  var dataUrl = await composeCoverFull(S.coverUrl, title, subtitle, hook, tpl);
+
+  // Usar Blob URL para evitar límites del navegador con data URLs muy largas
+  try {
+    var byteStr = atob(dataUrl.split(',')[1]);
+    var ab = new ArrayBuffer(byteStr.length);
+    var ia = new Uint8Array(ab);
+    for(var i=0;i<byteStr.length;i++) ia[i] = byteStr.charCodeAt(i);
+    var blob = new Blob([ab], {type:'image/jpeg'});
+    var blobUrl = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = 'portada_ebook.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 2000);
+  } catch(e) {
+    // Fallback directo
+    var a2 = document.createElement('a');
+    a2.href = dataUrl;
+    a2.download = 'portada_ebook.jpg';
+    document.body.appendChild(a2);
+    a2.click();
+    document.body.removeChild(a2);
+  }
 }
 
 async function composeImageWithText(imgUrl, textOverlay){
