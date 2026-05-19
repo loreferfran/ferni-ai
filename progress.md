@@ -1,6 +1,24 @@
-# Progreso FERNI AI — Estado Actual (19 Mayo 2026 — 19:20)
+# Progreso FERNI AI — Estado Actual (19 Mayo 2026 — 23:50)
 
-## ÚLTIMOS CAMBIOS (sesión 19 Mayo — tarde/noche)
+## ÚLTIMOS CAMBIOS (sesión 19 Mayo — noche)
+
+### Portada ebook — descarga compuesta con Canvas
+- Botón **🖼️ Descargar portada** añadido en barra sticky del **✅ PDF Final**
+- Función `dlCoverImage()` para descarga directa del raw DALL-E (base64 → Blob)
+- Función `composeCoverFull()` — Canvas API compone imagen + texto igual que el PDF:
+  - Gradiente oscuro arriba (52% altura) → título grande blanco + subtítulo italic
+  - Gradiente oscuro abajo (28% altura) → hook en color dorado/nicho
+  - Escala de fuentes relativa al ancho del canvas (794px base PDF)
+  - Auto-reduce font size si el título es muy largo
+- Función `downloadCoverComposed()` — lee textos en orden: `S.coverTitle` → `eb.title/subtitle/tagline` → inputs del panel
+- Descarga via Blob URL (más fiable que data URL directa para archivos grandes)
+- Slot portada (tab Ebook) también tiene botón **⬇ Descargar** verde con misma lógica
+
+### Commits sesión 19 Mayo noche
+- `7f9d1a8` — Fix: botón Descargar portada usa Canvas para componer imagen + texto del PDF
+- `cf6d1e9` — Add: botón Descargar portada en PDF Final + función dlCoverImage con Blob
+
+## ÚLTIMOS CAMBIOS (sesión 19 Mayo — tarde/noche anterior)
 
 ### Canvas API — texto perfecto en imágenes Hotmart
 - DALL-E genera solo el fondo visual (sin texto)
@@ -30,18 +48,6 @@
 - `noTextRule` añadido en API a TODOS los prompts antes de enviar a DALL-E
 - Imagen Credibilidad: escena profesional, sin estadísticas escritas
 
-## COMMITS sesión 19 Mayo (todos)
-- `1349976` — Fix: Canvas texto con maxWidth y auto font-size
-- `ceb27df` — Fix: Mockup también lleva text_overlay con título y subtítulo
-- `fc7b017` — Fix: Regenerar kit usa S.selOpp directo si hay ebook activo
-- `35196d7` — Add: botón Regenerar kit en cabecera Hotmart
-- `538c951` — Fix: fallback dalle_prompts para kits formato antiguo
-- `98bfb05` — Add: botón ✕ para eliminar imagen Hotmart
-- `9620a3c` — Add: Canvas API superpone texto en imágenes Hotmart
-- `5ba5e6c` — Fix: DALL-E cero texto — doble barrera
-- `b347e03` — Fix: persistencia completa hmKit/maKit/generatedBonuses
-- `745afeb` — Fix: guardar S.hmKit en localStorage al generar
-
 ## LO QUE FUNCIONA HOY ✅
 - Generación ebook completo (7 capítulos + conclusión + disclaimer)
 - Verificación 3 capas
@@ -55,6 +61,7 @@
 - Imágenes: generar, eliminar ✕, regenerar, descargar nombrado
 - Persistencia total: todo sobrevive Ctrl+Shift+R
 - Auto-restauración al recargar página
+- **Portada ebook: descarga compuesta (imagen DALL-E + título/subtítulo/hook via Canvas)**
 
 ## Stack Técnico
 - **Frontend**: public/index.html (vanilla JS, sin framework)
@@ -72,6 +79,14 @@
 → Usuario pulsa slot → DALL-E genera fondo sin texto
 → composeImageWithText() → Canvas superpone text_overlay con fuente real
 → Imagen final compuesta lista para descargar
+```
+
+## Flujo Portada Ebook
+```
+Tab Ebook → slot Portada (portrait) → clic → DALL-E genera fondo sin texto
+→ PDF superpone título/subtítulo/hook via HTML/CSS (visible en preview)
+→ Botón "🖼️ Descargar portada" (PDF Final) → composeCoverFull() via Canvas
+→ Descarga portada_ebook.jpg con texto incluido
 ```
 
 ## localStorage — Claves
@@ -92,6 +107,7 @@
 - **Meta Ads**: refactorizar igual que Hotmart — master prompt Claude + Canvas overlay
 - PDF preview oscuro al restaurar desde historial — investigar
 - Capítulo 3 UK AI tools sobreescrito — pendiente regenerar
+- Probar descarga portada compuesta en Vercel (nuevo)
 
 ## Módulos / Tabs
 | Tab | Función |
