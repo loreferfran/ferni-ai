@@ -1447,12 +1447,12 @@ function rebuildChapterSteps(nc) {
 
 function rebuildRewriteBtns(nc) {
   var btStyle = 'padding:6px 14px;border-radius:7px;border:1px solid rgba(0,184,148,0.4);background:rgba(0,184,148,0.1);color:#00b894;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;';
-  var html = '';
+  var html = '<button onclick="openChRewrite(\'intro\')" style="'+btStyle+'">Intro</button>';
   for (var i = 1; i <= nc; i++) html += '<button onclick="openChRewrite('+i+')" style="'+btStyle+'">Cap '+i+'</button>';
   html += '<button onclick="openChRewrite(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
   html += '<button onclick="openChRewrite(\'disclaimer\')" style="'+btStyle+'">Disclaimer</button>';
   var c1 = document.getElementById('ch-rewrite-btns'); if(c1) c1.innerHTML = html;
-  var html2 = '';
+  var html2 = '<button onclick="openChRewriteFin(\'intro\')" style="'+btStyle+'">Intro</button>';
   for (var j = 1; j <= nc; j++) html2 += '<button onclick="openChRewriteFin('+j+')" style="'+btStyle+'">Cap '+j+'</button>';
   html2 += '<button onclick="openChRewriteFin(\'conclusion\')" style="'+btStyle+'">Conclusión</button>';
   html2 += '<button onclick="openChRewriteFin(\'disclaimer\')" style="'+btStyle+'">Disclaimer</button>';
@@ -1463,10 +1463,10 @@ function openChRewriteFin(n) {
   S.chRewriteTarget = n;
   var btns = document.querySelectorAll('#ch-rewrite-btns-fin button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; });
-  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : n - 1;
+  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : (n === 'intro') ? 0 : n;
   if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var lbl = document.getElementById('ch-rewrite-label-fin');
-  if(lbl) lbl.textContent = n === 'disclaimer' ? 'Disclaimer / Aviso Legal' : n === 'conclusion' ? 'Conclusión' : 'Capítulo ' + n;
+  if(lbl) lbl.textContent = n === 'disclaimer' ? 'Disclaimer / Aviso Legal' : n === 'conclusion' ? 'Conclusión' : n === 'intro' ? 'Introducción' : 'Capítulo ' + n;
   var ta = document.getElementById('ch-rewrite-instructions-fin');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel-fin');
@@ -2654,10 +2654,10 @@ function openChRewrite(n){
   S.chRewriteTarget = n;
   var btns = document.querySelectorAll('#ch-rewrite-btns button');
   btns.forEach(function(b){ b.style.background='rgba(0,184,148,0.1)'; b.style.color='#00b894'; b.style.border='1px solid rgba(0,184,148,0.4)'; b.style.fontWeight='600'; });
-  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : n - 1;
+  var activeIdx = (n === 'disclaimer') ? btns.length - 1 : (n === 'conclusion') ? btns.length - 2 : (n === 'intro') ? 0 : n;
   if(btns[activeIdx]){ btns[activeIdx].style.background='#00b894'; btns[activeIdx].style.color='white'; btns[activeIdx].style.border='1px solid #00b894'; }
   var label = document.getElementById('ch-rewrite-label');
-  if(label) label.textContent = n === 'disclaimer' ? 'Instrucciones para el Disclaimer / Aviso Legal:' : n === 'conclusion' ? 'Instrucciones para la Conclusión:' : 'Instrucciones para el Capítulo ' + n + ':';
+  if(label) label.textContent = n === 'disclaimer' ? 'Instrucciones para el Disclaimer / Aviso Legal:' : n === 'conclusion' ? 'Instrucciones para la Conclusión:' : n === 'intro' ? 'Instrucciones para la Introducción:' : 'Instrucciones para el Capítulo ' + n + ':';
   var ta = document.getElementById('ch-rewrite-instructions');
   if(ta){ ta.value = ''; ta.focus(); }
   var panel = document.getElementById('ch-rewrite-panel');
@@ -2705,9 +2705,11 @@ async function runChPatch(){
   if(!ebook){ alert('No hay ebook cargado.'); return; }
   var isConclusion = (n === 'conclusion');
   var isDisclaimer = (n === 'disclaimer');
-  if(!isConclusion && !isDisclaimer && (!ebook.chapters || !ebook.chapters[n-1])){ alert('No hay capítulo ' + n + ' cargado.'); return; }
+  var isIntro = (n === 'intro');
+  if(!isConclusion && !isDisclaimer && !isIntro && (!ebook.chapters || !ebook.chapters[n-1])){ alert('No hay capítulo ' + n + ' cargado.'); return; }
+  if(isIntro && !ebook.intro){ alert('No hay introducción cargada.'); return; }
 
-  if(!isConclusion && !isDisclaimer) saveChSnapshot(n, ebook.chapters[n-1]);
+  if(!isConclusion && !isDisclaimer && !isIntro) saveChSnapshot(n, ebook.chapters[n-1]);
   var panel = document.getElementById('ch-rewrite-panel');
   if(panel) panel.style.display = 'none';
   var statusEl = document.getElementById('ch-rewrite-status');
@@ -2728,6 +2730,8 @@ async function runChPatch(){
           ? { legalSection: ebook.legalSection }
           : isConclusion
           ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
+          : isIntro
+          ? { intro: ebook.intro }
           : ebook.chapters[n-1];
         var chStr = JSON.stringify(targetObj);
         var escaped = findStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -2739,6 +2743,8 @@ async function runChPatch(){
             if(parsed.legalSection !== undefined) ebook.legalSection = parsed.legalSection;
             if(parsed.actionPlan !== undefined) ebook.actionPlan = parsed.actionPlan;
             if(parsed.resources !== undefined) ebook.resources = parsed.resources;
+          } else if (isIntro) {
+            if(parsed.intro !== undefined) ebook.intro = parsed.intro;
           } else {
             ebook.chapters[n-1] = parsed;
           }
@@ -2765,16 +2771,18 @@ async function runChPatch(){
     return;
   }
 
-  statusEl.textContent = isDisclaimer ? '✏️ Aplicando corrección al disclaimer...' : isConclusion ? '✏️ Aplicando corrección a la conclusión...' : '✏️ Aplicando corrección al capítulo ' + n + '...';
+  statusEl.textContent = isDisclaimer ? '✏️ Aplicando corrección al disclaimer...' : isConclusion ? '✏️ Aplicando corrección a la conclusión...' : isIntro ? '✏️ Aplicando corrección a la introducción...' : '✏️ Aplicando corrección al capítulo ' + n + '...';
   try {
     var o = S.selOpp || {};
     var chapterData = isDisclaimer
       ? { legalSection: ebook.legalSection }
       : isConclusion
       ? { conclusion: ebook.conclusion, legalSection: ebook.legalSection, actionPlan: ebook.actionPlan, resources: ebook.resources }
+      : isIntro
+      ? { intro: ebook.intro }
       : ebook.chapters[n-1];
     var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
-      opportunity: o, chapterNumber: isDisclaimer ? 'disclaimer' : isConclusion ? 'conclusion' : n,
+      opportunity: o, chapterNumber: isDisclaimer ? 'disclaimer' : isConclusion ? 'conclusion' : isIntro ? 'intro' : n,
       chapterData: chapterData, instruction: instruction, ebookDefs: S.ebookDefs || null
     })});
     var d = await r.json();
@@ -2786,6 +2794,8 @@ async function runChPatch(){
       if(d.chapter.legalSection !== undefined) ebook.legalSection = d.chapter.legalSection;
       if(d.chapter.actionPlan !== undefined) ebook.actionPlan = d.chapter.actionPlan;
       if(d.chapter.resources !== undefined) ebook.resources = d.chapter.resources;
+    } else if (isIntro) {
+      if(d.chapter.intro !== undefined) ebook.intro = d.chapter.intro;
     } else {
       ebook.chapters[n-1] = d.chapter;
     }
@@ -2810,6 +2820,9 @@ async function runChRewrite(){
   var rawInstructions = (document.getElementById('ch-rewrite-instructions') || {}).value || '';
   rawInstructions = rawInstructions.trim();
   if(!rawInstructions){ alert('Escribe las instrucciones para el capítulo ' + n + '.'); return; }
+
+  // La intro usa patch, no regeneración completa
+  if(n === 'intro'){ runChPatch(); return; }
 
   // Guardar snapshot del capítulo actual antes de regenerar
   var ebookSnap = S.finalEbook || S.ebookData;
