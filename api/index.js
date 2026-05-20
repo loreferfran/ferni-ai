@@ -2195,7 +2195,7 @@ app.post('/api/generate-extras', async function(req, res) {
       '\n1. CONTENIDO HIPERSPECÍFICO: cada item, paso, tarea o receta debe extraerse DIRECTAMENTE del contenido del ebook. Nada genérico.' +
       '\n2. LISTO PARA IMPRIMIR: diseñado para verse perfecto en A4.' +
       '\n3. VENDIBLE SOLO: tan completo y útil que alguien lo compraría sin el ebook.' +
-      '\n4. VOLUMEN: checklist mínimo 30 items, tarjetas mínimo 8, plan30 mínimo 28 días, recetas mínimo 5 tarjetas completas.' +
+      '\n4. VOLUMEN: checklist 20 items, tarjetas 6, plan30 exactamente 4 semanas con 5 días cada una (no 7), recetas 4 tarjetas.' +
       '\n5. TODO en ' + language + ' — cero palabras en otro idioma.';
 
     var userMsg = 'EBOOK: "' + (ebook.title||'') + '"\nSUBTÍTULO: ' + (ebook.subtitle||'') +
@@ -2214,22 +2214,22 @@ app.post('/api/generate-extras', async function(req, res) {
       '\n    "subtitle": "propuesta de valor en 1 línea — qué consigue el lector",' +
       '\n    "precio": "precio sugerido en EUR (entre 3.90 y 8.90)",' +
       '\n    "porQueEsteProducto": "justificación breve de por qué elegiste este tipo para este ebook",' +
-      '\n    // Para checklist: "items": ["paso concreto 1",...mínimo 30...]' +
-      '\n    // Para poster: "quote": "frase poderosa ≤15 palabras", "claves": ["clave 1",...6...]' +
-      '\n    // Para tarjetas: "tarjetas": [{"titulo":"nombre tarjeta","contenido":["punto 1","punto 2",...5 puntos...]},...mínimo 8 tarjetas...]' +
-      '\n    // Para plan30: "semanas": [{"num":1,"titulo":"Semana 1: Nombre","dias":[{"num":1,"tarea":"acción MUY específica"},...7 días...]},...4 semanas...]' +
-      '\n    // Para plantilla: "semanas": [{"num":1,"objetivo":"objetivo semana","dias":[{"dia":"Lunes","tarea":"tarea específica"},... 5 días...]},...4 semanas...]' +
-      '\n    // Para recetas: "recetas": [{"nombre":"nombre receta","tiempo":"X min","porciones":"X","ingredientes":["item1",...8+...],"pasos":["paso1",...6+...]},...5+ recetas...]' +
-      '\n    // Para calendario: "meses": [{"mes":"Mes 1","semanas":[{"semana":1,"actividades":["actividad1","actividad2",...]},...4 semanas...]}]' +
-      '\n    // Para tracker: "metricas": [{"nombre":"métrica","unidad":"kg/cm/veces/etc","filas":["Semana 1","Semana 2",...8 filas...]},...4-6 métricas...]' +
-      '\n    // Para materiales: "categorias": [{"nombre":"categoría","items":[{"material":"nombre","cantidad":"X","notas":"nota útil"},...]},...3-5 categorías...]' +
-      '\n    // Para guiarapida: "secciones": [{"titulo":"sección","items":["tip/regla/comando concreto",...8+ por sección...]},...4-5 secciones...]' +
-      '\n    // Para rutina: "bloques": [{"hora":"07:00","actividad":"actividad concreta","duracion":"15 min","notas":"por qué importa"},...10-15 bloques...]' +
-      '\n    // Para presupuesto: "categorias": [{"nombre":"categoría","items":[{"concepto":"nombre","costeEstimado":"X EUR","frecuencia":"mensual/único/anual"},...]},...4-5 categorías...]' +
+      '\n    // Para checklist: "items": ["paso concreto 1",...20 items...]' +
+      '\n    // Para poster: "quote": "frase poderosa ≤12 palabras", "claves": ["clave 1",...5...]' +
+      '\n    // Para tarjetas: "tarjetas": [{"titulo":"nombre tarjeta","contenido":["punto 1","punto 2","punto 3"]},...6 tarjetas...]' +
+      '\n    // Para plan30: "semanas": [{"num":1,"titulo":"Semana 1: Nombre","dias":[{"num":1,"tarea":"acción concreta"},...5 días...]},...4 semanas...]' +
+      '\n    // Para plantilla: "semanas": [{"num":1,"objetivo":"objetivo semana","dias":[{"dia":"Lunes","tarea":"tarea"},...5 días...]},...4 semanas...]' +
+      '\n    // Para recetas: "recetas": [{"nombre":"nombre","tiempo":"X min","porciones":"X","ingredientes":["item1",...6...],"pasos":["paso1",...5...]},...4 recetas...]' +
+      '\n    // Para calendario: "meses": [{"mes":"Mes 1","semanas":[{"semana":1,"actividades":["actividad1","actividad2"]},...4 semanas...]}]' +
+      '\n    // Para tracker: "metricas": [{"nombre":"métrica","unidad":"kg/cm/veces","filas":["Semana 1",...6 filas...]},...4 métricas...]' +
+      '\n    // Para materiales: "categorias": [{"nombre":"categoría","items":[{"material":"nombre","cantidad":"X","notas":"nota"},...5...]},...3 categorías...]' +
+      '\n    // Para guiarapida: "secciones": [{"titulo":"sección","items":["tip concreto",...6 por sección...]},...4 secciones...]' +
+      '\n    // Para rutina: "bloques": [{"hora":"07:00","actividad":"actividad","duracion":"15 min","notas":"nota"},...10 bloques...]' +
+      '\n    // Para presupuesto: "categorias": [{"nombre":"categoría","items":[{"concepto":"nombre","costeEstimado":"X EUR","frecuencia":"mensual"},...4...]},...3 categorías...]' +
       '\n  },...3 objetos más...' +
       '\n]';
 
-    var txt = await claudeCall(sys, userMsg, 7000);
+    var txt = await claudeCall(sys, userMsg, 4500);
     var extras = JSON.parse(txt.replace(/```json|```/g,'').trim());
     res.json({ success: true, extras: extras });
   } catch(e) {
