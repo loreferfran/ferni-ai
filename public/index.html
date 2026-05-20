@@ -549,7 +549,13 @@ select option { background: #1e2d52; }
             <div class="big-icon">🎁</div>
             <div class="state-title">Bonus Pack</div>
             <div class="state-sub">Genera 4 mini infoproductos complementarios al ebook:<br>checklist imprimible · poster motivacional · plantilla semanal · plan 30 días.<br>Véndelos en bundle o por separado para cobrar más.</div>
-            <button class="btn btn-p" style="margin-top:16px;font-size:14px;padding:10px 24px;" onclick="genExtras()">✦ Generar Bonus Pack</button>
+            <div style="margin-top:18px;width:100%;max-width:420px;">
+              <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-align:left;">📖 ¿Para qué ebook generar los bonus?</div>
+              <select id="extras-ebook-sel" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid rgba(108,92,231,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;">
+                <option value="">— Selecciona un ebook —</option>
+              </select>
+            </div>
+            <button class="btn btn-p" style="margin-top:14px;font-size:14px;padding:10px 24px;" onclick="genExtras()">✦ Generar Bonus Pack</button>
           </div>
           <div id="ex-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Creando Bonus Pack...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;">Claude está generando 4 mini infoproductos basados en el ebook</div></div>
           <div id="ex-content" class="hidden">
@@ -557,6 +563,10 @@ select option { background: #1e2d52; }
               <div class="sec-lbl">🎁 Bonus Pack — 4 mini infoproductos</div>
               <div style="display:flex;gap:7px;align-items:center;">
                 <span class="badge bteal" id="ex-lang"></span>
+                <select id="extras-ebook-sel-top" onchange="syncExtrasSel(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;max-width:200px;">
+                  <option value="">— Ebook —</option>
+                </select>
+                <button class="btn btn-s" style="font-size:12px;" onclick="genExtras()">↺ Regenerar</button>
                 <button class="btn btn-gold" onclick="dlAllExtras()">⬇ Descargar todo (ZIP Word)</button>
               </div>
             </div>
@@ -736,6 +746,8 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
       if(entry.hmKit) S.hmKit = entry.hmKit;
       if(entry.maKit) S.maKit = entry.maKit;
       if(entry.generatedBonuses) S.generatedBonuses = entry.generatedBonuses;
+      if(entry.extrasData) S.extrasData = entry.extrasData;
+      if(entry.extrasLang) S.extrasLang = entry.extrasLang;
     }
   } catch(e){}
 })();
@@ -816,7 +828,10 @@ function showTab(id,el){
   if(id==='hist') renderHist();
   if(id==='ebook') restoreEbookTab();
   if(id==='translate') restoreTranslateTab();
-  if(id==='extras' && S.extrasData){ hide('ex-empty'); hide('ex-loading'); show('ex-content'); }
+  if(id==='extras'){
+    populateExtrasSels();
+    if(S.extrasData){ hide('ex-empty'); hide('ex-loading'); show('ex-content'); }
+  }
   if(id==='hotmart'){
     if(S.hmKit && S.selOpp){ hide('hm-empty'); hide('hm-loading'); show('hm-content'); renderHotmart(S.selOpp, S.hmKit, S.selOpp.pais||S.selOpp.country||''); }
     else populateHmSel();
@@ -1785,6 +1800,8 @@ function saveFullDataToHist(histId){
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
     if(S.maKit) S.history[idx].maKit=S.maKit;
     if(S.generatedBonuses && S.generatedBonuses.length) S.history[idx].generatedBonuses=S.generatedBonuses;
+    if(S.extrasData && S.extrasData.length) S.history[idx].extrasData=S.extrasData;
+    if(S.extrasLang) S.history[idx].extrasLang=S.extrasLang;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -3013,8 +3030,12 @@ function dlAllImages(){
 
 // ─── BONUS PACK ─────────────────────────────────────────────────────────────
 async function genExtras(){
-  var o = S.selOpp; var eb = S.finalEbook || S.ebookData;
-  if(!eb || !o){ alert('Genera primero el ebook antes de crear el Bonus Pack.'); return; }
+  var exSel = document.getElementById('extras-ebook-sel');
+  var selIdx = exSel ? parseInt(exSel.value) : NaN;
+  var entry = (!isNaN(selIdx) && S.history && S.history[selIdx]) ? S.history[selIdx] : null;
+  var o = (entry && entry.selOpp) || S.selOpp;
+  var eb = (entry && (entry.finalEbook || entry.ebook)) || S.finalEbook || S.ebookData;
+  if(!eb || !o){ alert('Selecciona un ebook para generar el Bonus Pack.'); return; }
   var lang = S.approvedLang || o.idioma || o.language || 'Español';
   show('ex-loading'); hide('ex-empty'); hide('ex-content');
   try{
@@ -3024,6 +3045,7 @@ async function genExtras(){
     if(d.success){
       S.extrasData = d.extras;
       S.extrasLang = lang;
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
       hide('ex-loading'); show('ex-content');
       renderExtras(o, d.extras, lang);
     } else { hide('ex-loading'); show('ex-empty'); alert('Error: '+d.error); }
@@ -3059,6 +3081,7 @@ function renderExtras(o, extras, lang){
           '<button class="btn btn-s" style="flex:1;" onclick="previewExtra('+i+')">👁 Preview</button>' +
           '<button class="btn btn-teal" style="flex:1;" onclick="dlExtra('+i+')">⬇ Descargar</button>' +
         '</div>' +
+        '<button class="btn btn-s" style="width:100%;margin-top:6px;font-size:11px;opacity:0.8;" onclick="openExtraEdit('+i+')">✏ Editar contenido</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -3066,7 +3089,7 @@ function renderExtras(o, extras, lang){
 
 function buildExtraHtml(ex, lang, ebookTitle){
   var year = new Date().getFullYear();
-  var footer = '<div style="margin-top:20px;border-top:2px solid #eee;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aaa;"><span>'+ebookTitle+' · Ferni Guides</span><span>© '+year+' · ferniguides.com</span></div>';
+  var footer = '<div style="margin-top:20px;border-top:2px solid #eee;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aaa;"><span>'+ebookTitle+' · Ferni Guides</span><span>© '+year+' · ferniguides</span></div>';
   var wrap = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#1a1a2e;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@media print{body{margin:0;}}</style></head><body>';
 
   function header(icon,label,g1,g2){
@@ -4359,7 +4382,118 @@ function safeStr(v) {
     if(ebTab) ebTab.classList.add('active');
   }
 })();
+
+// ─── BONUS EDIT MODAL ────────────────────────────────────────────────────────
+function syncExtrasSel(val){
+  var bot = document.getElementById('extras-ebook-sel');
+  if(bot) bot.value = val;
+  var top = document.getElementById('extras-ebook-sel-top');
+  if(top) top.value = val;
+}
+
+function populateExtrasSels(){
+  var opts = '<option value="">— Ebook —</option>';
+  (S.history||[]).forEach(function(e, i){
+    var eb = e.finalEbook || e.ebook;
+    if(!eb) return;
+    var title = eb.title || (e.selOpp && (e.selOpp.tituloEbook||e.selOpp.ebookTitle)) || 'Ebook #'+(i+1);
+    var selected = (e.id === S.currentHistId) ? ' selected' : '';
+    opts += '<option value="'+i+'"'+selected+'>'+title+'</option>';
+  });
+  var bot = document.getElementById('extras-ebook-sel');
+  var top = document.getElementById('extras-ebook-sel-top');
+  if(bot) bot.innerHTML = opts;
+  if(top) top.innerHTML = opts;
+}
+
+function openExtraEdit(idx){
+  var ex = S.extrasData && S.extrasData[idx];
+  if(!ex){ alert('No hay datos del bonus.'); return; }
+  S._editExtraIdx = idx;
+  document.getElementById('ex-edit-title').value = ex.title || '';
+  document.getElementById('ex-edit-subtitle').value = ex.subtitle || '';
+  // Build readable content
+  var content = '';
+  if(ex.items && Array.isArray(ex.items)){
+    content = ex.items.join('\n');
+    document.getElementById('ex-edit-format-hint').textContent = 'Un elemento por línea';
+  } else if(ex.secciones && Array.isArray(ex.secciones)){
+    ex.secciones.forEach(function(s){ content += '== '+s.titulo+' ==\n'; (s.items||s.contenido||[]).forEach(function(it){ content += '- '+it+'\n'; }); content += '\n'; });
+    document.getElementById('ex-edit-format-hint').textContent = '== Sección == seguida de - items';
+  } else {
+    var copy = JSON.parse(JSON.stringify(ex));
+    ['title','subtitle','type','precio'].forEach(function(k){ delete copy[k]; });
+    content = JSON.stringify(copy, null, 2);
+    document.getElementById('ex-edit-format-hint').textContent = 'Formato JSON — edita con cuidado';
+  }
+  document.getElementById('ex-edit-content').value = content;
+  document.getElementById('ex-edit-type').textContent = (EXTRA_NAMES[ex.type]||ex.type) + ' #'+(idx+1);
+  document.getElementById('ex-edit-overlay').style.display = 'flex';
+}
+
+function closeExtraEdit(){
+  document.getElementById('ex-edit-overlay').style.display = 'none';
+}
+
+function saveExtraEdit(){
+  var idx = S._editExtraIdx;
+  var ex = S.extrasData && S.extrasData[idx];
+  if(!ex) return;
+  ex.title = document.getElementById('ex-edit-title').value.trim() || ex.title;
+  ex.subtitle = document.getElementById('ex-edit-subtitle').value.trim() || ex.subtitle;
+  var rawContent = document.getElementById('ex-edit-content').value.trim();
+  if(rawContent){
+    if(ex.items && Array.isArray(ex.items)){
+      ex.items = rawContent.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+    } else if(ex.secciones && Array.isArray(ex.secciones)){
+      // Parse == Section == format
+      var secs = []; var cur = null;
+      rawContent.split('\n').forEach(function(line){
+        var m = line.match(/^==\s*(.+?)\s*==$/);
+        if(m){ cur = {titulo: m[1], items: []}; secs.push(cur); }
+        else if(cur && line.startsWith('- ')){ cur.items.push(line.slice(2).trim()); }
+      });
+      if(secs.length) ex.secciones = secs;
+    } else {
+      try {
+        var parsed = JSON.parse(rawContent);
+        Object.assign(ex, parsed);
+      } catch(e){ alert('JSON inválido: ' + e.message); return; }
+    }
+  }
+  closeExtraEdit();
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  var o = S.selOpp || {};
+  renderExtras(o, S.extrasData, S.extrasLang || 'Español');
+}
 </script>
+
+<!-- Extra edit overlay -->
+<div id="ex-edit-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2,#1e1e2e);border:1px solid rgba(108,92,231,0.4);border-radius:16px;padding:28px;width:90%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:14px;font-weight:700;color:var(--accent,#a29bfe);">✏ Editar bonus — <span id="ex-edit-type"></span></div>
+      <button onclick="closeExtraEdit()" style="background:none;border:none;color:var(--muted,#888);font-size:20px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">TÍTULO</label>
+      <input id="ex-edit-title" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:13px;font-family:inherit;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">SUBTÍTULO</label>
+      <input id="ex-edit-subtitle" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:13px;font-family:inherit;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">CONTENIDO — <span id="ex-edit-format-hint" style="font-weight:400;color:var(--teal,#00cec9);"></span></label>
+      <textarea id="ex-edit-content" rows="12" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:12px;font-family:monospace;line-height:1.6;box-sizing:border-box;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeExtraEdit()" style="padding:9px 20px;border-radius:8px;border:1px solid var(--border,#333);background:transparent;color:var(--muted,#888);font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
+      <button onclick="saveExtraEdit()" style="padding:9px 24px;border-radius:8px;border:none;background:#6c5ce7;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 
