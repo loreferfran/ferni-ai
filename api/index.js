@@ -2167,71 +2167,60 @@ app.post('/api/generate-extras', async function(req, res) {
   var countryName = getCountryName((o && (o.pais || o.country)) || 'France');
   try {
     var chapsFull = (ebook.chapters || []).map(function(c, i) {
-      return '=== CAPÍTULO ' + (i+1) + ': ' + (c.title||'') + ' ===\n' + (c.content||'').substring(0,600);
+      return '=== CAP ' + (i+1) + ': ' + (c.title||'') + ' ===\n' + (c.content||'').substring(0,400);
     }).join('\n');
 
-    var sys = 'Eres el mejor diseñador de infoproductos digitales premium del mundo.' +
-      ' Analizas el contenido REAL de un ebook y decides cuáles son los 4 mini-productos complementarios' +
-      ' que más valor añaden, más sentido tienen para ese nicho específico, y más se pueden vender por separado.' +
-      ' Tus productos son de calidad PROFESIONAL — tan buenos que la gente los compraría aunque no tuviera el ebook.' +
-      ' Todo el contenido en ' + language + '. Devuelve SOLO JSON array con exactamente 4 objetos.' +
-
-      '\n\n=== CATÁLOGO DE TIPOS DISPONIBLES ===' +
-      '\nElige los 4 que mejor encajen con el ebook. NO uses siempre los mismos — elige según el nicho:' +
-      '\n• "checklist" — Lista de verificación por etapas (ideal para procesos, proyectos, aprendizaje)' +
-      '\n• "poster" — Afiche/póster motivacional A4 imprimible (ideal para fitness, bienestar, motivación, habilidades)' +
-      '\n• "tarjetas" — Tarjetas de referencia rápida recortables (ideal para idiomas, recetas, ejercicios, tips técnicos)' +
-      '\n• "plan30" — Plan de 30 días con tareas diarias (ideal para hábitos, fitness, aprendizaje, proyectos)' +
-      '\n• "plantilla" — Hoja de trabajo/seguimiento semanal (ideal para finanzas, productividad, crianza, negocios)' +
-      '\n• "recetas" — Tarjetas de recetas imprimibles (SOLO para cocina, nutrición, bienestar alimentario)' +
-      '\n• "calendario" — Calendario mensual de actividades (ideal para jardinería, crianza, proyectos, hábitos)' +
-      '\n• "tracker" — Hoja de seguimiento de progreso con métricas (ideal para fitness, finanzas, aprendizaje)' +
-      '\n• "materiales" — Lista detallada de materiales/herramientas (ideal para manualidades, jardinería, decoración, construcción)' +
-      '\n• "guiarapida" — Cheat sheet / guía de referencia rápida (ideal para programación, idiomas, técnicas, trucos)' +
-      '\n• "rutina" — Hoja de rutina diaria/semanal estructurada (ideal para crianza, productividad, fitness, bienestar)' +
-      '\n• "presupuesto" — Hoja de presupuesto/cálculo de costes (ideal para finanzas, negocios, manualidades con materiales)' +
-
-      '\n\n=== REGLAS DE CALIDAD ABSOLUTA ===' +
-      '\n1. CONTENIDO HIPERSPECÍFICO: cada item, paso, tarea o receta debe extraerse DIRECTAMENTE del contenido del ebook. Nada genérico.' +
-      '\n2. LISTO PARA IMPRIMIR: diseñado para verse perfecto en A4.' +
-      '\n3. VENDIBLE SOLO: tan completo y útil que alguien lo compraría sin el ebook.' +
-      '\n4. VOLUMEN: checklist 20 items, tarjetas 6, plan30 exactamente 4 semanas con 5 días cada una (no 7), recetas 4 tarjetas.' +
-      '\n5. TODO en ' + language + ' — cero palabras en otro idioma.';
-
-    var userMsg = 'EBOOK: "' + (ebook.title||'') + '"\nSUBTÍTULO: ' + (ebook.subtitle||'') +
+    var ebookCtx = 'EBOOK: "' + (ebook.title||'') + '" | SUBTÍTULO: ' + (ebook.subtitle||'') +
       '\nTEMA: ' + ((o && (o.problema||o.problem)) || '') +
       '\nNICHO: ' + ((o && (o.tipoDemanda||'')) || 'aprendizaje') +
-      '\nPAÍS: ' + countryName + ' | IDIOMA: ' + language +
-      '\n\n' + chapsFull +
-      '\n\n=== INSTRUCCIÓN ===' +
-      '\nAnaliza el ebook y elige los 4 tipos de productos que más sentido tienen para ESTE ebook específico.' +
-      '\nGenera el contenido completo y ultra-específico para cada uno.' +
-      '\n\nFORMATO JSON (adapta los campos según el tipo elegido):' +
-      '\n[' +
-      '\n  {' +
-      '\n    "type": "checklist|poster|tarjetas|plan30|plantilla|recetas|calendario|tracker|materiales|guiarapida|rutina|presupuesto",' +
-      '\n    "title": "título atractivo y vendible en ' + language + '",' +
-      '\n    "subtitle": "propuesta de valor en 1 línea — qué consigue el lector",' +
-      '\n    "precio": "precio sugerido en EUR (entre 3.90 y 8.90)",' +
-      '\n    "porQueEsteProducto": "justificación breve de por qué elegiste este tipo para este ebook",' +
-      '\n    // Para checklist: "items": ["paso concreto 1",...20 items...]' +
-      '\n    // Para poster: "quote": "frase poderosa ≤12 palabras", "claves": ["clave 1",...5...]' +
-      '\n    // Para tarjetas: "tarjetas": [{"titulo":"nombre tarjeta","contenido":["punto 1","punto 2","punto 3"]},...6 tarjetas...]' +
-      '\n    // Para plan30: "semanas": [{"num":1,"titulo":"Semana 1: Nombre","dias":[{"num":1,"tarea":"acción concreta"},...5 días...]},...4 semanas...]' +
-      '\n    // Para plantilla: "semanas": [{"num":1,"objetivo":"objetivo semana","dias":[{"dia":"Lunes","tarea":"tarea"},...5 días...]},...4 semanas...]' +
-      '\n    // Para recetas: "recetas": [{"nombre":"nombre","tiempo":"X min","porciones":"X","ingredientes":["item1",...6...],"pasos":["paso1",...5...]},...4 recetas...]' +
-      '\n    // Para calendario: "meses": [{"mes":"Mes 1","semanas":[{"semana":1,"actividades":["actividad1","actividad2"]},...4 semanas...]}]' +
-      '\n    // Para tracker: "metricas": [{"nombre":"métrica","unidad":"kg/cm/veces","filas":["Semana 1",...6 filas...]},...4 métricas...]' +
-      '\n    // Para materiales: "categorias": [{"nombre":"categoría","items":[{"material":"nombre","cantidad":"X","notas":"nota"},...5...]},...3 categorías...]' +
-      '\n    // Para guiarapida: "secciones": [{"titulo":"sección","items":["tip concreto",...6 por sección...]},...4 secciones...]' +
-      '\n    // Para rutina: "bloques": [{"hora":"07:00","actividad":"actividad","duracion":"15 min","notas":"nota"},...10 bloques...]' +
-      '\n    // Para presupuesto: "categorias": [{"nombre":"categoría","items":[{"concepto":"nombre","costeEstimado":"X EUR","frecuencia":"mensual"},...4...]},...3 categorías...]' +
-      '\n  },...3 objetos más...' +
-      '\n]';
+      '\nPAÍS: ' + countryName + ' | IDIOMA: ' + language + '\n\n' + chapsFull;
 
-    var txt = await claudeCall(sys, userMsg, 4500);
-    var extras = JSON.parse(txt.replace(/```json|```/g,'').trim());
-    res.json({ success: true, extras: extras });
+    var catalog = 'Tipos disponibles: checklist (procesos/aprendizaje), poster (motivación/fitness), tarjetas (referencia rápida), plan30 (hábitos/proyectos), plantilla (finanzas/productividad), recetas (SOLO cocina), calendario (jardinería/crianza), tracker (fitness/finanzas), materiales (manualidades), guiarapida (programación/técnicas), rutina (productividad/bienestar), presupuesto (finanzas/negocios)';
+
+    var fmtFields = '\nCada objeto debe tener: type, title (en ' + language + '), subtitle (1 línea), precio ("X.XX EUR" entre 3.90 y 8.90)' +
+      '\n+ campos según tipo:' +
+      '\n checklist → items:[15 acciones específicas]' +
+      '\n poster → quote:"frase ≤12 palabras", claves:[5 claves]' +
+      '\n tarjetas → tarjetas:[{titulo,contenido:[3 puntos]},…5 tarjetas]' +
+      '\n plan30 → semanas:[{num,titulo,dias:[{num,tarea},…5 días]},…4 semanas]' +
+      '\n plantilla → semanas:[{num,objetivo,dias:[{dia,tarea},…5 días]},…4 semanas]' +
+      '\n recetas → recetas:[{nombre,tiempo,porciones,ingredientes:[5],pasos:[4]},…3]' +
+      '\n tracker → metricas:[{nombre,unidad,filas:[6 filas]},…4]' +
+      '\n guiarapida → secciones:[{titulo,items:[5 tips]},…4 secciones]' +
+      '\n rutina → bloques:[{hora,actividad,duracion,notas},…8 bloques]' +
+      '\n calendario → meses:[{mes,semanas:[{semana,actividades:[2]},…4]},…1 mes]' +
+      '\n materiales → categorias:[{nombre,items:[{material,cantidad,notas},…4]},…3]' +
+      '\n presupuesto → categorias:[{nombre,items:[{concepto,costeEstimado,frecuencia},…3]},…3]';
+
+    var sys = 'Eres experto en infoproductos digitales premium. Generas mini-productos complementarios a ebooks con contenido específico extraído del ebook. Todo en ' + language + '. Devuelve SOLO JSON array sin texto extra ni markdown.';
+
+    // Llamada 1: elige 4 tipos, genera los 2 primeros. El primer objeto incluye _allTypes.
+    var msg1 = ebookCtx + '\n\n' + catalog +
+      '\n\nElige los 4 tipos más adecuados para ESTE ebook. Genera los 2 PRIMEROS bonus completos.' +
+      '\nIMPORTANTE: en el primer objeto incluye el campo "_allTypes":["tipo1","tipo2","tipo3","tipo4"] con los 4 elegidos.' +
+      '\nDevuelve JSON array de exactamente 2 objetos.' + fmtFields;
+
+    var txt1 = await claudeCall(sys, msg1, 2200);
+    var part1 = JSON.parse(txt1.replace(/```json|```/g,'').trim());
+    var allTypes = (part1[0] && part1[0]._allTypes) || [];
+    if(part1[0]) delete part1[0]._allTypes;
+    var usedTypes = part1.map(function(e){ return e.type; });
+    var remainTypes = allTypes.filter(function(t){ return usedTypes.indexOf(t) === -1; });
+    if(remainTypes.length < 2){
+      var fallbacks = ['checklist','guiarapida','tracker','plantilla'];
+      fallbacks.forEach(function(t){ if(remainTypes.length < 2 && usedTypes.indexOf(t) === -1) remainTypes.push(t); });
+    }
+
+    // Llamada 2: genera los 2 bonus restantes con los tipos que quedan
+    var msg2 = ebookCtx +
+      '\n\nYa existen bonus de tipo: ' + usedTypes.join(', ') + '.' +
+      '\nGenera exactamente 2 bonus de estos tipos: ' + remainTypes.slice(0,2).join(' y ') + '.' +
+      '\nDevuelve JSON array de exactamente 2 objetos.' + fmtFields;
+
+    var txt2 = await claudeCall(sys, msg2, 2200);
+    var part2 = JSON.parse(txt2.replace(/```json|```/g,'').trim());
+
+    res.json({ success: true, extras: part1.concat(part2) });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
