@@ -3079,7 +3079,7 @@ function renderExtras(o, extras, lang){
         '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px;">Precio sugerido: '+ex.precio+' EUR</div>' +
         '<div style="display:flex;gap:6px;">' +
           '<button class="btn btn-s" style="flex:1;" onclick="previewExtra('+i+')">👁 Preview</button>' +
-          '<button class="btn btn-teal" style="flex:1;" onclick="dlExtra('+i+')">⬇ Descargar</button>' +
+          '<button class="btn btn-teal" style="flex:1;" onclick="dlExtra('+i+')">🖨 Guardar PDF</button>' +
         '</div>' +
         '<button class="btn btn-s" style="width:100%;margin-top:6px;font-size:11px;opacity:0.8;" onclick="openExtraEdit('+i+')">✏ Editar contenido</button>' +
       '</div>' +
@@ -3315,24 +3315,35 @@ function dlExtra(idx){
   if(!ex) return;
   var eb = S.finalEbook || S.ebookData || {};
   var html = buildExtraHtml(ex, S.extrasLang||'Español', eb.title||'');
-  var blob = new Blob([html],{type:'application/msword'});
-  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'FERNI_'+(EXTRA_NAMES[ex.type]||ex.type).replace(/ /g,'_')+'_'+new Date().getFullYear()+'.doc';
-  a.click();
+  html = html.replace('</body>', '<script>window.onload=function(){window.print();}<\/script></body>');
+  var win = window.open('','_blank');
+  if(!win){ alert('Activa ventanas emergentes en tu navegador.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
 }
 
 function dlAllExtras(){
   if(!S.extrasData||!S.extrasData.length){ alert('Genera primero el Bonus Pack.'); return; }
   var eb = S.finalEbook || S.ebookData || {};
+  var lang = S.extrasLang||'Español';
+  var ebTitle = eb.title||'';
+  // Construir un único HTML con todos los bonus separados por salto de página
+  var combined = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0;}' +
+    'body{font-family:"Helvetica Neue",Arial,sans-serif;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+    '@media print{.page-break{page-break-after:always;} @page{margin:0;}}' +
+    '</style></head><body>';
   S.extrasData.forEach(function(ex, i){
-    setTimeout(function(){
-      var html = buildExtraHtml(ex, S.extrasLang||'Español', eb.title||'');
-      var blob = new Blob([html],{type:'application/msword'});
-      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = 'FERNI_BONUS_'+(EXTRA_NAMES[ex.type]||ex.type).replace(/ /g,'_')+'.doc';
-      a.click();
-    }, i*600);
+    var html = buildExtraHtml(ex, lang, ebTitle);
+    // Extraer solo el contenido del body
+    var m = html.match(/<body>([\s\S]*?)<\/body>/i);
+    var bodyContent = m ? m[1] : '';
+    combined += '<div>' + bodyContent + '</div>';
+    if(i < S.extrasData.length - 1) combined += '<div class="page-break"></div>';
   });
+  combined += '<script>window.onload=function(){window.print();}<\/script></body></html>';
+  var win = window.open('','_blank');
+  if(!win){ alert('Activa ventanas emergentes en tu navegador.'); return; }
+  win.document.open(); win.document.write(combined); win.document.close();
 }
 
 // ─── MÓDULO TRADUCCIÓN ──────────────────────────────────────────────────────
