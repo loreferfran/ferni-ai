@@ -3826,23 +3826,30 @@ function populateMetaSel(){
   var sel = document.getElementById('meta-ebook-sel');
   if(!sel) return;
   sel.innerHTML = '<option value="">— Selecciona un ebook —</option>';
-  // Ebook de la sesión actual
-  if(S.selOpp && (S.finalEbook || S.ebookData)){
-    var eb = S.finalEbook || S.ebookData;
+  var seenTitles = {};
+  // Ebook activo primero (solo si tiene finalEbook aprobado)
+  if(S.selOpp && S.finalEbook){
+    var eb = S.finalEbook;
     var o = S.selOpp;
+    var title = eb.title || o.tituloEbook || o.ebookTitle || 'Ebook actual';
+    seenTitles[title] = true;
     var opt = document.createElement('option');
     opt.value = 'current';
-    opt.textContent = '📖 ' + (eb.title || o.tituloEbook || o.ebookTitle || 'Ebook actual') + ' — ' + (o.pais||o.country||'') + ' · ' + (S.approvedLang||o.language||'');
+    opt.selected = true;
+    opt.textContent = title + ' — ' + (o.pais||o.country||'') + ' · ' + (S.approvedLang||o.language||'');
     sel.appendChild(opt);
   }
-  // Ebooks del historial que tienen datos
+  // Solo historial con finalEbook (aprobados), sin duplicar títulos
   (S.history||[]).forEach(function(h){
-    if(!h.ebook) return;
-    var bestOpp = h.opps && h.opps[0];
-    if(!bestOpp) return;
+    if(!h.finalEbook) return;
+    var opp = h.selOpp || (h.opps&&h.opps[0]);
+    if(!opp) return;
+    var title = h.finalEbook.title || (opp&&(opp.tituloEbook||opp.ebookTitle)) || 'Ebook';
+    if(seenTitles[title]) return;
+    seenTitles[title] = true;
     var opt = document.createElement('option');
     opt.value = 'hist_'+h.id;
-    opt.textContent = '🕐 ' + (h.ebook.title || bestOpp.tituloEbook || 'Ebook') + ' — ' + (h.country||'') + ' · ' + (h.language||'') + ' (' + h.date + ')';
+    opt.textContent = title + ' — ' + (h.country||opp.pais||opp.country||'') + ' · ' + (h.language||opp.idioma||opp.language||'');
     sel.appendChild(opt);
   });
   // Preview al cambiar selección
@@ -3867,7 +3874,7 @@ function getMetaEbookData(val){
   if(val && val.startsWith('hist_')){
     var id = parseInt(val.replace('hist_',''));
     var h = (S.history||[]).find(function(x){ return x.id===id; });
-    if(!h || !h.ebook) return null;
+    if(!h || !h.finalEbook) return null;
     var opp = h.opps && h.opps.find(function(o){ return o.tituloEbook&&h.ebook.title&&o.tituloEbook===h.ebook.title; }) || (h.opps&&h.opps[0]);
     return { opp: opp, ebook: h.ebook, lang: h.language||'Español' };
   }
