@@ -1531,18 +1531,23 @@ function _renderImpResult(){
 
 function sendToEbook(){
   if(!_impChapters.length) return;
-  var chs = {};
-  _impChapters.forEach(function(ch,i){ chs['ch'+(i+1)] = ch.improved; });
+  // Build chapters as array of objects — same format expected by buildFinalPdfHtml and correction functions
+  var chs = _impChapters.map(function(ch, i){
+    return { title: ch.title || ('Capítulo '+(i+1)), content: ch.improved, number: i+1, opening:'', keyPoints:[], exercise:null };
+  });
   var fileName = _impMeta.fileName.replace(/\.[^.]+$/,'');
   var opp = { titulo:fileName, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
-  var ebookData = { title:fileName, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:_impChapters[0]?_impChapters[0].improved:'', conclusion:'', disclaimer:'', source:'import', lang:_impMeta.lang };
+  // intro = first chapter text (used as introduction section in the PDF)
+  var introText = _impChapters[0] ? _impChapters[0].improved : '';
+  var ebookData = { title:fileName, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:introText, conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
   S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
   S.finalEbook = null; S.pdfHtml = null; S.hmKit = null; S.maKit = null;
+  S.numChapters = _impChapters.length;
+  S.chapterImages = new Array(_impChapters.length).fill(null);
   var id = 'imp_'+Date.now();
   S.currentHistId = id;
   var info = LANGS[_impMeta.market]||{lang:'Spanish',flag:'🌍'};
-  S.numChapters = _impChapters.length;
-  S.history.unshift({ id:id, opp:fileName, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, selOpp:opp, date:new Date().toLocaleDateString('es-CL'), source:'import' });
+  S.history.unshift({ id:id, opp:fileName, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, selOpp:opp, numChapters:_impChapters.length, date:new Date().toLocaleDateString('es-CL'), source:'import' });
   saveFullDataToHist(id);
   showTab('ebook', document.querySelectorAll('.tab')[1]);
 }
