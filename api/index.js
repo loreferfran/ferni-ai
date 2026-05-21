@@ -2200,7 +2200,7 @@ app.post('/api/generate-extras', async function(req, res) {
       '\nIMPORTANTE: en el primer objeto incluye el campo "_allTypes":["tipo1","tipo2","tipo3","tipo4"] con los 4 elegidos.' +
       '\nDevuelve JSON array de exactamente 2 objetos.' + fmtFields;
 
-    var txt1 = await claudeCall(sys, msg1, 2200);
+    var txt1 = await claudeCall(sys, msg1, 2200, false, 'claude-haiku-4-5-20251001');
     var part1 = JSON.parse(txt1.replace(/```json|```/g,'').trim());
     var allTypes = (part1[0] && part1[0]._allTypes) || [];
     if(part1[0]) delete part1[0]._allTypes;
@@ -2217,7 +2217,7 @@ app.post('/api/generate-extras', async function(req, res) {
       '\nGenera exactamente 2 bonus de estos tipos: ' + remainTypes.slice(0,2).join(' y ') + '.' +
       '\nDevuelve JSON array de exactamente 2 objetos.' + fmtFields;
 
-    var txt2 = await claudeCall(sys, msg2, 2200);
+    var txt2 = await claudeCall(sys, msg2, 2200, false, 'claude-haiku-4-5-20251001');
     var part2 = JSON.parse(txt2.replace(/```json|```/g,'').trim());
 
     res.json({ success: true, extras: part1.concat(part2) });
