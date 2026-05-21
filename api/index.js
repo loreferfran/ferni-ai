@@ -2286,6 +2286,33 @@ app.get('/api/config', function(req, res) {
   });
 });
 
+// IMPORT & UPGRADE — Fetch URL content for reference
+app.post('/api/fetch-url', async function(req, res) {
+  try {
+    var url = req.body.url || '';
+    if(!url.startsWith('http://') && !url.startsWith('https://')) {
+      return res.json({ success: false, error: 'URL inválida' });
+    }
+    var response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FerniAI/1.0; +https://ferni-ai.vercel.app)' },
+      redirect: 'follow'
+    });
+    var html = await response.text();
+    // Strip scripts, styles, tags — keep readable text
+    var text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .substring(0, 5000); // ~1000-1500 words max
+    if(!text || text.length < 50) return res.json({ success: false, error: 'No se pudo extraer texto de la página' });
+    res.json({ success: true, text: text });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // IMPORT & UPGRADE — Chapter improvement
 app.post('/api/import-chapter', async function(req, res) {
   try {

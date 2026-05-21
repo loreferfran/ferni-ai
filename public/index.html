@@ -1482,6 +1482,17 @@ async function startImport(){
     return;
   }
 
+  // Si la referencia es una URL, fetchearla una sola vez antes de los capítulos
+  var refText = ref;
+  if(ref && (ref.startsWith('http://') || ref.startsWith('https://'))){
+    _setImpProgress(8, 'Leyendo contenido de la referencia...', ref.substring(0,60)+'...');
+    try {
+      var frResp = await fetch('/api/fetch-url', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url:ref}) });
+      var frData = await frResp.json();
+      if(frData.success && frData.text) refText = '[Contenido de referencia extraído de ' + ref + ']:\n' + frData.text;
+    } catch(e){ /* fallback: usar URL como texto */ }
+  }
+
   _setImpProgress(12, 'Detectando estructura del ebook...', '');
   var chapters = _splitChapters(rawText.trim());
   if(!chapters.length){ hide('imp-loading'); show('imp-empty'); alert('No se encontraron secciones en el archivo.'); return; }
@@ -1500,7 +1511,7 @@ async function startImport(){
           chapterTitle: chapters[i].title,
           chapterText: chapters[i].content.substring(0, 3000),
           chapterNum: i+1, totalChapters: chapters.length,
-          market:market, lang:lang, context:context, reference:ref
+          market:market, lang:lang, context:context, reference:refText
         })
       });
       var d = await resp.json();
