@@ -3315,6 +3315,8 @@ function dlExtra(idx){
   if(!ex) return;
   var eb = S.finalEbook || S.ebookData || {};
   var html = buildExtraHtml(ex, S.extrasLang||'Español', eb.title||'');
+  var docTitle = (ex.title||'Bonus').replace(/[<>"/\\|?*]/g,'');
+  html = html.replace('<head>', '<head><title>'+docTitle+'</title>');
   html = html.replace('</body>', '<script>window.onload=function(){window.print();}<\/script></body>');
   var win = window.open('','_blank');
   if(!win){ alert('Activa ventanas emergentes en tu navegador.'); return; }
@@ -3327,7 +3329,7 @@ function dlAllExtras(){
   var lang = S.extrasLang||'Español';
   var ebTitle = eb.title||'';
   // Construir un único HTML con todos los bonus separados por salto de página
-  var combined = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+  var combined = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+ebTitle.replace(/[<>"/\\|?*]/g,'')+' — Bonus Pack</title><style>' +
     '*{box-sizing:border-box;margin:0;padding:0;}' +
     'body{font-family:"Helvetica Neue",Arial,sans-serif;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
     '@media print{.page-break{page-break-after:always;} @page{margin:0;}}' +
