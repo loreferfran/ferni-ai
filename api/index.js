@@ -1797,6 +1797,9 @@ app.post('/api/generate-meta', async function(req, res) {
   var targetMarket = req.body.targetMarket || '';
   var countryName = targetMarket || getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
+  var price = req.body.price || (o.precioHotmart || o.hotmartPrice || '');
+  var bonuses = req.body.bonuses || [];
+  var ebook = req.body.ebook || {};
   function safeParseKit(raw) {
     var cleaned = raw.replace(/```json|```/g, '').trim();
     try { return JSON.parse(cleaned); } catch(e) {
@@ -1805,14 +1808,19 @@ app.post('/api/generate-meta', async function(req, res) {
     }
   }
   try {
-    var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle) +
+    var bonusLine = bonuses.length
+      ? ' | Bundle includes ' + bonuses.length + ' bonuses: ' + bonuses.map(function(b){ return b.title + ' (' + b.precio + ' EUR)'; }).join(', ')
+      : '';
+    var ebookLine = ebook.title ? ' | Ebook subtitle: ' + (ebook.subtitle||'') + ' | Hook: ' + (ebook.tagline||'') : '';
+    var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle || ebook.title) +
       ' | Topic: ' + (o.problema || o.problem) +
       ' | Audience: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) +
       ' | Market: ' + countryName +
       ' | Emotional driver: ' + (o.emocion || o.emotion) +
       ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain) +
-      ' | Price: ' + (o.precioHotmart || o.hotmartPrice) +
-      ' | Promise: ' + (o.promesaEbook || o.ebookPromise);
+      ' | Price: ' + price +
+      ' | Promise: ' + (o.promesaEbook || o.ebookPromise) +
+      bonusLine + ebookLine;
 
     var metaSection = 'META ADS SYSTEM — Generate JSON with: segmentation (object: age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget). ads (array 5, each: angle, platform, format, headline, primaryText, shortCopy, longCopy, emotionalHook, cta, targetEmotion). Angles: problem, urgency, aspiration, curiosity, authority.';
     var socialSection = 'FACEBOOK + INSTAGRAM KIT — Generate JSON with: facebook (object: post string, storytellingPost string, authorityPost string, viralHook string, engagementPost string, commentCTA string). instagram (object: caption string, carouselIdeas array 3 strings, reelHooks array 3 strings, storyHooks array 3 strings, hashtags array 15 strings, shortHooks array 3 strings). emailSequence (array 3, each: subject, body). retargeting (object: headline, copy, cta, offer).';

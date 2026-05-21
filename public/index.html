@@ -517,6 +517,19 @@ select option { background: #1e2d52; }
                 <option value="">— Selecciona un ebook —</option>
               </select>
               <div id="meta-ebook-preview" style="display:none;background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2);"></div>
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">💰 Precio de venta del ebook</div>
+                <div style="display:flex;gap:8px;">
+                  <input id="ma-price-inp" type="number" min="1" placeholder="ej: 17" style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;">
+                  <select id="ma-currency-sel" style="padding:9px 10px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;">
+                    <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option>
+                  </select>
+                </div>
+              </div>
+              <div id="ma-bonus-section" style="display:none;margin-bottom:14px;background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.25);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;color:#00b894;font-weight:700;margin-bottom:6px;">🎁 Bonus Pack detectado — se incluirá en los anuncios</div>
+                <div id="ma-bonus-list" style="font-size:11px;color:var(--text2);"></div>
+              </div>
               <button class="btn btn-p" style="width:100%;font-size:14px;padding:11px;" onclick="genMetaFromSel()">✦ Generar Kit Meta Ads</button>
             </div>
           </div>
@@ -527,6 +540,16 @@ select option { background: #1e2d52; }
               <div style="display:flex;gap:7px;align-items:center;"><span class="badge ba" id="ma-badge"></span><button class="btn btn-s" onclick="resetMeta()">↺ Cambiar ebook</button><button class="btn btn-gold" onclick="dlMeta()">⬇ Descargar kit Word</button></div>
             </div>
             <div id="ma-seg" class="fc" style="margin-bottom:14px;"></div>
+            <!-- Corrector rápido -->
+            <div style="margin-bottom:14px;background:rgba(108,92,231,0.07);border:1px solid rgba(108,92,231,0.2);border-radius:9px;padding:12px 14px;">
+              <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;">✏ Corrección rápida — reemplazar texto</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input id="ma-fix-find" type="text" placeholder="Texto a buscar (ej: 29 libras)" style="flex:1;min-width:140px;padding:7px 10px;border-radius:7px;border:1px solid rgba(108,92,231,0.3);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit;">
+                <span style="color:var(--muted);font-size:12px;">→</span>
+                <input id="ma-fix-replace" type="text" placeholder="Reemplazar por (ej: 17 dólares)" style="flex:1;min-width:140px;padding:7px 10px;border-radius:7px;border:1px solid rgba(108,92,231,0.3);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit;">
+                <button onclick="applyMetaFix()" style="padding:7px 16px;border-radius:7px;border:none;background:#6c5ce7;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Aplicar</button>
+              </div>
+            </div>
             <div class="sec-lbl" style="margin-bottom:10px;">5 ANUNCIOS PARA FACEBOOK E INSTAGRAM</div>
             <div class="ads-grid" id="ma-ads"></div>
             <div id="ma-extra" style="margin-top:14px;"></div>
@@ -838,7 +861,7 @@ function showTab(id,el){
   }
   if(id==='meta'){
     if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
-    else populateMetaSel();
+    else { populateMetaSel(); showMaBonusInfo(); }
   }
 }
 
@@ -3899,21 +3922,63 @@ function genMetaFromSel(){
   if(!val){ alert('Selecciona primero un ebook de la lista.'); return; }
   var data = getMetaEbookData(val);
   if(!data || !data.opp){ alert('No se encontraron datos del ebook seleccionado.'); return; }
-  genMeta(data.opp, data.lang);
+  var priceVal = (document.getElementById('ma-price-inp')||{}).value || '';
+  var currency = (document.getElementById('ma-currency-sel')||{}).value || 'USD';
+  var price = priceVal ? (priceVal + ' ' + currency) : '';
+  genMeta(data.opp, data.lang, data.ebook, price);
+}
+
+function applyMetaFix(){
+  var find = (document.getElementById('ma-fix-find')||{}).value || '';
+  var replace = (document.getElementById('ma-fix-replace')||{}).value || '';
+  if(!find){ alert('Escribe el texto que quieres buscar.'); return; }
+  if(!S.maKit){ return; }
+  // Reemplazar en todo el JSON del kit
+  var kitStr = JSON.stringify(S.maKit);
+  var regex = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'g');
+  var newStr = kitStr.replace(regex, replace);
+  try {
+    S.maKit = JSON.parse(newStr);
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    renderMeta(S.selOpp||{}, S.maKit);
+    document.getElementById('ma-fix-find').value = '';
+    document.getElementById('ma-fix-replace').value = '';
+  } catch(e){ alert('Error al aplicar corrección: ' + e.message); }
+}
+
+function showMaBonusInfo(){
+  var sec = document.getElementById('ma-bonus-section');
+  var list = document.getElementById('ma-bonus-list');
+  if(!sec || !list) return;
+  if(S.extrasData && S.extrasData.length){
+    list.innerHTML = S.extrasData.map(function(ex){
+      return '· ' + ex.title + ' (' + ex.precio + ' EUR)';
+    }).join('<br>');
+    sec.style.display = 'block';
+  } else {
+    sec.style.display = 'none';
+  }
 }
 
 function resetMeta(){
   S.maKit = null;
   hide('ma-content'); hide('ma-loading'); show('ma-empty');
   populateMetaSel();
+  showMaBonusInfo();
 }
 
-async function genMeta(o, langOverride){
+async function genMeta(o, langOverride, ebookOverride, priceOverride){
   o=o||S.selOpp; if(!o) return;
   const lang = langOverride || S.approvedLang || o.idioma || o.language || 'Español';
+  const eb = ebookOverride || S.finalEbook || S.ebookData || {};
+  const price = priceOverride || S.maPrice || '';
+  if(price) S.maPrice = price;
+  // Bonus info
+  var bonuses = (S.extrasData||[]).map(function(ex){ return {title:ex.title, type:ex.type, precio:ex.precio}; });
   show('ma-loading');
   try{
-    const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,language:lang})});
+    const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({opportunity:o, language:lang, ebook:eb, price:price, bonuses:bonuses})});
     const d=await resp.json();
     if(d.success){ S.maKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
     else{ hide('ma-loading'); show('ma-empty'); alert('Error generando kit Meta Ads: '+d.error); }
