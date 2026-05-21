@@ -44,7 +44,16 @@ const REGS = {
   UAE: { legal: 'Federal Law No. 15 of 2020 on Consumer Protection, Federal Law No. 45 of 2021 on Personal Data', healthDisclaimer: 'This guide is for informational purposes only.', guarantee: '15-day return period', dataProtection: 'Data protected under PDP Law.', forbidden: 'No guaranteed health claims.', language: 'Arabic', currency: 'AED' },
   // OCEANIA
   Australia: { legal: 'Australian Consumer Law, Privacy Act 1988', healthDisclaimer: 'This guide is for informational purposes only.', guarantee: 'Cooling-off period varies by state', dataProtection: 'Data protected under Privacy Act.', forbidden: 'No guaranteed health claims.', language: 'English', currency: 'AUD' },
-  'New Zealand': { legal: 'Consumer Guarantees Act 1993, Privacy Act 2020', healthDisclaimer: 'This guide is for informational purposes only.', guarantee: '5 working days to cancel', dataProtection: 'Data protected under Privacy Act.', forbidden: 'No guaranteed health claims.', language: 'English', currency: 'NZD' }
+  'New Zealand': { legal: 'Consumer Guarantees Act 1993, Privacy Act 2020', healthDisclaimer: 'This guide is for informational purposes only.', guarantee: '5 working days to cancel', dataProtection: 'Data protected under Privacy Act.', forbidden: 'No guaranteed health claims.', language: 'English', currency: 'NZD' },
+  // LATAM
+  Mexico: { legal: 'LFPDPPP, Ley Federal de Protección al Consumidor, PROFECO', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico profesional.', guarantee: 'Derecho de cancelación conforme a PROFECO', dataProtection: 'Datos protegidos conforme a la LFPDPPP.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'MXN' },
+  Colombia: { legal: 'Ley 1581 de 2012 protección de datos, Estatuto del Consumidor Ley 1480', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no reemplaza el consejo médico.', guarantee: 'Derecho de retracto 5 días hábiles conforme a Ley 1480', dataProtection: 'Datos protegidos bajo Ley 1581 de 2012.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'COP' },
+  Argentina: { legal: 'Ley 25326 protección de datos personales, Ley 24240 defensa del consumidor', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico.', guarantee: 'Derecho de arrepentimiento 10 días hábiles conforme a Ley 24240', dataProtection: 'Datos protegidos bajo Ley 25326.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'ARS' },
+  Chile: { legal: 'Ley 19628 protección de datos, Ley 19496 protección al consumidor, SERNAC', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no reemplaza el consejo médico.', guarantee: 'Derecho a retracto 10 días conforme a Ley 19496', dataProtection: 'Datos protegidos bajo Ley 19628.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'CLP' },
+  Peru: { legal: 'Ley 29733 protección de datos, Código de Protección al Consumidor Ley 29571, INDECOPI', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico.', guarantee: 'Derecho de arrepentimiento conforme al Código de Protección al Consumidor', dataProtection: 'Datos protegidos bajo Ley 29733.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'PEN' },
+  Uruguay: { legal: 'Ley 18331 protección de datos, Ley 17189 relaciones de consumo, AGESIC', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no reemplaza el consejo médico.', guarantee: 'Derecho de rescisión conforme a Ley 17189', dataProtection: 'Datos protegidos bajo Ley 18331.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'UYU' },
+  Ecuador: { legal: 'LOPDP Ley Orgánica de Protección de Datos, Ley Orgánica de Defensa del Consumidor', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico.', guarantee: 'Derecho de devolución conforme a Ley de Defensa del Consumidor', dataProtection: 'Datos protegidos bajo LOPDP.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'USD' },
+  Brazil: { legal: 'LGPD Lei Geral de Proteção de Dados, CDC Código de Defesa do Consumidor', healthDisclaimer: 'Este guia tem fins exclusivamente informativos e não substitui o aconselhamento médico.', guarantee: 'Direito de arrependimento 7 dias conforme CDC', dataProtection: 'Dados protegidos conforme LGPD.', forbidden: 'Proibidas promessas de resultados garantidos em saúde.', language: 'Portuguese', currency: 'BRL' }
 };
 
 const POPULATION = {
@@ -61,7 +70,15 @@ const POPULATION = {
   Austria: '9 millones total, 7.5 millones adultos',
   Poland: '38 millones total, 31 millones adultos',
   USA: '335 millones total, 260 millones adultos',
-  Canada: '40 millones total, 32 millones adultos'
+  Canada: '40 millones total, 32 millones adultos',
+  Mexico: '130 millones total, 95 millones adultos',
+  Colombia: '52 millones total, 38 millones adultos',
+  Argentina: '46 millones total, 34 millones adultos',
+  Chile: '19 millones total, 14 millones adultos',
+  Peru: '33 millones total, 24 millones adultos',
+  Uruguay: '3.5 millones total, 2.7 millones adultos',
+  Ecuador: '18 millones total, 13 millones adultos',
+  Brazil: '215 millones total, 160 millones adultos'
 };
 
 function getCountryName(countryStr) {
@@ -89,7 +106,15 @@ function getCountryContext(country) {
     'Austria': 'clima continental, paisaje alpino, arquitectura vienesa elegante, naturaleza montañosa',
     'Poland': 'clima continental, paisaje europeo central, arquitectura diversa, invierno frío',
     'USA': 'clima variado (tropical/subtropical sur, continental/desértico oeste, templado noreste), arquitectura moderna, paisaje diverso',
-    'Canada': 'clima frío boreal, paisaje montañoso/boscoso, arquitectura moderna canadiense, luz natural extrema'
+    'Canada': 'clima frío boreal, paisaje montañoso/boscoso, arquitectura moderna canadiense, luz natural extrema',
+    'Mexico': 'clima cálido tropical/seco, arquitectura colonial y moderna, paisaje desértico/tropical/urbano, colores vibrantes',
+    'Colombia': 'clima tropical variado por altitud, arquitectura colonial y moderna, paisaje montañoso/costero/selvático, verde exuberante',
+    'Argentina': 'clima templado/frío sur, arquitectura europea rioplatense, paisaje pampeano/patagónico/urbano, luz clara',
+    'Chile': 'clima variado (desértico norte, mediterráneo centro, frío sur), arquitectura moderna/colonial, paisaje montañoso costero',
+    'Peru': 'clima variado (desértico costa, frío sierra, tropical selva), arquitectura colonial/inca, paisaje andino/amazónico',
+    'Uruguay': 'clima templado, arquitectura colonial rioplatense, paisaje costero atlántico, playas, campo verde',
+    'Ecuador': 'clima tropical variado, arquitectura colonial andina, paisaje montañoso/costero/amazónico, naturaleza exuberante',
+    'Brazil': 'clima tropical cálido, arquitectura colonial y moderna, paisaje costero/selva amazónica/urbano, colores vibrantes'
   };
   return contexts[country] || 'clima templado europeo estándar, paisaje diverso, arquitectura contemporánea';
 }
@@ -103,7 +128,9 @@ const GEO_CODES = {
   'Switzerland':'CH','Austria':'AT','Poland':'PL','USA':'US','Canada':'CA',
   'Japan':'JP','South Korea':'KR','India':'IN','China':'CN','Singapore':'SG',
   'Thailand':'TH','South Africa':'ZA','Nigeria':'NG','Kenya':'KE','UAE':'AE',
-  'Australia':'AU','New Zealand':'NZ'
+  'Australia':'AU','New Zealand':'NZ',
+  'Mexico':'MX','Colombia':'CO','Argentina':'AR','Chile':'CL',
+  'Peru':'PE','Uruguay':'UY','Ecuador':'EC','Brazil':'BR'
 };
 
 async function getRealTrends(keyword, country) {
@@ -189,7 +216,9 @@ const DFS_LOCATION_CODES = {
   'Switzerland':2756,'Austria':2040,'Poland':2616,'USA':2840,'Canada':2124,
   'Japan':2392,'South Korea':2410,'India':2356,'China':2156,'Singapore':2702,
   'Thailand':2764,'South Africa':2710,'Nigeria':2566,'Kenya':2404,'UAE':2784,
-  'Australia':2036,'New Zealand':2554
+  'Australia':2036,'New Zealand':2554,
+  'Mexico':2484,'Colombia':2170,'Argentina':2032,'Chile':2152,
+  'Peru':2604,'Uruguay':2858,'Ecuador':2218,'Brazil':2076
 };
 
 const DFS_LANG_CODES = {
@@ -2255,6 +2284,29 @@ app.get('/api/config', function(req, res) {
     ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY),
     openaiKey: process.env.OPENAI_API_KEY || ''
   });
+});
+
+// IMPORT & UPGRADE — Chapter improvement
+app.post('/api/import-chapter', async function(req, res) {
+  try {
+    var chapterTitle = req.body.chapterTitle || '';
+    var chapterText  = req.body.chapterText  || '';
+    var chapterNum   = req.body.chapterNum   || 1;
+    var totalChapters = req.body.totalChapters || 1;
+    var market    = req.body.market    || 'España';
+    var lang      = req.body.lang      || 'Español';
+    var context   = req.body.context   || '';
+    var reference = req.body.reference || '';
+
+    var sys = 'You are an expert ebook editor. Improve the following chapter while STRICTLY preserving the author\'s personal voice, experiences, first-person anecdotes, and unique tone.\n\nRules:\n- Keep ALL personal stories and first-person experiences intact\n- Fix grammar, spelling, and improve sentence flow\n- Update outdated information to 2025\n- Add depth where content is shallow — in the author\'s own voice\n- Adapt for target market: ' + market + '\n- Write the improved chapter in: ' + lang + '\n- Do NOT genericize the content or remove personality\n' + (context ? '- Author notes: ' + context + '\n' : '') + (reference ? '- Reference: ' + reference + '\n' : '') + '\nReturn ONLY the improved chapter text. No JSON, no metadata, no headings from you.';
+
+    var userMsg = 'Chapter ' + chapterNum + ' of ' + totalChapters + ': "' + chapterTitle + '"\n\n' + chapterText;
+
+    var improved = await claudeCall(sys, userMsg, 2000, false, 'claude-haiku-4-5-20251001');
+    res.json({ success: true, title: chapterTitle, improved: improved.trim() });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
 });
 
 app.get('*', function(req, res) {

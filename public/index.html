@@ -187,6 +187,7 @@ select option { background: #1e2d52; }
       <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
       <button class="tab" onclick="showTab('extras',this)">🎁 Bonus Pack</button>
       <button class="tab" onclick="showTab('directo',this)">✍️ Directo</button>
+      <button class="tab" onclick="showTab('import',this)">📥 Importar</button>
       <button class="tab" onclick="showTab('translate',this)">🌍 Traducción</button>
       <button class="tab" onclick="showTab('hist',this)">🕐 Historial</button>
     </div>
@@ -213,9 +214,19 @@ select option { background: #1e2d52; }
               <option value="Austria">🇦🇹 Austria</option>
               <option value="Poland">🇵🇱 Polonia</option>
             </optgroup>
-            <optgroup label="🌎 América">
+            <optgroup label="🌎 América del Norte">
               <option value="USA">🇺🇸 USA</option>
               <option value="Canada">🇨🇦 Canadá</option>
+            </optgroup>
+            <optgroup label="🌎 América Latina">
+              <option value="Mexico">🇲🇽 México</option>
+              <option value="Colombia">🇨🇴 Colombia</option>
+              <option value="Argentina">🇦🇷 Argentina</option>
+              <option value="Chile">🇨🇱 Chile</option>
+              <option value="Peru">🇵🇪 Perú</option>
+              <option value="Uruguay">🇺🇾 Uruguay</option>
+              <option value="Ecuador">🇪🇨 Ecuador</option>
+              <option value="Brazil">🇧🇷 Brasil</option>
             </optgroup>
           </select>
         </div>
@@ -684,6 +695,8 @@ select option { background: #1e2d52; }
                 <option value="Colombia">🇨🇴 Colombia</option>
                 <option value="Chile">🇨🇱 Chile</option>
                 <option value="Peru">🇵🇪 Perú</option>
+                <option value="Uruguay">🇺🇾 Uruguay</option>
+                <option value="Ecuador">🇪🇨 Ecuador</option>
                 <option value="France">🇫🇷 Francia</option>
                 <option value="Germany">🇩🇪 Alemania</option>
                 <option value="Italy">🇮🇹 Italia</option>
@@ -734,6 +747,101 @@ select option { background: #1e2d52; }
           </div>
 
           <div id="dir-error" class="hidden" style="background:#fff0f0;border:1px solid #e74c3c;border-radius:10px;padding:16px;margin-top:16px;color:#c0392b;font-size:13px;"></div>
+        </div>
+      </div>
+
+      <!-- IMPORT & UPGRADE -->
+      <div id="panel-import" class="panel">
+        <div class="panel-scroll">
+
+          <!-- Empty state -->
+          <div id="imp-empty">
+            <div class="row-hd"><div class="sec-lbl">📥 Importar &amp; Mejorar</div><span class="badge ba">PDF · DOCX · TXT</span></div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Sube un ebook existente. Claude lo analiza capítulo por capítulo, mejora el contenido manteniendo tu voz personal, y lo integra al flujo normal de Ferni AI.</div>
+
+            <div id="imp-drop" onclick="document.getElementById('imp-file').click()" style="border:2px dashed var(--border);border-radius:12px;padding:36px 24px;text-align:center;cursor:pointer;margin-bottom:16px;transition:border-color .2s;">
+              <div style="font-size:36px;margin-bottom:8px;">📄</div>
+              <div style="font-size:14px;color:var(--text);margin-bottom:4px;">Arrastra tu archivo aquí o haz clic para seleccionar</div>
+              <div style="font-size:12px;color:var(--muted);">PDF, DOCX, TXT — máx. 10 MB</div>
+              <input type="file" id="imp-file" accept=".pdf,.docx,.txt,.doc" style="display:none" onchange="handleImpFile(this)">
+            </div>
+            <div id="imp-file-name" style="display:none;font-size:13px;color:var(--teal);margin-bottom:16px;text-align:center;font-weight:600;"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+              <div>
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Mercado objetivo</div>
+                <select id="imp-market" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <optgroup label="🌎 LatAm">
+                    <option value="España">🇪🇸 España</option>
+                    <option value="Mexico">🇲🇽 México</option>
+                    <option value="Colombia">🇨🇴 Colombia</option>
+                    <option value="Argentina">🇦🇷 Argentina</option>
+                    <option value="Chile">🇨🇱 Chile</option>
+                    <option value="Peru">🇵🇪 Perú</option>
+                    <option value="Uruguay">🇺🇾 Uruguay</option>
+                    <option value="Ecuador">🇪🇨 Ecuador</option>
+                    <option value="Brazil">🇧🇷 Brasil</option>
+                  </optgroup>
+                  <optgroup label="🌍 Europa / USA">
+                    <option value="USA">🇺🇸 USA</option>
+                    <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                    <option value="France">🇫🇷 Francia</option>
+                    <option value="Germany">🇩🇪 Alemania</option>
+                    <option value="Italy">🇮🇹 Italia</option>
+                    <option value="Portugal">🇵🇹 Portugal</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Idioma de salida</div>
+                <select id="imp-lang" style="width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="Español">Español</option>
+                  <option value="English">English</option>
+                  <option value="Português">Português</option>
+                  <option value="Français">Français</option>
+                  <option value="Deutsch">Deutsch</option>
+                  <option value="Italiano">Italiano</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Contexto / Instrucciones <span style="color:var(--teal);text-transform:none;">(opcional)</span></div>
+              <textarea id="imp-context" rows="3" placeholder="Ej: Este ebook está escrito desde mi experiencia personal como nutricionista. Mantén mi voz directa e informal. El público son mujeres 35-50 años. Actualiza las referencias al año 2025." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+            </div>
+
+            <div style="margin-bottom:20px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Referencia adicional <span style="color:var(--teal);text-transform:none;">(opcional)</span></div>
+              <input type="text" id="imp-ref" placeholder="ej: nombre de un libro de referencia, tendencia del mercado, URL de artículo..." style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
+            </div>
+
+            <button onclick="startImport()" class="btn btn-teal" style="width:100%;font-size:15px;padding:14px;">📥 Importar y Mejorar</button>
+          </div>
+
+          <!-- Loading state -->
+          <div id="imp-loading" style="display:none;text-align:center;padding:60px 20px;">
+            <div class="spinner" style="margin:0 auto 20px;"></div>
+            <div id="imp-load-txt" style="font-size:14px;color:var(--text);margin-bottom:12px;">Extrayendo texto...</div>
+            <div style="width:280px;background:var(--bg2);border-radius:6px;height:6px;overflow:hidden;margin:0 auto 12px;">
+              <div id="imp-load-fill" style="height:100%;background:var(--teal);width:0%;transition:width .5s;border-radius:6px;"></div>
+            </div>
+            <div id="imp-load-sub" style="font-size:12px;color:var(--muted);font-style:italic;"></div>
+          </div>
+
+          <!-- Content state -->
+          <div id="imp-content" style="display:none;">
+            <div class="row-hd">
+              <div class="sec-lbl">✅ Ebook mejorado</div>
+              <button class="btn btn-ghost" onclick="resetImport()" style="font-size:12px;padding:6px 12px;">↺ Importar otro</button>
+            </div>
+            <div id="imp-result-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></div>
+            <div style="background:var(--bg2);border-radius:10px;padding:12px 16px;margin-bottom:20px;">
+              <div id="imp-chapters-list"></div>
+            </div>
+            <button onclick="sendToEbook()" class="btn btn-teal" style="width:100%;font-size:15px;padding:14px;margin-bottom:8px;">📖 Enviar al módulo Ebook → continuar flujo normal</button>
+            <div style="font-size:12px;color:var(--muted);text-align:center;">El ebook mejorado quedará disponible para verificación, correcciones, PDF y todos los módulos.</div>
+          </div>
+
         </div>
       </div>
 
@@ -848,7 +956,7 @@ async function genImgDirectGlobal(prompt, imageType, niche){
   }
 }
 
-const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'} };
+const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'}, 'Mexico':{lang:'Spanish',flag:'🇲🇽'}, 'Colombia':{lang:'Spanish',flag:'🇨🇴'}, 'Argentina':{lang:'Spanish',flag:'🇦🇷'}, 'Chile':{lang:'Spanish',flag:'🇨🇱'}, 'Peru':{lang:'Spanish',flag:'🇵🇪'}, 'Uruguay':{lang:'Spanish',flag:'🇺🇾'}, 'Ecuador':{lang:'Spanish',flag:'🇪🇨'}, 'Brazil':{lang:'Portuguese',flag:'🇧🇷'} };
 
 function showTab(id,el){ 
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); 
@@ -1267,6 +1375,184 @@ async function generateDirectEbook(){
     errEl.textContent = '❌ ' + e.message;
     show('dir-error');
   }
+}
+
+// ===== IMPORT & UPGRADE =====
+var _impChapters = [];
+var _impMeta = {};
+
+function handleImpFile(input){
+  var file = input.files[0];
+  if(!file) return;
+  var nameEl = document.getElementById('imp-file-name');
+  nameEl.textContent = '📎 ' + file.name;
+  nameEl.style.display = 'block';
+  document.getElementById('imp-drop').style.borderColor = 'var(--teal)';
+}
+
+function _loadScript(src){
+  return new Promise(function(res,rej){
+    if(document.querySelector('script[src="'+src+'"]')){ res(); return; }
+    var s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function _extractText(file){
+  var ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='txt'){
+    return new Promise(function(res,rej){ var fr=new FileReader(); fr.onload=function(e){res(e.target.result);}; fr.onerror=rej; fr.readAsText(file); });
+  }
+  if(ext==='pdf'){
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var ab = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({data:ab}).promise;
+    var text = '';
+    for(var i=1;i<=pdf.numPages;i++){
+      var pg = await pdf.getPage(i);
+      var ct = await pg.getTextContent();
+      text += ct.items.map(function(it){return it.str;}).join(' ') + '\n';
+    }
+    return text;
+  }
+  if(ext==='docx'||ext==='doc'){
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+    var ab2 = await file.arrayBuffer();
+    var r = await mammoth.extractRawText({arrayBuffer:ab2});
+    return r.value;
+  }
+  throw new Error('Formato no soportado. Usa PDF, DOCX o TXT.');
+}
+
+function _splitChapters(text){
+  var rx = /\n(?:Chapter|Capítulo|Cap\.|CHAPTER|CAPÍTULO|Chapitre|Kapitel|Capitolo)\s*[\d\w]+[:\.]?[^\n]*/gi;
+  var headings = text.match(rx) || [];
+  if(headings.length >= 2){
+    var parts = text.split(rx);
+    var chapters = [];
+    for(var i=0;i<headings.length;i++){
+      var content = (parts[i+1]||'').trim();
+      if(content.length > 80) chapters.push({title:headings[i].trim(), content:content});
+    }
+    if(chapters.length >= 2) return chapters;
+  }
+  // Fallback: chunk by words
+  var words = text.split(/\s+/);
+  var size = 400;
+  var chunks = [];
+  for(var j=0;j<words.length;j+=size){
+    var chunk = words.slice(j,j+size).join(' ');
+    if(chunk.length > 50) chunks.push({title:'Sección '+(chunks.length+1), content:chunk});
+  }
+  return chunks;
+}
+
+function _setImpProgress(pct, txt, sub){
+  var fill = document.getElementById('imp-load-fill');
+  var txtEl = document.getElementById('imp-load-txt');
+  var subEl = document.getElementById('imp-load-sub');
+  if(fill) fill.style.width = pct+'%';
+  if(txtEl && txt) txtEl.textContent = txt;
+  if(subEl && sub !== undefined) subEl.textContent = sub;
+}
+
+async function startImport(){
+  var fileInput = document.getElementById('imp-file');
+  var file = fileInput && fileInput.files[0];
+  if(!file){ alert('Por favor selecciona un archivo primero.'); return; }
+
+  var market = document.getElementById('imp-market').value;
+  var lang = document.getElementById('imp-lang').value;
+  var context = document.getElementById('imp-context').value.trim();
+  var ref = (document.getElementById('imp-ref').value||'').trim();
+
+  hide('imp-empty'); show('imp-loading');
+  _setImpProgress(5, 'Extrayendo texto del archivo...', '');
+
+  var rawText;
+  try { rawText = await _extractText(file); }
+  catch(err){ hide('imp-loading'); show('imp-empty'); alert('Error al leer el archivo: '+err.message); return; }
+
+  if(!rawText || rawText.trim().length < 100){
+    hide('imp-loading'); show('imp-empty');
+    alert('No se pudo extraer texto suficiente. Intenta con un archivo diferente.');
+    return;
+  }
+
+  _setImpProgress(12, 'Detectando estructura del ebook...', '');
+  var chapters = _splitChapters(rawText.trim());
+  if(!chapters.length){ hide('imp-loading'); show('imp-empty'); alert('No se encontraron secciones en el archivo.'); return; }
+  if(chapters.length > 8) chapters = chapters.slice(0, 8);
+
+  _impChapters = [];
+  _impMeta = { market:market, lang:lang, totalChapters:chapters.length, fileName:file.name };
+
+  for(var i=0;i<chapters.length;i++){
+    var pct = 12 + Math.round(((i+1)/chapters.length)*80);
+    _setImpProgress(pct, 'Mejorando capítulo '+(i+1)+' de '+chapters.length+'...', chapters[i].title||'');
+    try {
+      var resp = await fetch('/api/import-chapter', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          chapterTitle: chapters[i].title,
+          chapterText: chapters[i].content.substring(0, 3000),
+          chapterNum: i+1, totalChapters: chapters.length,
+          market:market, lang:lang, context:context, reference:ref
+        })
+      });
+      var d = await resp.json();
+      if(d.success){
+        _impChapters.push({title:d.title||chapters[i].title, original:chapters[i].content, improved:d.improved});
+      } else {
+        _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
+      }
+    } catch(e){
+      _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
+    }
+  }
+
+  _setImpProgress(100, 'Listo.', '');
+  hide('imp-loading'); show('imp-content');
+  _renderImpResult();
+}
+
+function _renderImpResult(){
+  var info = document.getElementById('imp-result-info');
+  var list = document.getElementById('imp-chapters-list');
+  if(info) info.textContent = _impMeta.fileName+' → '+_impChapters.length+' capítulos mejorados para '+_impMeta.market+' en '+_impMeta.lang;
+  if(list){
+    list.innerHTML = _impChapters.map(function(ch,i){
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--teal);margin-right:8px;">✓</span>'+(ch.title||'Capítulo '+(i+1))+'</div>';
+    }).join('');
+  }
+}
+
+function sendToEbook(){
+  if(!_impChapters.length) return;
+  var chs = {};
+  _impChapters.forEach(function(ch,i){ chs['ch'+(i+1)] = ch.improved; });
+  var fileName = _impMeta.fileName.replace(/\.[^.]+$/,'');
+  var opp = { titulo:fileName, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
+  var ebookData = { title:fileName, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:_impChapters[0]?_impChapters[0].improved:'', conclusion:'', disclaimer:'', source:'import', lang:_impMeta.lang };
+  S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
+  S.finalEbook = null; S.pdfHtml = null; S.hmKit = null; S.maKit = null;
+  var id = 'imp_'+Date.now();
+  S.currentHistId = id;
+  var info = LANGS[_impMeta.market]||{lang:'Spanish',flag:'🌍'};
+  S.numChapters = _impChapters.length;
+  S.history.unshift({ id:id, opp:fileName, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, selOpp:opp, date:new Date().toLocaleDateString('es-CL'), source:'import' });
+  saveFullDataToHist(id);
+  showTab('ebook', document.querySelectorAll('.tab')[1]);
+}
+
+function resetImport(){
+  _impChapters = []; _impMeta = {};
+  hide('imp-content'); hide('imp-loading'); show('imp-empty');
+  var fi = document.getElementById('imp-file'); if(fi) fi.value='';
+  var fn = document.getElementById('imp-file-name'); if(fn) fn.style.display='none';
+  var drop = document.getElementById('imp-drop'); if(drop) drop.style.borderColor='var(--border)';
 }
 
 function ebStep(id, state){
