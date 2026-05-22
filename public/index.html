@@ -4864,87 +4864,89 @@ function openExtraEdit(idx){
   var ex = S.extrasData && S.extrasData[idx];
   if(!ex){ alert('No hay datos del bonus.'); return; }
   S._editExtraIdx = idx;
-  document.getElementById('ex-edit-title').value = ex.title || '';
-  document.getElementById('ex-edit-subtitle').value = ex.subtitle || '';
-  // Build readable content
-  var content = '';
-  if(ex.items && Array.isArray(ex.items)){
-    content = ex.items.join('\n');
-    document.getElementById('ex-edit-format-hint').textContent = 'Un elemento por línea';
-  } else if(ex.secciones && Array.isArray(ex.secciones)){
-    ex.secciones.forEach(function(s){ content += '== '+s.titulo+' ==\n'; (s.items||s.contenido||[]).forEach(function(it){ content += '- '+it+'\n'; }); content += '\n'; });
-    document.getElementById('ex-edit-format-hint').textContent = '== Sección == seguida de - items';
-  } else {
-    var copy = JSON.parse(JSON.stringify(ex));
-    ['title','subtitle','type','precio'].forEach(function(k){ delete copy[k]; });
-    content = JSON.stringify(copy, null, 2);
-    document.getElementById('ex-edit-format-hint').textContent = 'Formato JSON — edita con cuidado';
-  }
-  document.getElementById('ex-edit-content').value = content;
   document.getElementById('ex-edit-type').textContent = (EXTRA_NAMES[ex.type]||ex.type) + ' #'+(idx+1);
+  document.getElementById('ex-edit-bonus-title').textContent = ex.title || '';
+  document.getElementById('ex-edit-instruction').value = '';
+  document.getElementById('ex-edit-status').style.display = 'none';
+  document.getElementById('ex-edit-apply-btn').disabled = false;
+  document.getElementById('ex-edit-apply-btn').textContent = '✨ Aplicar corrección';
   document.getElementById('ex-edit-overlay').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('ex-edit-instruction').focus(); }, 100);
 }
 
 function closeExtraEdit(){
   document.getElementById('ex-edit-overlay').style.display = 'none';
 }
 
-function saveExtraEdit(){
+async function saveExtraEdit(){
   var idx = S._editExtraIdx;
   var ex = S.extrasData && S.extrasData[idx];
   if(!ex) return;
-  ex.title = document.getElementById('ex-edit-title').value.trim() || ex.title;
-  ex.subtitle = document.getElementById('ex-edit-subtitle').value.trim() || ex.subtitle;
-  var rawContent = document.getElementById('ex-edit-content').value.trim();
-  if(rawContent){
-    if(ex.items && Array.isArray(ex.items)){
-      ex.items = rawContent.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
-    } else if(ex.secciones && Array.isArray(ex.secciones)){
-      // Parse == Section == format
-      var secs = []; var cur = null;
-      rawContent.split('\n').forEach(function(line){
-        var m = line.match(/^==\s*(.+?)\s*==$/);
-        if(m){ cur = {titulo: m[1], items: []}; secs.push(cur); }
-        else if(cur && line.startsWith('- ')){ cur.items.push(line.slice(2).trim()); }
-      });
-      if(secs.length) ex.secciones = secs;
-    } else {
+  var instruction = (document.getElementById('ex-edit-instruction').value||'').trim();
+  if(!instruction){ alert('Escribe qué quieres corregir, agregar o quitar.'); return; }
+
+  var btn = document.getElementById('ex-edit-apply-btn');
+  var statusEl = document.getElementById('ex-edit-status');
+  btn.disabled = true; btn.textContent = '⏳ Aplicando...';
+  statusEl.style.display = 'none';
+
+  // Intento rápido: buscar → reemplazar (ej: "cambia X por Y" o "X → Y")
+  var qm = instruction.match(/(?:reemplaz[ae]|cambi[ae]|sustituye?)\s+["']?(.+?)["']?\s+(?:por|a|con)\s+["']?(.+?)["']?\.?\s*$/i)
+         || instruction.match(/["']?(.+?)["']?\s*(?:→|->)\s*["']?(.+?)["']?\.?\s*$/i);
+  if(qm && qm[1].length <= 30 && qm[2].length <= 30){
+    var exStr = JSON.stringify(ex);
+    var escaped = qm[1].trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    var replaced = exStr.replace(new RegExp(escaped,'g'), qm[2].trim());
+    if(replaced !== exStr){
       try {
-        var parsed = JSON.parse(rawContent);
-        Object.assign(ex, parsed);
-      } catch(e){ alert('JSON inválido: ' + e.message); return; }
+        S.extrasData[idx] = JSON.parse(replaced);
+        closeExtraEdit();
+        try{ localStorage.setItem('ferni_extras', JSON.stringify({data:S.extrasData, lang:S.extrasLang})); }catch(e){}
+        if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+        renderExtras(S.selOpp||{}, S.extrasData, S.extrasLang||'Español');
+        return;
+      } catch(e){ /* fall through to Claude */ }
     }
   }
-  closeExtraEdit();
-  try{ localStorage.setItem('ferni_extras', JSON.stringify({data:S.extrasData, lang:S.extrasLang})); }catch(e){}
-  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-  var o = S.selOpp || {};
-  renderExtras(o, S.extrasData, S.extrasLang || 'Español');
+
+  // Corrección con Claude Haiku
+  try {
+    var resp = await fetch('/api/fix-bonus', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ bonus: ex, instruction: instruction, language: S.extrasLang||'Español' })
+    });
+    var d = await resp.json();
+    if(d.success && d.bonus){
+      S.extrasData[idx] = d.bonus;
+      closeExtraEdit();
+      try{ localStorage.setItem('ferni_extras', JSON.stringify({data:S.extrasData, lang:S.extrasLang})); }catch(e){}
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+      renderExtras(S.selOpp||{}, S.extrasData, S.extrasLang||'Español');
+    } else {
+      btn.disabled=false; btn.textContent='✨ Aplicar corrección';
+      statusEl.style.display='block'; statusEl.textContent='❌ '+(d.error||'Error desconocido');
+    }
+  } catch(e){
+    btn.disabled=false; btn.textContent='✨ Aplicar corrección';
+    statusEl.style.display='block'; statusEl.textContent='❌ '+e.message;
+  }
 }
 </script>
 
 <!-- Extra edit overlay -->
 <div id="ex-edit-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:var(--bg2,#1e1e2e);border:1px solid rgba(108,92,231,0.4);border-radius:16px;padding:28px;width:90%;max-width:560px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <div style="font-size:14px;font-weight:700;color:var(--accent,#a29bfe);">✏ Editar bonus — <span id="ex-edit-type"></span></div>
+  <div style="background:var(--bg2,#1e1e2e);border:1px solid rgba(108,92,231,0.4);border-radius:16px;padding:28px;width:90%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:14px;font-weight:700;color:var(--accent,#a29bfe);">✏ Corregir bonus — <span id="ex-edit-type"></span></div>
       <button onclick="closeExtraEdit()" style="background:none;border:none;color:var(--muted,#888);font-size:20px;cursor:pointer;line-height:1;">✕</button>
     </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">TÍTULO</label>
-      <input id="ex-edit-title" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:13px;font-family:inherit;box-sizing:border-box;">
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">SUBTÍTULO</label>
-      <input id="ex-edit-subtitle" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:13px;font-family:inherit;box-sizing:border-box;">
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:4px;">CONTENIDO — <span id="ex-edit-format-hint" style="font-weight:400;color:var(--teal,#00cec9);"></span></label>
-      <textarea id="ex-edit-content" rows="12" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:12px;font-family:monospace;line-height:1.6;box-sizing:border-box;resize:vertical;"></textarea>
-    </div>
+    <div id="ex-edit-bonus-title" style="font-size:12px;color:var(--muted,#888);margin-bottom:18px;"></div>
+    <label style="font-size:11px;font-weight:700;color:var(--muted,#888);display:block;margin-bottom:6px;">¿QUÉ QUIERES CORREGIR, AGREGAR O QUITAR?</label>
+    <textarea id="ex-edit-instruction" rows="5" placeholder="Ej: El plan solo llega al día 20, agrégale los días 21 al 30 para completar la semana 4&#10;Ej: Cambia el título por uno más motivador&#10;Ej: Añade 3 ítems más al checklist sobre gestión del tiempo" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg,#12121e);color:var(--text,#eee);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;margin-bottom:12px;"></textarea>
+    <div id="ex-edit-status" style="display:none;font-size:13px;color:#fd79a8;margin-bottom:10px;"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="closeExtraEdit()" style="padding:9px 20px;border-radius:8px;border:1px solid var(--border,#333);background:transparent;color:var(--muted,#888);font-size:13px;cursor:pointer;font-family:inherit;">Cancelar</button>
-      <button onclick="saveExtraEdit()" style="padding:9px 24px;border-radius:8px;border:none;background:#6c5ce7;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">💾 Guardar cambios</button>
+      <button id="ex-edit-apply-btn" onclick="saveExtraEdit()" style="padding:9px 24px;border-radius:8px;border:none;background:#6c5ce7;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✨ Aplicar corrección</button>
     </div>
   </div>
 </div>

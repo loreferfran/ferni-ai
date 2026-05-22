@@ -2318,6 +2318,24 @@ app.post('/api/regen-bonus', async function(req, res) {
   }
 });
 
+// BONUS — Apply natural-language correction to one bonus
+app.post('/api/fix-bonus', async function(req, res) {
+  try {
+    var bonus      = req.body.bonus || {};
+    var instruction = req.body.instruction || '';
+    var language   = req.body.language || 'Español';
+    var sys = 'Eres experto en infoproductos digitales. Recibes un objeto JSON de un bonus y una instrucción de corrección. Aplica la corrección manteniendo exactamente la misma estructura JSON y el mismo idioma (' + language + '). Devuelve SOLO el objeto JSON corregido, sin markdown, sin explicaciones.';
+    var msg = 'BONUS ACTUAL:\n' + JSON.stringify(bonus, null, 2) +
+      '\n\nINSTRUCCIÓN DE CORRECCIÓN:\n' + instruction +
+      '\n\nDevuelve el objeto JSON corregido completo.';
+    var txt = await claudeCall(sys, msg, 2400, false, 'claude-haiku-4-5-20251001');
+    var fixed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    res.json({ success: true, bonus: fixed });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // IMPORT & UPGRADE — Fetch URL content for reference
 app.post('/api/fetch-url', async function(req, res) {
   try {
