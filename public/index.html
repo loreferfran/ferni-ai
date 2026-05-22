@@ -4916,13 +4916,32 @@ async function _genBundleImgDalle(){
   var niche=(o.nicho||o.niche||o.problema||'digital products').substring(0,60);
   var eb=S.finalEbook||S.ebookData||{};
   var topic=(eb.title||niche).substring(0,60);
-  var prompt='Premium digital product bundle mockup: four small colorful mini-guide booklets with vibrant covers arranged in a 2x2 grid on a dark elegant surface. Topic: '+topic+'. Professional flat lay photography, studio lighting, rich purple and teal color accents, marketing hero image style, high quality, sharp details, no text visible on covers.';
+  var lang=S.extrasLang||'Español';
+
+  // Tomar estilo visual de las imágenes de Hotmart para concordancia de colores
+  var styleHint='';
+  if(S.hmKit&&S.hmKit.images){
+    var hmP=(S.hmKit.images['image_1']||{}).visual_prompt||(S.hmKit.images['image_4']||{}).visual_prompt||'';
+    if(hmP) styleHint=hmP.replace(/High quality digital marketing image\. NO TEXT[^.]*\./gi,'').replace(/No text\. No signs\.[^.]*\./gi,'').trim().substring(0,140);
+  }
+
+  var prompt='High quality digital marketing image. NO TEXT NO WORDS NO LETTERS anywhere. '+
+    'Premium product bundle mockup: four small elegant digital guide booklets arranged neatly in a 2x2 grid, aerial flat lay view. Topic: '+topic+'. '+
+    (styleHint?'Visual style and color palette matching: '+styleHint+'. ':'Professional purple and teal color palette. ')+
+    'Each booklet has a distinct vibrant colored cover. Studio photography lighting, dark elegant surface, cinematic depth. '+
+    'No text. No signs. Premium dark background. Cinematic lighting. Ultra high quality.';
+
   var resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({prompt:prompt, imageType:'chapter', niche:niche})});
   var d=await resp.json();
   if(!d.success||!d.url) throw new Error(d.error||'Error generando imagen');
-  var dataUrl=await composeImageWithText(d.url,'BONUS PACK · 4 mini infoproductos premium');
-  return dataUrl;
+
+  // Texto superpuesto en el idioma del ebook
+  var lc=_getLangCode(lang);
+  var overlays={es:'BONUS PACK · 4 mini infoproductos premium',en:'BONUS PACK · 4 premium resources included',fr:'BONUS PACK · 4 ressources premium incluses',de:'BONUS PACK · 4 Premium-Ressourcen inklusive',it:'BONUS PACK · 4 risorse premium incluse',pt:'BONUS PACK · 4 recursos premium incluídos',nl:'BONUS PACK · 4 premium resources inbegrepen',pl:'BONUS PACK · 4 zasoby premium w zestawie',sv:'BONUS PACK · 4 premiumresurser ingår'};
+  var overlay=overlays[lc]||overlays['en'];
+
+  return await composeImageWithText(d.url, overlay);
 }
 
 async function genBonusMarketing(){
