@@ -2318,6 +2318,30 @@ app.post('/api/regen-bonus', async function(req, res) {
   }
 });
 
+// BONUS — Generate marketing texts (Hotmart + Meta) for the bonus pack
+app.post('/api/bonus-marketing-texts', async function(req, res) {
+  try {
+    var extras   = req.body.extras || [];
+    var ebook    = req.body.ebook || {};
+    var o        = req.body.opportunity || {};
+    var language = req.body.language || 'Español';
+    var bonusList = extras.map(function(e, i){
+      return (i+1) + '. ' + (e.title||e.type) + (e.subtitle ? ' — ' + e.subtitle : '') + (e.precio ? ' (valor '+e.precio+')' : '');
+    }).join('\n');
+    var sys = 'Eres experto en marketing de infoproductos digitales. Escribe textos de venta persuasivos en ' + language + '.';
+    var msg = 'EBOOK: "' + (ebook.title||'') + '"\nBONUS PACK incluido (4 mini infoproductos):\n' + bonusList +
+      '\n\nEscribe en ' + language + ':' +
+      '\n1. HOTMART (150-200 palabras): sección "Bonus incluidos" para la página de ventas. Menciona cada bonus, su valor y por qué complementa el ebook. Tono entusiasta y persuasivo.' +
+      '\n2. META (3-4 líneas independientes, máx 40 palabras c/u): copies cortos para anuncios Meta/Facebook que destaquen el bonus pack como diferenciador de valor.' +
+      '\n\nDevuelve SOLO JSON sin markdown: { "hotmart": "...", "meta": "..." }';
+    var txt = await claudeCall(sys, msg, 900, false, 'claude-haiku-4-5-20251001');
+    var result = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    res.json({ success: true, hotmart: result.hotmart, meta: result.meta });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // BONUS — Apply natural-language correction to one bonus
 app.post('/api/fix-bonus', async function(req, res) {
   try {
