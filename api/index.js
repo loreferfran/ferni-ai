@@ -2286,6 +2286,38 @@ app.get('/api/config', function(req, res) {
   });
 });
 
+// BONUS PACK — Regenerate single bonus
+app.post('/api/regen-bonus', async function(req, res) {
+  try {
+    var type     = req.body.type || 'checklist';
+    var ebook    = req.body.ebook || {};
+    var o        = req.body.opportunity || {};
+    var language = req.body.language || 'Español';
+    var countryName = getCountryName((o.pais || o.country) || 'France');
+    var chapsFull = (ebook.chapters || []).map(function(c, i){
+      return '=== CAP '+(i+1)+': '+(c.title||'')+' ===\n'+(c.content||'').substring(0,400);
+    }).join('\n');
+    var ebookCtx = 'EBOOK: "' + (ebook.title||'') + '" | TEMA: ' + ((o.problema||o.problem)||'') +
+      '\nPAÍS: ' + countryName + ' | IDIOMA: ' + language + '\n\n' + chapsFull;
+    var fmtFields = '\nchecklist→items:[15 acciones] | poster→quote+claves:[5] | tarjetas→tarjetas:[{titulo,contenido:[3]},×5]' +
+      ' | plan30→semanas:[{num,titulo,dias:[{num,tarea},×5]},×4] | plantilla→semanas:[{num,objetivo,dias:[{dia,tarea},×5]},×4]' +
+      ' | tracker→metricas:[{nombre,unidad,filas:[6]},×4] | guiarapida→secciones:[{titulo,items:[5]},×4]' +
+      ' | rutina→bloques:[{hora,actividad,duracion,notas},×8] | calendario→meses:[{mes,semanas:[{semana,actividades:[2]},×4]},×1]' +
+      ' | materiales→categorias:[{nombre,items:[{material,cantidad,notas},×4]},×3]' +
+      ' | presupuesto→categorias:[{nombre,items:[{concepto,costeEstimado,frecuencia},×3]},×3]';
+    var sys = 'Eres experto en infoproductos digitales. Genera UN bonus de tipo específico para un ebook. Todo en ' + language + '. Devuelve SOLO un objeto JSON (no array) sin markdown.';
+    var msg = ebookCtx + '\n\nGenera UN bonus de tipo: ' + type + '.' +
+      '\nIncluye: type:"'+type+'", title (en '+language+'), subtitle (1 línea), precio ("X.XX EUR" entre 3.90 y 8.90)' +
+      fmtFields + '\nDevuelve solo UN objeto JSON.';
+    var txt = await claudeCall(sys, msg, 2200, false, 'claude-haiku-4-5-20251001');
+    var bonus = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if(Array.isArray(bonus)) bonus = bonus[0];
+    res.json({ success: true, bonus: bonus });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // IMPORT & UPGRADE — Fetch URL content for reference
 app.post('/api/fetch-url', async function(req, res) {
   try {

@@ -601,7 +601,7 @@ select option { background: #1e2d52; }
                   <option value="">— Ebook —</option>
                 </select>
                 <button class="btn btn-s" style="font-size:12px;" onclick="genExtras()">↺ Regenerar</button>
-                <button class="btn btn-gold" onclick="dlAllExtras()">⬇ Descargar todo (ZIP Word)</button>
+                <div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0;">📥 Descarga cada bonus con el botón <strong>🖨 Guardar PDF</strong> de su card</div>
               </div>
             </div>
             <div style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text2);">
@@ -969,7 +969,11 @@ function showTab(id,el){
   if(id==='translate') restoreTranslateTab();
   if(id==='extras'){
     populateExtrasSels();
-    if(S.extrasData){ hide('ex-empty'); hide('ex-loading'); show('ex-content'); }
+    if(S.extrasData && S.extrasData.length){
+      hide('ex-empty'); hide('ex-loading'); show('ex-content');
+      var _exO = S.selOpp || {};
+      renderExtras(_exO, S.extrasData, S.extrasLang||'Español');
+    }
   }
   if(id==='hotmart'){
     if(S.hmKit && S.selOpp){ hide('hm-empty'); hide('hm-loading'); show('hm-content'); renderHotmart(S.selOpp, S.hmKit, S.selOpp.pais||S.selOpp.country||''); }
@@ -3402,7 +3406,7 @@ function renderExtras(o, extras, lang){
     var grad = EXTRA_COLORS[ex.type] || '6c5ce7,a29bfe';
     var icon = EXTRA_ICONS[ex.type] || '📄';
     var name = EXTRA_NAMES[ex.type] || ex.type;
-    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">' +
+    return '<div id="ex-card-'+i+'" style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">' +
       '<div style="background:linear-gradient(135deg,#'+grad+');padding:16px 14px;display:flex;align-items:center;gap:10px;">' +
         '<span style="font-size:26px;">'+icon+'</span>' +
         '<div><div style="font-size:11px;color:rgba(255,255,255,0.75);letter-spacing:1px;text-transform:uppercase;">'+name+'</div>' +
@@ -3411,11 +3415,14 @@ function renderExtras(o, extras, lang){
       '<div style="padding:12px 14px;">' +
         '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">'+ex.subtitle+'</div>' +
         '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px;">Precio sugerido: '+ex.precio+' EUR</div>' +
-        '<div style="display:flex;gap:6px;">' +
+        '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
           '<button class="btn btn-s" style="flex:1;" onclick="previewExtra('+i+')">👁 Preview</button>' +
           '<button class="btn btn-teal" style="flex:1;" onclick="dlExtra('+i+')">🖨 Guardar PDF</button>' +
         '</div>' +
-        '<button class="btn btn-s" style="width:100%;margin-top:6px;font-size:11px;opacity:0.8;" onclick="openExtraEdit('+i+')">✏ Editar contenido</button>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button class="btn btn-s" style="flex:1;font-size:11px;opacity:0.8;" onclick="openExtraEdit('+i+')">✏ Editar</button>' +
+          '<button id="ex-regen-btn-'+i+'" class="btn btn-s" style="flex:1;font-size:11px;opacity:0.8;" onclick="regenBonus('+i+')">↺ Regenerar</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -3700,22 +3707,37 @@ function dlExtra(idx){
   win.document.open(); win.document.write(html); win.document.close();
 }
 
-function dlAllExtras(){
-  if(!S.extrasData||!S.extrasData.length){ alert('Genera primero el Bonus Pack.'); return; }
-  var eb = S.finalEbook || S.ebookData || {};
-  var lang = S.extrasLang||'Español';
-  var ebTitle = eb.title||'';
-  // Abrir cada bonus en su propia ventana con auto-print (archivos separados)
-  S.extrasData.forEach(function(ex, i){
-    setTimeout(function(){
-      var html = buildExtraHtml(ex, lang, ebTitle);
-      var docTitle = (ex.title||'Bonus').replace(/[<>"/\\|?*]/g,'');
-      html = html.replace('<head>', '<head><title>'+docTitle+'</title>');
-      html = html.replace('</body>', '<script>window.onload=function(){window.print();}<\/script></body>');
-      var win = window.open('','_blank');
-      if(win){ win.document.open(); win.document.write(html); win.document.close(); }
-    }, i * 1200);
-  });
+async function regenBonus(idx){
+  if(!S.extrasData || !S.extrasData[idx]){ return; }
+  var ex = S.extrasData[idx];
+  var btn = document.getElementById('ex-regen-btn-'+idx);
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Regenerando...'; }
+  var exSel = document.getElementById('extras-ebook-sel') || document.getElementById('extras-ebook-sel-top');
+  var selIdx = exSel ? parseInt(exSel.value) : NaN;
+  var entry = (!isNaN(selIdx) && S.history && S.history[selIdx]) ? S.history[selIdx] : null;
+  var o = (entry && entry.selOpp) || S.selOpp || {};
+  var eb = (entry && (entry.finalEbook || entry.ebook)) || S.finalEbook || S.ebookData || {};
+  var lang = S.extrasLang || S.approvedLang || o.idioma || o.language || 'Español';
+  var existingTypes = S.extrasData.map(function(e, i){ return i !== idx ? e.type : null; }).filter(Boolean);
+  try {
+    var resp = await fetch('/api/regen-bonus', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ type: ex.type, ebook: eb, opportunity: o, language: lang, existingTypes: existingTypes })
+    });
+    var d = await resp.json();
+    if(d.success && d.bonus){
+      S.extrasData[idx] = d.bonus;
+      try{ localStorage.setItem('ferni_extras', JSON.stringify({data:S.extrasData, lang:S.extrasLang})); }catch(e){}
+      if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+      renderExtras(o, S.extrasData, lang);
+    } else {
+      if(btn){ btn.disabled=false; btn.textContent='↺ Regenerar'; }
+      alert('Error regenerando: '+(d.error||'desconocido'));
+    }
+  } catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='↺ Regenerar'; }
+    alert('Error: '+e.message);
+  }
 }
 
 // ─── MÓDULO TRADUCCIÓN ──────────────────────────────────────────────────────
