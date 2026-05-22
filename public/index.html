@@ -4925,26 +4925,22 @@ async function _genBundleImgDalle(){
     if(hmP) styleHint=hmP.replace(/High quality digital marketing image\. NO TEXT[^.]*\./gi,'').replace(/No text\. No signs\.[^.]*\./gi,'').trim().substring(0,140);
   }
 
-  var iconMap={checklist:'a printable checklist',tracker:'a progress tracker',plan30:'a 30-day action plan calendar',guiarapida:'a quick reference card',tarjetas:'reference flashcards',plantilla:'a weekly planner template',rutina:'a daily routine sheet',calendario:'a monthly calendar',materiales:'a materials checklist',presupuesto:'a budget worksheet',poster:'a motivational poster',recetas:'recipe cards'};
-  var icons=(S.extrasData||[]).slice(0,4).map(function(e){ return iconMap[e.type]||'a digital guide'; }).join(', ');
-  var colorRef=styleHint?'Use colors and style consistent with this visual reference: '+styleHint+'.':'Clean modern premium design, colors matching the topic: '+topic+'.';
-  var prompt='Create a single professional illustration showing 4 different digital bonus materials as a bundle. '+
-    'Each bonus is represented by a distinct simple icon: '+icons+'. '+
-    'All 4 elements arranged together in one cohesive composition. '+
-    'Clean modern design, no text, no letters, no words. Premium digital product feel. '+
-    colorRef+' Ultra high quality.';
+  var iconMap={checklist:'a checklist icon',tracker:'a progress tracker icon',plan30:'a 30-day calendar plan icon',guiarapida:'a quick reference card icon',tarjetas:'a flashcard set icon',plantilla:'a weekly planner icon',rutina:'a daily routine sheet icon',calendario:'a monthly calendar icon',materiales:'a materials list icon',presupuesto:'a budget worksheet icon',poster:'a motivational poster icon',recetas:'a recipe card icon'};
+  var icons=(S.extrasData||[]).slice(0,4).map(function(e){ return iconMap[e.type]||'a digital guide icon'; }).join(', ');
+  var colorRef=styleHint?'Color palette and visual style inspired by: '+styleHint:('Premium design colors aligned with the topic: '+topic);
+  var prompt='IMPORTANT: absolutely no text, no letters, no words, no numbers anywhere in this image. '+
+    'Professional digital product bundle illustration: four distinct flat design icons arranged in a clean 2x2 grid composition — '+icons+'. '+
+    'Topic context: '+topic+'. '+
+    'Each icon is clearly different, colorful, modern flat design style. '+
+    'Dark premium background. Cohesive layout. No text. No labels. No writing of any kind. '+
+    colorRef+'. High quality illustration, marketing ready.';
 
   var resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({prompt:prompt, imageType:'chapter', niche:niche})});
   var d=await resp.json();
   if(!d.success||!d.url) throw new Error(d.error||'Error generando imagen');
-
-  // Texto superpuesto en el idioma del ebook
-  var lc=_getLangCode(lang);
-  var overlays={es:'BONUS PACK · 4 mini infoproductos premium',en:'BONUS PACK · 4 premium resources included',fr:'BONUS PACK · 4 ressources premium incluses',de:'BONUS PACK · 4 Premium-Ressourcen inklusive',it:'BONUS PACK · 4 risorse premium incluse',pt:'BONUS PACK · 4 recursos premium incluídos',nl:'BONUS PACK · 4 premium resources inbegrepen',pl:'BONUS PACK · 4 zasoby premium w zestawie',sv:'BONUS PACK · 4 premiumresurser ingår'};
-  var overlay=overlays[lc]||overlays['en'];
-
-  return await composeImageWithText(d.url, overlay);
+  // Sin overlay — imagen pura, convertida a dataURL para persistencia
+  return await composeImageWithText(d.url,'');
 }
 
 async function genBonusMarketing(){
