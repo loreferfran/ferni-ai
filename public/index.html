@@ -4911,153 +4911,75 @@ function _saveExtras(){
 }
 
 // ─── BONUS MARKETING KIT ────────────────────────────────────────────────────
-function _roundRect(ctx, x, y, w, h, r){
-  var tl=Array.isArray(r)?r[0]:r, tr=Array.isArray(r)?r[1]:r, br=Array.isArray(r)?r[2]:r, bl=Array.isArray(r)?r[3]:r;
-  ctx.beginPath();
-  ctx.moveTo(x+tl,y); ctx.lineTo(x+w-tr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+tr);
-  ctx.lineTo(x+w,y+h-br); ctx.quadraticCurveTo(x+w,y+h,x+w-br,y+h);
-  ctx.lineTo(x+bl,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-bl);
-  ctx.lineTo(x,y+tl); ctx.quadraticCurveTo(x,y,x+tl,y);
-  ctx.closePath();
-}
-
-function drawBundleCanvas(){
-  if(!S.extrasData || !S.extrasData.length) return null;
-  var W=1200, H=630;
-  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
-  var ctx=cv.getContext('2d');
-
-  // Background
-  var bg=ctx.createLinearGradient(0,0,W,H);
-  bg.addColorStop(0,'#0d0d1c'); bg.addColorStop(1,'#18103a');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-
-  // Header band
-  var hb=ctx.createLinearGradient(0,0,W,0);
-  hb.addColorStop(0,'rgba(108,92,231,0.45)'); hb.addColorStop(0.5,'rgba(162,155,254,0.22)'); hb.addColorStop(1,'rgba(108,92,231,0.45)');
-  ctx.fillStyle=hb; ctx.fillRect(0,0,W,86);
-
-  ctx.textAlign='center'; ctx.shadowColor='rgba(162,155,254,0.9)'; ctx.shadowBlur=18;
-  ctx.fillStyle='#c5beff'; ctx.font='bold 20px Arial,sans-serif';
-  ctx.fillText('✦  BONUS PACK  ✦', W/2, 36);
-  ctx.shadowBlur=0;
-  var ebTitle=((S.finalEbook||S.ebookData||{}).title||'').substring(0,80);
-  ctx.fillStyle='rgba(255,255,255,0.52)'; ctx.font='13px Arial,sans-serif';
-  ctx.fillText(ebTitle, W/2, 62);
-
-  // 2x2 grid
-  var colorMap={ checklist:['#00b894','#00cec9'], poster:['#6c5ce7','#a29bfe'], tarjetas:['#0984e3','#74b9ff'], plan30:['#fdcb6e','#e17055'], plantilla:['#e17055','#d63031'], tracker:['#00cec9','#55efc4'], guiarapida:['#a29bfe','#6c5ce7'], rutina:['#fd79a8','#e84393'], calendario:['#0984e3','#55efc4'], materiales:['#6c5ce7','#fd79a8'], presupuesto:['#00b894','#55efc4'], recetas:['#e84393','#fd79a8'] };
-  var pad=28, gapX=14, gapY=14;
-  var cardW=Math.floor((W-pad*2-gapX)/2);
-  var cardH=Math.floor((H-86-pad-gapY-46)/2);
-  var startX=pad, startY=86+14;
-
-  S.extrasData.slice(0,4).forEach(function(ex,i){
-    var col=i%2, row=Math.floor(i/2);
-    var x=startX+col*(cardW+gapX), y=startY+row*(cardH+gapY);
-    var colors=colorMap[ex.type]||['#6c5ce7','#a29bfe'];
-
-    // Card bg
-    ctx.fillStyle='rgba(255,255,255,0.04)';
-    _roundRect(ctx,x,y,cardW,cardH,12); ctx.fill();
-
-    // Color bar
-    var barG=ctx.createLinearGradient(x,y,x+cardW,y);
-    barG.addColorStop(0,colors[0]); barG.addColorStop(1,colors[1]);
-    ctx.fillStyle=barG; _roundRect(ctx,x,y,cardW,6,[12,12,0,0]); ctx.fill();
-
-    // Border
-    ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1;
-    _roundRect(ctx,x,y,cardW,cardH,12); ctx.stroke();
-
-    // Number badge
-    var bdG=ctx.createLinearGradient(x+12,y+14,x+48,y+50);
-    bdG.addColorStop(0,colors[0]); bdG.addColorStop(1,colors[1]);
-    ctx.fillStyle=bdG; ctx.beginPath(); ctx.arc(x+30,y+32,18,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.shadowBlur=0;
-    ctx.font='bold 16px Arial,sans-serif'; ctx.textAlign='center';
-    ctx.fillText(String(i+1),x+30,y+38);
-
-    // Icon
-    ctx.font='22px Arial,sans-serif';
-    ctx.fillText(EXTRA_ICONS[ex.type]||'🎁',x+cardW-36,y+38);
-
-    // Title — wrap if needed
-    ctx.textAlign='left'; ctx.fillStyle='#fff'; ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=4;
-    ctx.font='bold 15px Arial,sans-serif';
-    var title=(ex.title||ex.type||''), titleY=y+72, maxTW=cardW-64;
-    if(ctx.measureText(title).width>maxTW){
-      var tw=title.split(' '), l1='', l2='';
-      tw.forEach(function(w){ if(ctx.measureText(l1+(l1?' ':'')+w).width<=maxTW) l1+=(l1?' ':'')+w; else l2+=(l2?' ':'')+w; });
-      ctx.fillText(l1.substring(0,50),x+16,titleY);
-      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='bold 13px Arial,sans-serif';
-      ctx.fillText(l2.substring(0,50),x+16,titleY+20);
-      titleY+=18;
-    } else { ctx.fillText(title.substring(0,55),x+16,titleY); }
-
-    // Subtitle
-    ctx.shadowBlur=0; ctx.fillStyle='rgba(255,255,255,0.52)'; ctx.font='12px Arial,sans-serif';
-    var sub=(ex.subtitle||''), subMaxW=cardW-32, subWords=sub.split(' '), sl='', sLines=[];
-    subWords.forEach(function(w){ var t=sl+(sl?' ':'')+w; if(ctx.measureText(t).width>subMaxW){ sLines.push(sl); sl=w; } else sl=t; });
-    if(sl) sLines.push(sl);
-    sLines.slice(0,3).forEach(function(line,li){ ctx.fillText(line,x+16,titleY+18+li*17); });
-
-    // Price badge
-    if(ex.precio){
-      ctx.fillStyle='rgba(0,0,0,0.45)'; _roundRect(ctx,x+14,y+cardH-36,88,22,5); ctx.fill();
-      var prG=ctx.createLinearGradient(x+14,0,x+102,0);
-      prG.addColorStop(0,colors[0]); prG.addColorStop(1,colors[1]);
-      ctx.fillStyle=prG; ctx.font='bold 12px Arial,sans-serif';
-      ctx.fillText('+ '+(ex.precio||''),x+20,y+cardH-20);
-    }
-  });
-
-  // Bottom bar
-  ctx.fillStyle='rgba(0,0,0,0.48)'; ctx.fillRect(0,H-46,W,46);
-  var total=S.extrasData.reduce(function(a,e){ return a+(parseFloat(e.precio)||5); },0);
-  ctx.textAlign='center'; ctx.fillStyle='rgba(255,255,255,0.42)'; ctx.font='12px Arial,sans-serif'; ctx.shadowBlur=0;
-  ctx.fillText('4 mini infoproductos premium  ·  Valor total del pack: '+total.toFixed(2)+' EUR', W/2, H-18);
-
-  return cv.toDataURL('image/jpeg',0.92);
+async function _genBundleImgDalle(){
+  var o=S.selOpp||{};
+  var niche=(o.nicho||o.niche||o.problema||'digital products').substring(0,60);
+  var eb=S.finalEbook||S.ebookData||{};
+  var topic=(eb.title||niche).substring(0,60);
+  var prompt='Premium digital product bundle mockup: four small colorful mini-guide booklets with vibrant covers arranged in a 2x2 grid on a dark elegant surface. Topic: '+topic+'. Professional flat lay photography, studio lighting, rich purple and teal color accents, marketing hero image style, high quality, sharp details, no text visible on covers.';
+  var resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt:prompt, imageType:'chapter', niche:niche})});
+  var d=await resp.json();
+  if(!d.success||!d.url) throw new Error(d.error||'Error generando imagen');
+  var dataUrl=await composeImageWithText(d.url,'BONUS PACK · 4 mini infoproductos premium');
+  return dataUrl;
 }
 
 async function genBonusMarketing(){
-  if(!S.extrasData || !S.extrasData.length){ alert('Genera el Bonus Pack primero.'); return; }
+  if(!S.extrasData||!S.extrasData.length){ alert('Genera el Bonus Pack primero.'); return; }
   hide('ex-mkt-empty'); hide('ex-mkt-content'); show('ex-mkt-loading');
   try {
     var eb=S.finalEbook||S.ebookData||{};
-    var resp=await fetch('/api/bonus-marketing-texts',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({extras:S.extrasData, ebook:{title:eb.title||'',subtitle:eb.subtitle||''}, opportunity:S.selOpp||{}, language:S.extrasLang||'Español'})});
-    var d=await resp.json();
-    if(!d.success) throw new Error(d.error||'Error desconocido');
-    S.extrasMarketing={hotmart:d.hotmart, meta:d.meta};
+    // Textos e imagen en paralelo
+    var [textsResp, imgDataUrl] = await Promise.all([
+      fetch('/api/bonus-marketing-texts',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({extras:S.extrasData, ebook:{title:eb.title||'',subtitle:eb.subtitle||''}, opportunity:S.selOpp||{}, language:S.extrasLang||'Español'})}).then(r=>r.json()),
+      _genBundleImgDalle()
+    ]);
+    if(!textsResp.success) throw new Error(textsResp.error||'Error en textos');
+    S.extrasMarketing={hotmart:textsResp.hotmart, meta:textsResp.meta};
+    S._bundleImgDataUrl=imgDataUrl;
+    idbSet('bonus_bundle_img', imgDataUrl);
     _saveExtras();
-    renderBonusMarketing(S.extrasMarketing);
+    renderBonusMarketing(S.extrasMarketing, imgDataUrl);
   } catch(e){
     hide('ex-mkt-loading'); show('ex-mkt-empty');
-    alert('Error generando kit de marketing: '+e.message);
+    alert('Error generando kit: '+e.message);
   }
 }
 
-function renderBonusMarketing(mkt){
+function renderBonusMarketing(mkt, imgDataUrl){
   hide('ex-mkt-empty'); hide('ex-mkt-loading'); show('ex-mkt-content');
-  var imgUrl=drawBundleCanvas();
   var imgEl=document.getElementById('ex-bundle-img');
-  if(imgEl && imgUrl){ imgEl.src=imgUrl; S._bundleImgDataUrl=imgUrl; }
+  if(imgEl){
+    if(imgDataUrl){ imgEl.src=imgDataUrl; S._bundleImgDataUrl=imgDataUrl; }
+    else if(S._bundleImgDataUrl){ imgEl.src=S._bundleImgDataUrl; }
+    else { idbGet('bonus_bundle_img',function(saved){ if(saved&&imgEl){ imgEl.src=saved; S._bundleImgDataUrl=saved; } }); }
+  }
   document.getElementById('ex-mkt-hotmart').value=mkt.hotmart||'';
   document.getElementById('ex-mkt-meta').value=mkt.meta||'';
 }
 
-function regenBundleImg(){
-  var url=drawBundleCanvas();
-  if(!url) return;
+async function regenBundleImg(){
+  var btn=document.querySelector('#ex-mkt-content button[onclick="regenBundleImg()"]');
   var imgEl=document.getElementById('ex-bundle-img');
-  if(imgEl) imgEl.src=url;
-  S._bundleImgDataUrl=url;
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Generando...'; }
+  if(imgEl) imgEl.style.opacity='0.35';
+  try {
+    var url=await _genBundleImgDalle();
+    S._bundleImgDataUrl=url;
+    idbSet('bonus_bundle_img', url);
+    if(imgEl){ imgEl.src=url; imgEl.style.opacity='1'; }
+  } catch(e){
+    if(imgEl) imgEl.style.opacity='1';
+    alert('Error regenerando imagen: '+e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='↺ Regenerar imagen'; }
+  }
 }
 
 function dlBundleImg(){
-  var src=S._bundleImgDataUrl||drawBundleCanvas();
+  var src=S._bundleImgDataUrl;
   if(!src){ alert('No hay imagen generada.'); return; }
   var a=document.createElement('a'); a.href=src; a.download='BONUS_BUNDLE.jpg'; a.click();
 }
