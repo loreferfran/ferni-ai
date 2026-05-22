@@ -3421,6 +3421,49 @@ function renderExtras(o, extras, lang){
   }).join('');
 }
 
+var _EXTRA_LABELS = {
+  checklist:   {es:'CHECKLIST',en:'CHECKLIST',fr:'LISTE DE CONTRÔLE',de:'CHECKLISTE',it:'CHECKLIST',pt:'CHECKLIST',nl:'CHECKLIST',pl:'LISTA KONTROLNA',sv:'CHECKLISTA'},
+  tarjetas:    {es:'TARJETAS DE REFERENCIA',en:'REFERENCE CARDS',fr:'FICHES DE RÉFÉRENCE',de:'REFERENZKARTEN',it:'SCHEDE DI RIFERIMENTO',pt:'CARTÕES DE REFERÊNCIA',nl:'REFERENTIEKAARTEN',pl:'KARTY REFERENCYJNE',sv:'REFERENSKORT'},
+  plan30:      {es:'PLAN 30 DÍAS',en:'30-DAY PLAN',fr:'PLAN 30 JOURS',de:'30-TAGE-PLAN',it:'PIANO 30 GIORNI',pt:'PLANO 30 DIAS',nl:'30-DAGENPLAN',pl:'PLAN 30 DNI',sv:'30-DAGARSPLAN'},
+  plantilla:   {es:'PLANTILLA SEMANAL',en:'WEEKLY TEMPLATE',fr:'MODÈLE HEBDOMADAIRE',de:'WÖCHENTLICHE VORLAGE',it:'MODELLO SETTIMANALE',pt:'MODELO SEMANAL',nl:'WEEKSJABLOON',pl:'SZABLON TYGODNIOWY',sv:'VECKSMALL'},
+  recetas:     {es:'TARJETAS DE RECETAS',en:'RECIPE CARDS',fr:'FICHES RECETTES',de:'REZEPTKARTEN',it:'SCHEDE RICETTE',pt:'FICHAS DE RECEITAS',nl:'RECEPTKAARTEN',pl:'KARTY PRZEPISÓW',sv:'RECEPTKORT'},
+  calendario:  {es:'CALENDARIO',en:'CALENDAR',fr:'CALENDRIER',de:'KALENDER',it:'CALENDARIO',pt:'CALENDÁRIO',nl:'KALENDER',pl:'KALENDARZ',sv:'KALENDER'},
+  tracker:     {es:'TRACKER DE PROGRESO',en:'PROGRESS TRACKER',fr:'SUIVI DE PROGRÈS',de:'FORTSCHRITTS-TRACKER',it:'TRACKER DEI PROGRESSI',pt:'RASTREADOR DE PROGRESSO',nl:'VOORTGANGSTRACKER',pl:'ŚLEDZENIE POSTĘPÓW',sv:'FRAMSTEGSMÄTARE'},
+  materiales:  {es:'LISTA DE MATERIALES',en:'MATERIALS LIST',fr:'LISTE DE MATÉRIAUX',de:'MATERIALLISTE',it:'LISTA MATERIALI',pt:'LISTA DE MATERIAIS',nl:'MATERIAALLIJST',pl:'LISTA MATERIAŁÓW',sv:'MATERIALLISTA'},
+  guiarapida:  {es:'GUÍA DE REFERENCIA RÁPIDA',en:'QUICK REFERENCE GUIDE',fr:'GUIDE DE RÉFÉRENCE RAPIDE',de:'SCHNELLREFERENZ-GUIDE',it:'GUIDA DI RIFERIMENTO RAPIDO',pt:'GUIA DE REFERÊNCIA RÁPIDA',nl:'SNELLE REFERENTIEGIDS',pl:'PRZEWODNIK REFERENCYJNY',sv:'SNABBREFERENSGUIDE'},
+  rutina:      {es:'RUTINA DIARIA',en:'DAILY ROUTINE',fr:'ROUTINE QUOTIDIENNE',de:'TAGESROUTINE',it:'ROUTINE QUOTIDIANA',pt:'ROTINA DIÁRIA',nl:'DAGELIJKSE ROUTINE',pl:'CODZIENNA RUTYNA',sv:'DAGLIG RUTIN'},
+  presupuesto: {es:'HOJA DE PRESUPUESTO',en:'BUDGET SHEET',fr:'FEUILLE DE BUDGET',de:'BUDGETBLATT',it:'FOGLIO DI BUDGET',pt:'PLANILHA DE ORÇAMENTO',nl:'BUDGETBLAD',pl:'ARKUSZ BUDŻETOWY',sv:'BUDGETBLAD'}
+};
+var _TX = {
+  dia:         {es:'DÍA',en:'DAY',fr:'JOUR',de:'TAG',it:'GIORNO',pt:'DIA',nl:'DAG',pl:'DZIEŃ',sv:'DAG'},
+  semana:      {es:'Semana',en:'Week',fr:'Semaine',de:'Woche',it:'Settimana',pt:'Semana',nl:'Week',pl:'Tydzień',sv:'Vecka'},
+  ingredientes:{es:'INGREDIENTES',en:'INGREDIENTS',fr:'INGRÉDIENTS',de:'ZUTATEN',it:'INGREDIENTI',pt:'INGREDIENTES',nl:'INGREDIËNTEN',pl:'SKŁADNIKI',sv:'INGREDIENSER'},
+  preparacion: {es:'PREPARACIÓN',en:'PREPARATION',fr:'PRÉPARATION',de:'ZUBEREITUNG',it:'PREPARAZIONE',pt:'PREPARAÇÃO',nl:'BEREIDING',pl:'PRZYGOTOWANIE',sv:'BEREDNING'},
+  material:    {es:'MATERIAL',en:'MATERIAL',fr:'MATÉRIAU',de:'MATERIAL',it:'MATERIALE',pt:'MATERIAL',nl:'MATERIAAL',pl:'MATERIAŁ',sv:'MATERIAL'},
+  cantidad:    {es:'CANTIDAD',en:'QUANTITY',fr:'QUANTITÉ',de:'MENGE',it:'QUANTITÀ',pt:'QUANTIDADE',nl:'HOEVEELHEID',pl:'ILOŚĆ',sv:'ANTAL'},
+  notas:       {es:'NOTAS',en:'NOTES',fr:'NOTES',de:'NOTIZEN',it:'NOTE',pt:'NOTAS',nl:'NOTITIES',pl:'NOTATKI',sv:'ANTECKNINGAR'},
+  periodo:     {es:'PERÍODO',en:'PERIOD',fr:'PÉRIODE',de:'ZEITRAUM',it:'PERIODO',pt:'PERÍODO',nl:'PERIODE',pl:'OKRES',sv:'PERIOD'},
+  concepto:    {es:'CONCEPTO',en:'ITEM',fr:'ARTICLE',de:'POSITION',it:'VOCE',pt:'ITEM',nl:'ITEM',pl:'POZYCJA',sv:'POST'},
+  coste:       {es:'COSTE EST.',en:'EST. COST',fr:'COÛT EST.',de:'GESCH. KOSTEN',it:'COSTO STIM.',pt:'CUSTO EST.',nl:'GESCH. KOSTEN',pl:'SZAC. KOSZT',sv:'UPP. KOSTNAD'},
+  frecuencia:  {es:'FRECUENCIA',en:'FREQUENCY',fr:'FRÉQUENCE',de:'HÄUFIGKEIT',it:'FREQUENZA',pt:'FREQUÊNCIA',nl:'FREQUENTIE',pl:'CZĘSTOTLIWOŚĆ',sv:'FREKVENS'},
+  real:        {es:'REAL',en:'ACTUAL',fr:'RÉEL',de:'TATSÄCHLICH',it:'REALE',pt:'REAL',nl:'WERKELIJK',pl:'RZECZYWISTY',sv:'FAKTISK'}
+};
+function _getLangCode(lang){
+  if(!lang) return 'es';
+  var l = lang.toLowerCase();
+  if(l.includes('english')) return 'en';
+  if(l.includes('french')||l.includes('fran')) return 'fr';
+  if(l.includes('german')||l.includes('deutsch')) return 'de';
+  if(l.includes('italian')||l.includes('italiano')) return 'it';
+  if(l.includes('portug')) return 'pt';
+  if(l.includes('dutch')||l.includes('neder')) return 'nl';
+  if(l.includes('polish')||l.includes('polski')) return 'pl';
+  if(l.includes('swedish')||l.includes('svenska')) return 'sv';
+  return 'es';
+}
+function _extraLabel(type, lang){ var c=_getLangCode(lang); var r=_EXTRA_LABELS[type]||{}; return r[c]||r.es||'BONUS'; }
+function _t(key, lang){ var c=_getLangCode(lang); var r=_TX[key]||{}; return r[c]||r.es||key; }
+
 function buildExtraHtml(ex, lang, ebookTitle){
   var year = new Date().getFullYear();
   var footer = '<div style="margin-top:20px;border-top:2px solid #eee;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aaa;"><span>'+ebookTitle+' · Ferni Guides</span><span>© '+year+' · ferniguides</span></div>';
@@ -3436,7 +3479,7 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='checklist'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:28px 36px;">' +
-      header('✅','CHECKLIST','#00b894','#00cec9') +
+      header('✅',_extraLabel('checklist',lang),'#00b894','#00cec9') +
       '<div style="columns:2;column-gap:16px;">' +
       (ex.items||[]).map(function(item,i){
         return '<div style="break-inside:avoid;display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;padding:7px 10px;border:1px solid #d1f5ed;border-radius:6px;background:'+(i%2===0?'#f4fffc':'white')+';">' +
@@ -3464,7 +3507,7 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='tarjetas'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:24px 30px;">' +
-      header('🃏','TARJETAS DE REFERENCIA','#6c5ce7','#a29bfe') +
+      header('🃏',_extraLabel('tarjetas',lang),'#6c5ce7','#a29bfe') +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
       (ex.tarjetas||[]).map(function(t){
         return '<div style="border:2px solid #6c5ce7;border-radius:10px;overflow:hidden;">' +
@@ -3478,14 +3521,14 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='plan30'){
     return wrap+'<div style="max-width:842px;margin:0 auto;padding:24px 30px;">' +
-      header('🗓️','PLAN 30 DÍAS','#fdcb6e','#e67e22') +
+      header('🗓️',_extraLabel('plan30',lang),'#fdcb6e','#e67e22') +
       (ex.semanas||[]).map(function(sem){
         return '<div style="margin-bottom:18px;">' +
           '<div style="background:#e67e22;color:white;padding:7px 14px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;">'+sem.titulo+'</div>' +
           '<div style="display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #fde8c8;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">' +
           (sem.dias||[]).map(function(d,di){
             return '<div style="padding:8px 5px;border-right:1px solid #fde8c8;background:'+(di%2===0?'#fffdf5':'white')+';">' +
-              '<div style="font-size:9px;color:#e67e22;font-weight:700;margin-bottom:5px;">DÍA '+d.num+'</div>' +
+              '<div style="font-size:9px;color:#e67e22;font-weight:700;margin-bottom:5px;">'+_t('dia',lang)+' '+d.num+'</div>' +
               '<div style="font-size:10px;color:#2d3436;line-height:1.4;min-height:50px;">'+d.tarea+'</div>' +
               '<div style="margin-top:6px;width:16px;height:16px;border:1.5px solid #fdcb6e;border-radius:3px;"></div>' +
             '</div>';
@@ -3495,10 +3538,10 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='plantilla'){
     return wrap+'<div style="max-width:842px;margin:0 auto;padding:24px 30px;">' +
-      header('📋','PLANTILLA SEMANAL','#e17055','#d63031') +
+      header('📋',_extraLabel('plantilla',lang),'#e17055','#d63031') +
       (ex.semanas||[]).map(function(sem){
         return '<div style="margin-bottom:16px;">' +
-          '<div style="background:#d63031;color:white;padding:7px 14px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;">Semana '+sem.num+': '+sem.objetivo+'</div>' +
+          '<div style="background:#d63031;color:white;padding:7px 14px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;">'+_t('semana',lang)+' '+sem.num+': '+sem.objetivo+'</div>' +
           '<table style="width:100%;border-collapse:collapse;border:1px solid #ffd5cc;border-top:none;">' +
           '<tr style="background:#fff0ee;">'+(sem.dias||[]).map(function(d){ return '<th style="padding:6px 8px;font-size:10px;color:#d63031;text-transform:uppercase;border:1px solid #ffd5cc;text-align:left;width:'+(100/(sem.dias||[1]).length)+'%;">'+d.dia+'</th>'; }).join('')+'</tr>' +
           '<tr>'+(sem.dias||[]).map(function(d){ return '<td style="padding:8px;border:1px solid #eee;font-size:11px;color:#2d3436;vertical-align:top;">'+d.tarea+'<br><br><div style="height:30px;border-bottom:1px dashed #eee;margin-top:6px;"></div></td>'; }).join('')+'</tr>' +
@@ -3509,7 +3552,7 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='recetas'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:24px 32px;">' +
-      header('🍳','TARJETAS DE RECETAS','#e84393','#fd79a8') +
+      header('🍳',_extraLabel('recetas',lang),'#e84393','#fd79a8') +
       (ex.recetas||[]).map(function(r){
         return '<div style="border:2px solid #fd79a8;border-radius:12px;overflow:hidden;margin-bottom:16px;page-break-inside:avoid;">' +
           '<div style="background:linear-gradient(135deg,#e84393,#fd79a8);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">' +
@@ -3518,11 +3561,11 @@ function buildExtraHtml(ex, lang, ebookTitle){
           '</div>' +
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">' +
             '<div style="padding:12px 14px;border-right:1px solid #ffd6eb;">' +
-              '<div style="font-size:9px;color:#e84393;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">INGREDIENTES</div>' +
+              '<div style="font-size:9px;color:#e84393;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">'+_t('ingredientes',lang)+'</div>' +
               (r.ingredientes||[]).map(function(ing){ return '<div style="font-size:11px;color:#2d3436;padding:2px 0;">• '+ing+'</div>'; }).join('') +
             '</div>' +
             '<div style="padding:12px 14px;">' +
-              '<div style="font-size:9px;color:#e84393;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">PREPARACIÓN</div>' +
+              '<div style="font-size:9px;color:#e84393;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700;">'+_t('preparacion',lang)+'</div>' +
               (r.pasos||[]).map(function(p,i){ return '<div style="font-size:11px;color:#2d3436;padding:2px 0;"><strong style="color:#e84393;">'+(i+1)+'.</strong> '+p+'</div>'; }).join('') +
             '</div>' +
           '</div></div>';
@@ -3531,13 +3574,13 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='calendario'){
     return wrap+'<div style="max-width:842px;margin:0 auto;padding:24px 30px;">' +
-      header('📆','CALENDARIO','#0984e3','#74b9ff') +
+      header('📆',_extraLabel('calendario',lang),'#0984e3','#74b9ff') +
       (ex.meses||[]).map(function(mes){
         return '<div style="margin-bottom:20px;">' +
           '<div style="background:#0984e3;color:white;padding:8px 14px;border-radius:8px 8px 0 0;font-size:13px;font-weight:700;">'+mes.mes+'</div>' +
           '<table style="width:100%;border-collapse:collapse;border:1px solid #dbeeff;border-top:none;">' +
           (mes.semanas||[]).map(function(s){
-            return '<tr><td style="padding:6px 10px;background:#f0f7ff;font-size:10px;color:#0984e3;font-weight:700;border:1px solid #dbeeff;white-space:nowrap;width:90px;">Semana '+s.semana+'</td>' +
+            return '<tr><td style="padding:6px 10px;background:#f0f7ff;font-size:10px;color:#0984e3;font-weight:700;border:1px solid #dbeeff;white-space:nowrap;width:90px;">'+_t('semana',lang)+' '+s.semana+'</td>' +
               '<td style="padding:8px 12px;border:1px solid #dbeeff;">' +
               (s.actividades||[]).map(function(a){ return '<div style="font-size:11px;color:#2d3436;padding:2px 0;">• '+a+'</div>'; }).join('') +
               '</td></tr>';
@@ -3547,12 +3590,12 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='tracker'){
     return wrap+'<div style="max-width:842px;margin:0 auto;padding:24px 30px;">' +
-      header('📈','TRACKER DE PROGRESO','#00cec9','#55efc4') +
+      header('📈',_extraLabel('tracker',lang),'#00cec9','#55efc4') +
       '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">' +
       '<thead><tr style="background:linear-gradient(90deg,#00cec9,#55efc4);">' +
-        '<th style="padding:8px 12px;font-size:10px;color:white;text-align:left;border:1px solid #b2f5ea;">PERÍODO</th>' +
+        '<th style="padding:8px 12px;font-size:10px;color:white;text-align:left;border:1px solid #b2f5ea;">'+_t('periodo',lang)+'</th>' +
         (ex.metricas||[]).map(function(m){ return '<th style="padding:8px 10px;font-size:10px;color:white;text-align:center;border:1px solid #b2f5ea;">'+m.nombre+'<br><span style="font-weight:400;opacity:0.8;">('+m.unidad+')</span></th>'; }).join('') +
-        '<th style="padding:8px 10px;font-size:10px;color:white;text-align:center;border:1px solid #b2f5ea;">NOTAS</th>' +
+        '<th style="padding:8px 10px;font-size:10px;color:white;text-align:center;border:1px solid #b2f5ea;">'+_t('notas',lang)+'</th>' +
       '</tr></thead><tbody>' +
       (ex.metricas&&ex.metricas[0]&&ex.metricas[0].filas||['Semana 1','Semana 2','Semana 3','Semana 4','Semana 5','Semana 6','Semana 7','Semana 8']).map(function(fila,i){
         return '<tr style="background:'+(i%2===0?'white':'#f0fffe')+';">' +
@@ -3565,12 +3608,12 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='materiales'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:28px 36px;">' +
-      header('🛠️','LISTA DE MATERIALES','#6c5ce7','#fd79a8') +
+      header('🛠️',_extraLabel('materiales',lang),'#6c5ce7','#fd79a8') +
       (ex.categorias||[]).map(function(cat){
         return '<div style="margin-bottom:16px;">' +
           '<div style="background:linear-gradient(90deg,#6c5ce7,#a29bfe);color:white;padding:7px 14px;border-radius:6px 6px 0 0;font-size:11px;font-weight:700;letter-spacing:0.5px;">'+cat.nombre.toUpperCase()+'</div>' +
           '<table style="width:100%;border-collapse:collapse;">' +
-          '<tr style="background:#f4f0ff;"><th style="padding:6px 10px;font-size:9px;color:#6c5ce7;text-align:left;border:1px solid #e0d9ff;">MATERIAL</th><th style="padding:6px;font-size:9px;color:#6c5ce7;text-align:center;border:1px solid #e0d9ff;">CANTIDAD</th><th style="padding:6px 10px;font-size:9px;color:#6c5ce7;text-align:left;border:1px solid #e0d9ff;">NOTAS</th><th style="padding:6px;font-size:9px;color:#6c5ce7;text-align:center;border:1px solid #e0d9ff;">✓</th></tr>' +
+          '<tr style="background:#f4f0ff;"><th style="padding:6px 10px;font-size:9px;color:#6c5ce7;text-align:left;border:1px solid #e0d9ff;">'+_t('material',lang)+'</th><th style="padding:6px;font-size:9px;color:#6c5ce7;text-align:center;border:1px solid #e0d9ff;">'+_t('cantidad',lang)+'</th><th style="padding:6px 10px;font-size:9px;color:#6c5ce7;text-align:left;border:1px solid #e0d9ff;">'+_t('notas',lang)+'</th><th style="padding:6px;font-size:9px;color:#6c5ce7;text-align:center;border:1px solid #e0d9ff;">✓</th></tr>' +
           (cat.items||[]).map(function(item,i){
             return '<tr style="background:'+(i%2===0?'white':'#faf8ff')+';">' +
               '<td style="padding:7px 10px;font-size:11px;border:1px solid #eee;">'+item.material+'</td>' +
@@ -3584,7 +3627,7 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='guiarapida'){
     return wrap+'<div style="max-width:842px;margin:0 auto;padding:24px 30px;">' +
-      header('⚡','GUÍA DE REFERENCIA RÁPIDA','#2d3436','#636e72') +
+      header('⚡',_extraLabel('guiarapida',lang),'#2d3436','#636e72') +
       '<div style="columns:2;column-gap:20px;">' +
       (ex.secciones||[]).map(function(sec){
         return '<div style="break-inside:avoid;margin-bottom:16px;border:1px solid #dfe6e9;border-radius:10px;overflow:hidden;">' +
@@ -3597,7 +3640,7 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='rutina'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:28px 36px;">' +
-      header('⏰','RUTINA DIARIA','#a29bfe','#fd79a8') +
+      header('⏰',_extraLabel('rutina',lang),'#a29bfe','#fd79a8') +
       (ex.bloques||[]).map(function(b,i){
         var bg = i%2===0?'#faf9ff':'white';
         return '<div style="display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;padding:10px 12px;background:'+bg+';border-bottom:1px solid #f0eeff;">' +
@@ -3610,12 +3653,12 @@ function buildExtraHtml(ex, lang, ebookTitle){
 
   if(ex.type==='presupuesto'){
     return wrap+'<div style="max-width:595px;margin:0 auto;padding:28px 36px;">' +
-      header('💰','HOJA DE PRESUPUESTO','#00b894','#55efc4') +
+      header('💰',_extraLabel('presupuesto',lang),'#00b894','#55efc4') +
       (ex.categorias||[]).map(function(cat){
         return '<div style="margin-bottom:16px;">' +
           '<div style="background:#00b894;color:white;padding:7px 14px;border-radius:6px 6px 0 0;font-size:11px;font-weight:700;">'+cat.nombre.toUpperCase()+'</div>' +
           '<table style="width:100%;border-collapse:collapse;">' +
-          '<tr style="background:#e8f8f5;"><th style="padding:6px 10px;font-size:9px;color:#00b894;text-align:left;border:1px solid #b2dfdb;">CONCEPTO</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">COSTE EST.</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">FRECUENCIA</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">REAL</th></tr>' +
+          '<tr style="background:#e8f8f5;"><th style="padding:6px 10px;font-size:9px;color:#00b894;text-align:left;border:1px solid #b2dfdb;">'+_t('concepto',lang)+'</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">'+_t('coste',lang)+'</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">'+_t('frecuencia',lang)+'</th><th style="padding:6px;font-size:9px;color:#00b894;text-align:center;border:1px solid #b2dfdb;">'+_t('real',lang)+'</th></tr>' +
           (cat.items||[]).map(function(item,i){
             return '<tr style="background:'+(i%2===0?'white':'#f4fffe')+';">' +
               '<td style="padding:7px 10px;font-size:11px;border:1px solid #eee;">'+item.concepto+'</td>' +
