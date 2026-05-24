@@ -2325,14 +2325,19 @@ app.post('/api/bonus-marketing-texts', async function(req, res) {
     var ebook    = req.body.ebook || {};
     var o        = req.body.opportunity || {};
     var language = req.body.language || 'Español';
+    var countryName = getCountryName((o.pais||o.country)||'France');
+    var currency = (REGS[countryName]||{}).currency || (REGS[o.pais||o.country||'']||{}).currency || 'USD';
     var bonusList = extras.map(function(e, i){
-      return (i+1) + '. ' + (e.title||e.type) + (e.subtitle ? ' — ' + e.subtitle : '') + (e.precio ? ' (valor '+e.precio+')' : '');
+      return (i+1) + '. ' + (e.title||e.type) + (e.subtitle ? ' — ' + e.subtitle : '');
     }).join('\n');
     var sys = 'Eres experto en marketing de infoproductos digitales. Escribe textos de venta persuasivos en ' + language + '.';
-    var msg = 'EBOOK: "' + (ebook.title||'') + '"\nBONUS PACK incluido (4 mini infoproductos):\n' + bonusList +
+    var msg = 'EBOOK: "' + (ebook.title||'') + '"\nMERCADO: ' + countryName + ' | MONEDA: ' + currency + '\nBONUS PACK incluido (4 mini infoproductos):\n' + bonusList +
+      '\n\nREGLAS OBLIGATORIAS:' +
+      '\n- NUNCA incluyas precios, valores monetarios ni cifras de referencia. Los precios los maneja la vendedora.' +
+      '\n- Si el idioma del mercado usa moneda específica, úsala (' + currency + ') solo si es estrictamente necesario para contexto, nunca con cifras.' +
       '\n\nEscribe en ' + language + ':' +
-      '\n1. HOTMART (150-200 palabras): sección "Bonus incluidos" para la página de ventas. Menciona cada bonus, su valor y por qué complementa el ebook. Tono entusiasta y persuasivo.' +
-      '\n2. META (3-4 líneas independientes, máx 40 palabras c/u): copies cortos para anuncios Meta/Facebook que destaquen el bonus pack como diferenciador de valor.' +
+      '\n1. HOTMART (150-200 palabras): sección "Bonus incluidos" para la página de ventas. Menciona cada bonus y por qué complementa el ebook. Tono entusiasta y persuasivo. Sin precios.' +
+      '\n2. META (3-4 líneas independientes, máx 40 palabras c/u): copies cortos para anuncios Meta/Facebook que destaquen el bonus pack como diferenciador de valor. Sin precios.' +
       '\n\nDevuelve SOLO JSON sin markdown: { "hotmart": "...", "meta": "..." }';
     var txt = await claudeCall(sys, msg, 900, false, 'claude-haiku-4-5-20251001');
     var result = JSON.parse(txt.replace(/```json|```/g,'').trim());
