@@ -2415,6 +2415,75 @@ app.post('/api/import-chapter', async function(req, res) {
   }
 });
 
+app.post('/api/generate-app', async function(req, res) {
+  try {
+    var topic   = req.body.topic   || '';
+    var country = req.body.country || 'España';
+    var lang    = req.body.lang    || 'Español';
+    var context = req.body.context || '';
+
+    var countryName = getCountryName(country);
+    var regs = REGS[countryName] || REGS['Spain'] || {};
+    var currency = regs.currency || 'EUR';
+
+    var sys = 'You are an expert frontend developer and UX/UI designer. Generate a complete, self-contained HTML file that functions as a beautiful, interactive desktop tool.\n\n' +
+      'CRITICAL RULES:\n' +
+      '- ONE single HTML file — all CSS and JavaScript must be inline. Zero external dependencies.\n' +
+      '- The entire app MUST be written in ' + lang + '. ALL text, labels, buttons, placeholders, messages, and tooltips: in ' + lang + '.\n' +
+      '- Designed for the ' + countryName + ' market. Use ' + currency + ' for any monetary values if relevant.\n' +
+      '- Dark theme UI: deep dark background (#0f0f1a), purple/indigo accent (#6c5ce7), clean modern sans-serif font.\n' +
+      '- Must be genuinely USEFUL and INTERACTIVE — real functionality (calculations, tracking, scoring, step logic, etc.).\n' +
+      '- Mobile-friendly responsive layout.\n' +
+      '- Complete and working — do not truncate or leave TODOs.\n' +
+      '- Return ONLY the raw HTML starting with <!DOCTYPE html>. No markdown, no code blocks, no explanation.';
+
+    var userMsg = 'Create an interactive tool/app for this topic: "' + topic + '"' +
+      (context ? '\n\nAdditional requirements: ' + context : '');
+
+    var html = await claudeCall(sys, userMsg, 4000, false, 'claude-sonnet-4-6');
+    html = html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+    if (!html.toLowerCase().startsWith('<!doctype') && !html.toLowerCase().startsWith('<html')) {
+      var idx = html.indexOf('<!DOCTYPE');
+      if (idx === -1) idx = html.indexOf('<html');
+      if (idx > 0) html = html.slice(idx);
+    }
+    res.json({ success: true, html: html });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/generate-skill', async function(req, res) {
+  try {
+    var topic   = req.body.topic   || '';
+    var country = req.body.country || 'España';
+    var lang    = req.body.lang    || 'Español';
+
+    var countryName = getCountryName(country);
+
+    var sys = 'You are an expert AI prompt engineer and instructional designer. Create a complete Skill Pack for the given topic — a set of structured, ready-to-use prompts that anyone can copy and paste into any AI assistant (ChatGPT, Claude, Gemini, Copilot, etc.).\n\n' +
+      'CRITICAL RULES:\n' +
+      '- Write ENTIRELY in ' + lang + '. ALL text, titles, instructions, and prompt content: in ' + lang + '.\n' +
+      '- Designed for the ' + countryName + ' market — use appropriate cultural context, examples, and references.\n' +
+      '- Structure:\n' +
+      '  1. Brief intro (2-3 sentences explaining what this Skill Pack does)\n' +
+      '  2. One powerful SYSTEM PROMPT (persona + context + rules for the AI)\n' +
+      '  3. Five to seven specialized ACTION PROMPTS — each ready to copy-paste, clearly labeled\n' +
+      '  4. Brief usage instructions for each prompt (1-2 lines)\n' +
+      '- Each prompt must be complete, specific, and produce expert-level results immediately.\n' +
+      '- Do NOT mention prices, product names, or external links.\n' +
+      '- Use clean markdown formatting (## headers, ### subheaders, code blocks for prompts).\n' +
+      '- Return only the Skill Pack content. No meta-commentary.';
+
+    var userMsg = 'Create a Skill Pack for this topic: "' + topic + '"';
+
+    var text = await claudeCall(sys, userMsg, 3000, false, 'claude-sonnet-4-6');
+    res.json({ success: true, text: text.trim() });
+  } catch(err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 app.get('*', function(req, res) {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });

@@ -188,7 +188,7 @@ select option { background: #1e2d52; }
       <button class="tab" onclick="showTab('extras',this)">🎁 Bonus Pack</button>
       <button class="tab" onclick="showTab('directo',this)">✍️ Directo</button>
       <button class="tab" onclick="showTab('import',this)">📥 Importar</button>
-      <button class="tab" onclick="showTab('translate',this)">🌍 Traducción</button>
+      <button class="tab" onclick="showTab('crear',this)">📱 Crear</button>
       <button class="tab" onclick="showTab('hist',this)">🕐 Historial</button>
     </div>
   </div>
@@ -653,72 +653,151 @@ select option { background: #1e2d52; }
         </div>
       </div>
 
-      <!-- TRADUCCIÓN -->
-      <div id="panel-translate" class="panel">
+      <!-- CREAR — Herramientas Interactivas + Skill Packs -->
+      <div id="panel-crear" class="panel">
         <div class="panel-scroll">
-          <div id="tr-empty" class="state-c"><div class="big-icon">🌍</div><div class="state-title">Módulo Traducción</div><div class="state-sub">Genera primero el borrador del ebook en español,<br>luego tradúcelo a cualquier idioma aquí.</div></div>
-          <div id="tr-loading" class="state-c hidden"><div class="spinner"></div><div style="font-size:14px;color:var(--text);margin-top:12px;font-weight:600;">Traduciendo ebook...</div><div style="font-size:11px;color:var(--muted);margin-top:6px;" id="tr-load-txt">Enviando a Claude...</div></div>
-          <div id="tr-content" class="hidden">
-            <div class="row-hd">
-              <div class="sec-lbl">🌍 Traducción a cualquier idioma</div>
-              <span class="badge bg2" id="tr-badge"></span>
-            </div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">El ebook se genera siempre en español. Aquí puedes traducirlo a cualquier idioma para venderlo en otro mercado.</div>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-              <select id="tr-lang-sel" style="padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;flex:1;min-width:220px;">
-                <option value="">-- Selecciona idioma destino --</option>
-                <option value="English">🇬🇧 Inglés (English)</option>
-                <option value="French">🇫🇷 Francés (Français)</option>
-                <option value="Italian">🇮🇹 Italiano (Italiano)</option>
-                <option value="German">🇩🇪 Alemán (Deutsch)</option>
-                <option value="Portuguese">🇧🇷 Portugués (Português)</option>
-                <option value="Spanish">🇪🇸 Español de España</option>
-                <option value="Dutch">🇳🇱 Holandés (Nederlands)</option>
-                <option value="Polish">🇵🇱 Polaco (Polski)</option>
-                <option value="Swedish">🇸🇪 Sueco (Svenska)</option>
-                <option value="Norwegian">🇳🇴 Noruego (Norsk)</option>
-                <option value="Danish">🇩🇰 Danés (Dansk)</option>
-                <option value="Finnish">🇫🇮 Finlandés (Suomi)</option>
-                <option value="Greek">🇬🇷 Griego (Ελληνικά)</option>
-                <option value="Romanian">🇷🇴 Rumano (Română)</option>
-                <option value="Hungarian">🇭🇺 Húngaro (Magyar)</option>
-                <option value="Czech">🇨🇿 Checo (Čeština)</option>
-                <option value="Turkish">🇹🇷 Turco (Türkçe)</option>
-                <option value="Russian">🇷🇺 Ruso (Русский)</option>
-                <option value="Arabic">🇸🇦 Árabe (العربية)</option>
-                <option value="Hebrew">🇮🇱 Hebreo (עברית)</option>
-                <option value="Hindi">🇮🇳 Hindi (हिन्दी)</option>
-                <option value="Chinese Simplified">🇨🇳 Chino Simplificado (中文简体)</option>
-                <option value="Chinese Traditional">🇹🇼 Chino Tradicional (中文繁體)</option>
-                <option value="Japanese">🇯🇵 Japonés (日本語)</option>
-                <option value="Korean">🇰🇷 Coreano (한국어)</option>
-                <option value="Thai">🇹🇭 Tailandés (ภาษาไทย)</option>
-                <option value="Vietnamese">🇻🇳 Vietnamita (Tiếng Việt)</option>
-                <option value="Indonesian">🇮🇩 Indonesio (Bahasa Indonesia)</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px;">
-              <div style="flex:1;min-width:200px;">
-                <div style="font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
-                <input id="tr-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;" />
-                <div style="font-size:10px;color:var(--muted);margin-top:3px;">Inglés Canada ≠ UK ≠ USA — Claude adapta modismos y tono</div>
+          <div class="row-hd" style="margin-bottom:16px;">
+            <div class="sec-lbl">📱 Crear Producto Digital</div>
+            <span class="badge ba">Herramientas + Skill Packs</span>
+          </div>
+
+          <!-- Sub-nav -->
+          <div style="display:flex;gap:8px;margin-bottom:22px;border-bottom:1px solid var(--border);padding-bottom:14px;">
+            <button id="cr-tab-app" class="btn btn-p" style="font-size:13px;padding:8px 18px;" onclick="showCrearTab('app',this)">📱 Herramienta Interactiva</button>
+            <button id="cr-tab-skill" class="btn" style="font-size:13px;padding:8px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="showCrearTab('skill',this)">⚡ Skill Pack IA</button>
+          </div>
+
+          <!-- === APP PANEL === -->
+          <div id="cr-sub-app">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera una <strong style="color:var(--text)">Herramienta Interactiva de Escritorio</strong> — un mini-software que tu comprador descarga y usa offline. Calculadoras, trackers, planificadores, quizzes y más.</div>
+
+            <div id="cr-app-form">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
+                <select id="cr-app-country" onchange="crAppAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="España">🇪🇸 España</option>
+                  <option value="Mexico">🇲🇽 México</option>
+                  <option value="Argentina">🇦🇷 Argentina</option>
+                  <option value="Colombia">🇨🇴 Colombia</option>
+                  <option value="Chile">🇨🇱 Chile</option>
+                  <option value="Peru">🇵🇪 Perú</option>
+                  <option value="Uruguay">🇺🇾 Uruguay</option>
+                  <option value="Ecuador">🇪🇨 Ecuador</option>
+                  <option value="Brazil">🇧🇷 Brasil</option>
+                  <option value="France">🇫🇷 Francia</option>
+                  <option value="Germany">🇩🇪 Alemania</option>
+                  <option value="Italy">🇮🇹 Italia</option>
+                  <option value="Portugal">🇵🇹 Portugal</option>
+                  <option value="United States">🇺🇸 Estados Unidos</option>
+                  <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                  <option value="Canada">🇨🇦 Canadá</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Netherlands">🇳🇱 Países Bajos</option>
+                  <option value="Sweden">🇸🇪 Suecia</option>
+                  <option value="Poland">🇵🇱 Polonia</option>
+                </select>
               </div>
-              <button class="btn btn-p" style="font-size:14px;padding:10px 20px;align-self:flex-end;" onclick="translateCustom()">🌍 Traducir ebook</button>
-            </div>
-            <div id="tr-preview-wrap" class="hidden">
-              <div class="row-hd" style="margin-bottom:8px;">
-                <div class="sec-lbl" id="tr-preview-lbl">PDF traducido</div>
-                <button class="btn btn-gold" onclick="dlTranslated()">⬇ Descargar PDF</button>
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Qué herramienta necesitas?</div>
+                <textarea id="cr-app-topic" rows="4" placeholder="Ejemplos:&#10;• Calculadora de calorías y macros para dieta cetogénica&#10;• Planificador de rutinas de entrenamiento semanal&#10;• Tracker de hábitos con racha y progreso diario&#10;• Quiz de diagnóstico de tipo de piel&#10;• Calculadora de retorno de inversión inmobiliaria" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
               </div>
-              <iframe id="tr-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
+              <div style="margin-bottom:18px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Instrucciones extra <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
+                <input id="cr-app-context" type="text" placeholder="Ej: incluir gráfico de progreso, modo claro/oscuro, botón de exportar..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
+              </div>
+              <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genApp()">⚡ Generar Herramienta</button>
+            </div>
+
+            <div id="cr-app-loading" class="hidden" style="text-align:center;padding:40px 20px;">
+              <div class="spinner" style="margin:0 auto 16px;"></div>
+              <div style="font-size:14px;color:var(--muted);">Claude está construyendo tu herramienta interactiva...</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px;">Suele tardar entre 30 y 50 segundos</div>
+            </div>
+
+            <div id="cr-app-content" class="hidden">
+              <div class="row-hd" style="margin-bottom:10px;">
+                <div class="sec-lbl" id="cr-app-lbl">Herramienta lista</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlApp()">⬇ Descargar ZIP</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetApp()">↺ Nueva herramienta</button>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Vista previa — El ZIP incluye la herramienta + instrucciones de instalación</div>
+              <iframe id="cr-app-preview" style="background:white;border-radius:10px;border:1px solid var(--border);height:600px;width:100%;display:block;" frameborder="0"></iframe>
             </div>
           </div>
+
+          <!-- === SKILL PANEL === -->
+          <div id="cr-sub-skill" class="hidden">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera un <strong style="color:var(--text)">Skill Pack IA</strong> — conjunto de prompts profesionales listos para copiar y pegar en ChatGPT, Claude, Gemini o cualquier IA. El comprador obtiene resultados expertos al instante.</div>
+
+            <div id="cr-skill-form">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
+                <select id="cr-skill-country" onchange="crSkillAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="España">🇪🇸 España</option>
+                  <option value="Mexico">🇲🇽 México</option>
+                  <option value="Argentina">🇦🇷 Argentina</option>
+                  <option value="Colombia">🇨🇴 Colombia</option>
+                  <option value="Chile">🇨🇱 Chile</option>
+                  <option value="Peru">🇵🇪 Perú</option>
+                  <option value="Uruguay">🇺🇾 Uruguay</option>
+                  <option value="Ecuador">🇪🇨 Ecuador</option>
+                  <option value="Brazil">🇧🇷 Brasil</option>
+                  <option value="France">🇫🇷 Francia</option>
+                  <option value="Germany">🇩🇪 Alemania</option>
+                  <option value="Italy">🇮🇹 Italia</option>
+                  <option value="Portugal">🇵🇹 Portugal</option>
+                  <option value="United States">🇺🇸 Estados Unidos</option>
+                  <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                  <option value="Canada">🇨🇦 Canadá</option>
+                  <option value="Australia">🇦🇺 Australia</option>
+                  <option value="Netherlands">🇳🇱 Países Bajos</option>
+                  <option value="Sweden">🇸🇪 Suecia</option>
+                  <option value="Poland">🇵🇱 Polonia</option>
+                </select>
+              </div>
+              <div style="margin-bottom:18px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tema del Skill Pack</div>
+                <textarea id="cr-skill-topic" rows="4" placeholder="Ejemplos:&#10;• Copywriting persuasivo para landing pages&#10;• Nutrición y planificación de dietas&#10;• Mindset y productividad personal&#10;• Marketing de contenidos para redes sociales&#10;• Finanzas personales e inversión para principiantes" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+              </div>
+              <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genSkill()">⚡ Generar Skill Pack</button>
+            </div>
+
+            <div id="cr-skill-loading" class="hidden" style="text-align:center;padding:40px 20px;">
+              <div class="spinner" style="margin:0 auto 16px;"></div>
+              <div style="font-size:14px;color:var(--muted);">Claude está creando tu Skill Pack profesional...</div>
+            </div>
+
+            <div id="cr-skill-content" class="hidden">
+              <div class="row-hd" style="margin-bottom:10px;">
+                <div class="sec-lbl" id="cr-skill-lbl">Skill Pack listo</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlSkill()">⬇ Descargar .txt</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="copySkill()">📋 Copiar todo</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetSkill()">↺ Nuevo Skill Pack</button>
+                </div>
+              </div>
+              <textarea id="cr-skill-out" rows="24" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+          </div>
+
         </div>
       </div>
 
       <!-- DIRECTO -->
       <div id="panel-directo" class="panel">
         <div class="panel-scroll">
+
+          <!-- Sub-nav -->
+          <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:14px;">
+            <button id="dir-tab-ebook" class="btn btn-p" style="font-size:12px;padding:7px 16px;" onclick="showDirSubTab('ebook',this)">📄 Ebook</button>
+            <button id="dir-tab-app" class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="showDirSubTab('app',this)">📱 Herramienta</button>
+            <button id="dir-tab-skill" class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="showDirSubTab('skill',this)">⚡ Skill Pack</button>
+          </div>
+
+          <!-- Ebook sub-panel (existing content) -->
+          <div id="dir-sub-ebook">
           <div class="row-hd"><div class="sec-lbl">✍️ Ebook Directo</div><span class="badge ba">Sin búsqueda · GPT-4o + Claude</span></div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Describe el ebook que necesitas. GPT-4o analiza el tema y prepara el brief de producción. Claude genera el ebook completo con el mismo flujo y calidad premium.</div>
 
@@ -788,6 +867,65 @@ select option { background: #1e2d52; }
           </div>
 
           <div id="dir-error" class="hidden" style="background:#fff0f0;border:1px solid #e74c3c;border-radius:10px;padding:16px;margin-top:16px;color:#c0392b;font-size:13px;"></div>
+          </div><!-- /dir-sub-ebook -->
+
+          <!-- Herramienta sub-panel -->
+          <div id="dir-sub-app" class="hidden">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera una <strong style="color:var(--text)">Herramienta Interactiva de Escritorio</strong> en el idioma del país seleccionado arriba. El comprador la descarga y usa offline.</div>
+            <div id="dir-app-form">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Qué herramienta necesitas?</div>
+                <textarea id="dir-app-topic" rows="4" placeholder="Ejemplos:&#10;• Calculadora de calorías y macros&#10;• Tracker de hábitos con racha de días&#10;• Planificador de rutinas de ejercicio&#10;• Quiz de diagnóstico de tipo de piel&#10;• Calculadora de ROI para inversiones" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+              </div>
+              <div style="margin-bottom:18px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Instrucciones extra <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
+                <input id="dir-app-context" type="text" placeholder="Ej: incluir gráfico de progreso, modo oscuro, botón exportar..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
+              </div>
+              <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genDirApp()">⚡ Generar Herramienta</button>
+            </div>
+            <div id="dir-app-loading" class="hidden" style="text-align:center;padding:40px 20px;">
+              <div class="spinner" style="margin:0 auto 16px;"></div>
+              <div style="font-size:14px;color:var(--muted);">Claude está construyendo tu herramienta... (~40s)</div>
+            </div>
+            <div id="dir-app-content" class="hidden">
+              <div class="row-hd" style="margin-bottom:10px;">
+                <div class="sec-lbl">Herramienta lista</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlDirApp()">⬇ Descargar ZIP</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetDirApp()">↺ Nueva</button>
+                </div>
+              </div>
+              <iframe id="dir-app-preview" style="background:white;border-radius:10px;border:1px solid var(--border);height:560px;width:100%;display:block;" frameborder="0"></iframe>
+            </div>
+          </div>
+
+          <!-- Skill Pack sub-panel -->
+          <div id="dir-sub-skill" class="hidden">
+            <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera un <strong style="color:var(--text)">Skill Pack IA</strong> — prompts profesionales listos para usar en ChatGPT, Claude o Gemini, en el idioma del país seleccionado arriba.</div>
+            <div id="dir-skill-form">
+              <div style="margin-bottom:18px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tema del Skill Pack</div>
+                <textarea id="dir-skill-topic" rows="4" placeholder="Ejemplos:&#10;• Copywriting persuasivo para ventas&#10;• Nutrición y dietas saludables&#10;• Productividad y gestión del tiempo&#10;• Marketing en redes sociales&#10;• Finanzas personales e inversión" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+              </div>
+              <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genDirSkill()">⚡ Generar Skill Pack</button>
+            </div>
+            <div id="dir-skill-loading" class="hidden" style="text-align:center;padding:40px 20px;">
+              <div class="spinner" style="margin:0 auto 16px;"></div>
+              <div style="font-size:14px;color:var(--muted);">Claude está creando tu Skill Pack...</div>
+            </div>
+            <div id="dir-skill-content" class="hidden">
+              <div class="row-hd" style="margin-bottom:10px;">
+                <div class="sec-lbl">Skill Pack listo</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlDirSkill()">⬇ Descargar .txt</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="copyDirSkill()">📋 Copiar</button>
+                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetDirSkill()">↺ Nuevo</button>
+                </div>
+              </div>
+              <textarea id="dir-skill-out" rows="22" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;"></textarea>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1008,7 +1146,7 @@ function showTab(id,el){
   if(el)el.classList.add('active'); 
   if(id==='hist') renderHist();
   if(id==='ebook') restoreEbookTab();
-  if(id==='translate') restoreTranslateTab();
+  if(id==='crear') { /* Crear tab — no restore needed, forms are stateless */ }
   if(id==='extras'){
     populateExtrasSels();
     if(S.extrasData && S.extrasData.length){
@@ -1345,6 +1483,7 @@ function cancelEbook(){
 
 var DIR_LANG_MAP = {
   'España':'Español','Mexico':'Español','Argentina':'Español','Colombia':'Español','Chile':'Español','Peru':'Español',
+  'Uruguay':'Español','Ecuador':'Español',
   'France':'French','Germany':'German','Italy':'Italian','Portugal':'Portuguese','Brazil':'Portuguese',
   'United States':'English','United Kingdom':'English','Canada':'English','Australia':'English',
   'Netherlands':'Dutch','Sweden':'Swedish','Poland':'Polish'
@@ -5079,6 +5218,227 @@ async function saveExtraEdit(){
     statusEl.style.display='block'; statusEl.textContent='❌ '+e.message;
   }
 }
+
+// ===== CREAR MODULE (panel-crear) =====
+var S_crApp = null;
+var S_crSkill = null;
+
+function showCrearTab(type, el) {
+  ['app','skill'].forEach(function(t){
+    var panel = document.getElementById('cr-sub-'+t);
+    if(panel) panel.classList.toggle('hidden', t !== type);
+    var btn = document.getElementById('cr-tab-'+t);
+    if(!btn) return;
+    if(t === type){
+      btn.className = 'btn btn-p';
+      btn.style.cssText = 'font-size:13px;padding:8px 18px;';
+    } else {
+      btn.className = 'btn';
+      btn.style.cssText = 'font-size:13px;padding:8px 18px;background:transparent;border:1px solid var(--border);color:var(--muted);';
+    }
+  });
+}
+
+function crAppAutoFill(){
+  var country = document.getElementById('cr-app-country').value;
+  window._crAppCountry = country;
+}
+function crSkillAutoFill(){
+  var country = document.getElementById('cr-skill-country').value;
+  window._crSkillCountry = country;
+}
+
+async function genApp(){
+  var topic = (document.getElementById('cr-app-topic').value||'').trim();
+  if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
+  var country = document.getElementById('cr-app-country').value || 'España';
+  var lang = DIR_LANG_MAP[country] || 'Español';
+  var context = (document.getElementById('cr-app-context').value||'').trim();
+
+  hide('cr-app-form'); show('cr-app-loading'); hide('cr-app-content');
+  try {
+    var r = await fetch('/api/generate-app',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context})});
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error||'Error generando herramienta');
+    S_crApp = d.html;
+    window._crAppTopic = topic;
+    hide('cr-app-loading'); show('cr-app-content');
+    document.getElementById('cr-app-lbl').textContent = 'Herramienta lista — '+topic.substring(0,40);
+    document.getElementById('cr-app-preview').srcdoc = d.html;
+  } catch(e){
+    hide('cr-app-loading'); show('cr-app-form');
+    alert('Error: '+e.message);
+  }
+}
+
+async function genSkill(){
+  var topic = (document.getElementById('cr-skill-topic').value||'').trim();
+  if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
+  var country = document.getElementById('cr-skill-country').value || 'España';
+  var lang = DIR_LANG_MAP[country] || 'Español';
+
+  hide('cr-skill-form'); show('cr-skill-loading'); hide('cr-skill-content');
+  try {
+    var r = await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:topic, country:country, lang:lang})});
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error||'Error generando skill pack');
+    S_crSkill = d.text;
+    window._crSkillTopic = topic;
+    hide('cr-skill-loading'); show('cr-skill-content');
+    document.getElementById('cr-skill-lbl').textContent = 'Skill Pack — '+topic.substring(0,40);
+    document.getElementById('cr-skill-out').value = d.text;
+  } catch(e){
+    hide('cr-skill-loading'); show('cr-skill-form');
+    alert('Error: '+e.message);
+  }
+}
+
+async function dlApp(){
+  if(!S_crApp) return;
+  try {
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    var zip = new JSZip();
+    var topicSlug = (window._crAppTopic||'herramienta').replace(/[^\w\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-');
+    var readme = 'INSTRUCCIONES DE USO\n====================\n\n'+
+      'Herramienta: '+(window._crAppTopic||'')+'\n\n'+
+      '1. Haz doble clic en el archivo "herramienta.html" para abrirlo\n'+
+      '2. Se abrira en tu navegador web (Chrome, Edge, Firefox, Safari)\n'+
+      '3. No necesitas internet — funciona completamente offline\n'+
+      '4. Puedes guardarla en cualquier carpeta de tu PC\n\n'+
+      'Requisitos: Cualquier navegador web moderno';
+    zip.file('herramienta.html', S_crApp);
+    zip.file('LEEME - Instrucciones de uso.txt', readme);
+    var blob = await zip.generateAsync({type:'blob'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=topicSlug+'.zip'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e){ alert('Error al crear ZIP: '+e.message); }
+}
+
+function dlSkill(){
+  var text = document.getElementById('cr-skill-out').value;
+  if(!text) return;
+  var blob = new Blob([text],{type:'text/plain;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url;
+  a.download='skill-pack-'+(window._crSkillTopic||'ia').replace(/[^\w]/g,'-').substring(0,30)+'.txt';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function copySkill(){
+  var text = document.getElementById('cr-skill-out').value;
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+}
+
+function resetApp(){ S_crApp=null; hide('cr-app-content'); hide('cr-app-loading'); show('cr-app-form'); }
+function resetSkill(){ S_crSkill=null; hide('cr-skill-content'); hide('cr-skill-loading'); show('cr-skill-form'); }
+
+// ===== DIRECTO MODULE SUB-TABS =====
+var S_dirApp = null;
+var S_dirSkill = null;
+
+function showDirSubTab(type, el){
+  ['ebook','app','skill'].forEach(function(t){
+    var panel = document.getElementById('dir-sub-'+t);
+    if(panel) panel.classList.toggle('hidden', t !== type);
+    var btn = document.getElementById('dir-tab-'+t);
+    if(!btn) return;
+    if(t === type){
+      btn.className = 'btn btn-p';
+      btn.style.cssText = 'font-size:12px;padding:7px 16px;';
+    } else {
+      btn.className = 'btn';
+      btn.style.cssText = 'font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);';
+    }
+  });
+}
+
+async function genDirApp(){
+  var topic = (document.getElementById('dir-app-topic').value||'').trim();
+  if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
+  var country = document.getElementById('dir-country').value || 'España';
+  var lang = document.getElementById('dir-lang').value || 'Español';
+  var context = (document.getElementById('dir-app-context').value||'').trim();
+
+  hide('dir-app-form'); show('dir-app-loading'); hide('dir-app-content');
+  try {
+    var r = await fetch('/api/generate-app',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context})});
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error||'Error generando herramienta');
+    S_dirApp = d.html;
+    window._dirAppTopic = topic;
+    hide('dir-app-loading'); show('dir-app-content');
+    document.getElementById('dir-app-preview').srcdoc = d.html;
+  } catch(e){
+    hide('dir-app-loading'); show('dir-app-form');
+    alert('Error: '+e.message);
+  }
+}
+
+async function genDirSkill(){
+  var topic = (document.getElementById('dir-skill-topic').value||'').trim();
+  if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
+  var country = document.getElementById('dir-country').value || 'España';
+  var lang = document.getElementById('dir-lang').value || 'Español';
+
+  hide('dir-skill-form'); show('dir-skill-loading'); hide('dir-skill-content');
+  try {
+    var r = await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({topic:topic, country:country, lang:lang})});
+    var d = await r.json();
+    if(!d.success) throw new Error(d.error||'Error generando skill pack');
+    S_dirSkill = d.text;
+    window._dirSkillTopic = topic;
+    hide('dir-skill-loading'); show('dir-skill-content');
+    document.getElementById('dir-skill-out').value = d.text;
+  } catch(e){
+    hide('dir-skill-loading'); show('dir-skill-form');
+    alert('Error: '+e.message);
+  }
+}
+
+async function dlDirApp(){
+  if(!S_dirApp) return;
+  try {
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    var zip = new JSZip();
+    var topicSlug = (window._dirAppTopic||'herramienta').replace(/[^\w\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-');
+    var readme = 'INSTRUCCIONES DE USO\n====================\n\n'+
+      'Herramienta: '+(window._dirAppTopic||'')+'\n\n'+
+      '1. Haz doble clic en el archivo "herramienta.html" para abrirlo\n'+
+      '2. Se abrira en tu navegador web (Chrome, Edge, Firefox, Safari)\n'+
+      '3. No necesitas internet — funciona completamente offline\n'+
+      '4. Puedes guardarla en cualquier carpeta de tu PC\n\n'+
+      'Requisitos: Cualquier navegador web moderno';
+    zip.file('herramienta.html', S_dirApp);
+    zip.file('LEEME - Instrucciones de uso.txt', readme);
+    var blob = await zip.generateAsync({type:'blob'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=topicSlug+'.zip'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e){ alert('Error al crear ZIP: '+e.message); }
+}
+
+function dlDirSkill(){
+  var text = document.getElementById('dir-skill-out').value;
+  if(!text) return;
+  var blob = new Blob([text],{type:'text/plain;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href=url;
+  a.download='skill-pack-'+(window._dirSkillTopic||'ia').replace(/[^\w]/g,'-').substring(0,30)+'.txt';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+function copyDirSkill(){
+  var text = document.getElementById('dir-skill-out').value;
+  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+}
+
+function resetDirApp(){ S_dirApp=null; hide('dir-app-content'); hide('dir-app-loading'); show('dir-app-form'); }
+function resetDirSkill(){ S_dirSkill=null; hide('dir-skill-content'); hide('dir-skill-loading'); show('dir-skill-form'); }
 </script>
 
 <!-- Extra edit overlay -->
