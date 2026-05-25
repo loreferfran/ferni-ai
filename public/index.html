@@ -1782,15 +1782,27 @@ function sendToEbook(){
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
   S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
-  S.finalEbook = null; S.pdfHtml = null; S.hmKit = null; S.maKit = null;
-  S.numChapters = _impChapters.length;
-  S.chapterImages = new Array(_impChapters.length).fill(null);
+  S.hmKit = null; S.maKit = null; S.coverUrl = null;
+  S.numChapters = chs.length;
+  S.chapterImages = new Array(chs.length).fill(null);
+  // Treat imported ebook as final (already in target language) → go directly to approved view
+  S.finalEbook = ebookData;
+  S.approvedLang = _impMeta.lang;
+  S.pdfHtml = buildFinalPdfHtml(ebookData, opp, _impMeta.lang, _impMeta.market, null, []);
   var id = 'imp_'+Date.now();
   S.currentHistId = id;
   var info = LANGS[_impMeta.market]||{lang:'Spanish',flag:'🌍'};
-  S.history.unshift({ id:id, opp:fileName, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, selOpp:opp, numChapters:_impChapters.length, date:new Date().toLocaleDateString('es-CL'), source:'import' });
+  S.history.unshift({ id:id, opp:ebookTitle, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, finalEbook:ebookData, selOpp:opp, numChapters:chs.length, date:new Date().toLocaleDateString('es-CL'), source:'import' });
   saveFullDataToHist(id);
   showTab('ebook', document.querySelectorAll('.tab')[1]);
+  setTimeout(function(){
+    hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+    document.getElementById('eb-approved-badge').textContent = '✓ ' + _impMeta.lang + ' · Importado';
+    var prev = document.getElementById('eb-final-preview');
+    if(prev) prev.srcdoc = S.pdfHtml;
+    rebuildRewriteBtns(chs.length);
+    addMsg('chat-ebook', '📄 Ebook importado listo. Descárgalo con "📄 Descargar PDF para Hotmart".\n\nPara corregir: usa los botones de capítulo del panel "✍️ Corregir un capítulo" que ves arriba. Escribe la instrucción y pulsa "Corregir texto".', 'ferni');
+  }, 200);
 }
 
 function resetImport(){
@@ -4903,17 +4915,34 @@ function loadAndDraft(id){
   });
 }
 
-// Cargar historial y mostrar PDF final existente  
+// Cargar historial y mostrar PDF final existente
 function loadAndShowPDF(id){
   const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.finalEbook) return;
   loadHistData(e);
+  var numCh = (e.finalEbook.chapters||[]).length;
+  S.numChapters = numCh;
+  rebuildChapterSteps(numCh);
+  rebuildRewriteBtns(numCh);
   showTab('ebook', document.querySelectorAll('.tab')[1]);
-  setTimeout(function(){ 
-    hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
-    var lang = (e.selOpp && (e.selOpp.idioma||e.selOpp.language)) || 'French';
-    renderFinal(e.selOpp||e.opps[0], e.finalEbook, lang);
-    addMsg('chat-ebook', '📄 PDF final restaurado — descárgalo con el botón de abajo.', 'ferni');
-  }, 100);
+  restoreImagesIDB(e.id, numCh, function(imgs){
+    applyIDBImages(e.id, e.finalEbook, imgs);
+    setTimeout(function(){
+      hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
+      var lang = (e.selOpp && (e.selOpp.idioma||e.selOpp.language)) || e.language || 'Español';
+      var o = e.selOpp || (e.opps && e.opps[0]) || {};
+      var cName = o.pais || o.country || lang;
+      // Rebuild PDF from saved finalEbook (use stored pdfHtml if available)
+      if(e.pdfHtml) {
+        S.pdfHtml = e.pdfHtml;
+      } else {
+        S.pdfHtml = buildFinalPdfHtml(e.finalEbook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
+      }
+      var preview = document.getElementById('eb-final-preview');
+      if(preview) preview.srcdoc = S.pdfHtml;
+      document.getElementById('eb-approved-badge').textContent = '✓ ' + lang;
+      addMsg('chat-ebook', '📄 PDF final restaurado desde historial — descárgalo con el botón de abajo.', 'ferni');
+    }, 100);
+  });
 }
 
 // Cargar historial, mostrar borrador y lanzar aprobacion directa
