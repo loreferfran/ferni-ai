@@ -1023,7 +1023,7 @@ select option { background: #1e2d52; }
           </div>
 
           <!-- Loading state -->
-          <div id="imp-loading" style="display:none;text-align:center;padding:60px 20px;">
+          <div id="imp-loading" class="hidden" style="text-align:center;padding:60px 20px;">
             <div class="spinner" style="margin:0 auto 20px;"></div>
             <div id="imp-load-txt" style="font-size:14px;color:var(--text);margin-bottom:12px;">Extrayendo texto...</div>
             <div style="width:280px;background:var(--bg2);border-radius:6px;height:6px;overflow:hidden;margin:0 auto 12px;">
@@ -1033,7 +1033,7 @@ select option { background: #1e2d52; }
           </div>
 
           <!-- Content state -->
-          <div id="imp-content" style="display:none;">
+          <div id="imp-content" class="hidden">
             <div class="row-hd">
               <div class="sec-lbl">✅ Ebook mejorado</div>
               <button class="btn btn-ghost" onclick="resetImport()" style="font-size:12px;padding:6px 12px;">↺ Importar otro</button>
