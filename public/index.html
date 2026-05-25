@@ -1646,7 +1646,8 @@ async function _extractText(file){
     for(var i=1;i<=pdf.numPages;i++){
       var pg = await pdf.getPage(i);
       var ct = await pg.getTextContent();
-      text += ct.items.map(function(it){return it.str;}).join(' ') + '\n';
+      // hasEOL marks actual line breaks in the PDF — use it to preserve structure
+      text += ct.items.map(function(it){ return it.str + (it.hasEOL ? '\n' : ' '); }).join('') + '\n';
     }
     return text;
   }
@@ -1660,20 +1661,25 @@ async function _extractText(file){
 }
 
 function _splitChapters(text){
-  // Detect chapter/section headings (English, Spanish, French, German, Italian + Bonus/Part/Intro)
-  var rx = /\n((?:Chapter|Capítulo|Capitulo|Cap\.|CHAPTER|CAPÍTULO|CAPITULO|Chapitre|CHAPITRE|Kapitel|KAPITEL|Capitolo|CAPITOLO|Bonus|BONUS|Part|Parte|PART|PARTE|Section|Sección|SECTION|Intro|Introduction|Introducción|Conclusión|Conclusion|CONCLUSION|INTRODUCCIÓN|Appendix|Apéndice)\s*[\d\w]*[\.\:\-]?[^\n]{0,80})/gi;
+  // PDF.js joins items with spaces and only adds \n at page breaks.
+  // Insert \n\n before chapter keywords found mid-text so the regex below can match them.
+  text = text.replace(/([^\n])\s*(Capítulo|Capitulo|CAPÍTULO|CAPITULO|Chapter|CHAPTER|Chapitre|CHAPITRE|Kapitel|KAPITEL|Capitolo|CAPITOLO)\s+(\d)/g, '$1\n\n$2 $3');
+  text = text.replace(/([^\n])\s*(Introducción|INTRODUCCIÓN|Introduction|Conclusión|CONCLUSIÓN|Conclusion|CONCLUSION|Appendix|Apéndice|Bonus|BONUS)\s*[\d:\.]/g, '$1\n\n$2 ');
+
+  // NON-capturing group — text.split(rx) gives [pre, content1, content2, ...]
+  // (A capturing group would interleave heading strings into the parts array, breaking i+1 indexing)
+  var rx = /\n(?:Chapter|Capítulo|Capitulo|Cap\.|CHAPTER|CAPÍTULO|CAPITULO|Chapitre|CHAPITRE|Kapitel|KAPITEL|Capitolo|CAPITOLO|Bonus|BONUS|Part|Parte|PART|PARTE|Section|Sección|SECTION|Intro|Introduction|Introducción|Conclusión|Conclusion|CONCLUSION|INTRODUCCIÓN|Appendix|Apéndice)\s*[\d\w]*[\.\:\-]?[^\n]{0,80}/gi;
   var headings = text.match(rx) || [];
   if(headings.length >= 2){
-    var parts = text.split(rx);
+    var parts = text.split(rx); // parts[0]=pre, parts[1]=content1, parts[2]=content2 ...
     var chapters = [];
-    // parts[0] = content before first heading — preserve it if substantial
     if(parts[0] && parts[0].trim().length > 80){
       var preTitle = parts[0].trim().split('\n')[0].substring(0,80).trim() || 'Prefacio';
       chapters.push({title:preTitle, content:parts[0].trim()});
     }
     for(var i=0;i<headings.length;i++){
       var content = (parts[i+1]||'').trim();
-      if(content.length > 80) chapters.push({title:headings[i].trim(), content:content});
+      if(content.length > 20) chapters.push({title:headings[i].trim(), content:content});
     }
     if(chapters.length >= 2) return chapters;
   }
@@ -1853,10 +1859,18 @@ function buildImportPreviewHtml(chapters, meta){
   html += '<div class="meta-bar">'+_escHtml(market)+' · '+_escHtml(lang)+' · '+chapters.length+' secciones</div>';
   chapters.forEach(function(ch,i){
     html += '<h2>'+_escHtml(ch.title||'Sección '+(i+1))+'</h2>';
-    var content = (ch.improved||ch.original||'');
-    // Convert double newlines to paragraphs, preserve single newlines
-    var paras = content.split(/\n\n+/).map(function(p){ return p.replace(/\n/g,'<br>'); });
-    html += paras.map(function(p){ return p.trim() ? '<p>'+p.trim()+'</p>' : ''; }).join('');
+    var content = (ch.improved||ch.original||'').trim();
+    if(!content){
+      html += '<p style="color:#999;font-style:italic;">[Sección sin contenido extraído del PDF]</p>';
+    } else {
+      var escaped = _escHtml(content);
+      if(escaped.indexOf('\n\n') >= 0){
+        var paras = escaped.split(/\n\n+/).map(function(p){ return p.replace(/\n/g,'<br>'); });
+        html += paras.map(function(p){ return p.trim() ? '<p>'+p.trim()+'</p>' : ''; }).join('');
+      } else {
+        html += '<p>'+escaped.replace(/\n/g,'<br>')+'</p>';
+      }
+    }
   });
   html += '</body></html>';
   return html;
