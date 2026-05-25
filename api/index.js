@@ -2427,28 +2427,33 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are an expert frontend developer and UX/UI designer specializing in self-contained single-file web applications.\n\n' +
-      'ABSOLUTE RULES — no exceptions:\n' +
-      '1. Output ONLY raw HTML. Start your response with <!DOCTYPE html>. No preamble, no explanation, no markdown, no code fences.\n' +
-      '2. The entire app must be ONE single HTML file — all CSS in <style> tags, all JS in <script> tags. Zero external dependencies.\n' +
-      '3. Language: EVERY word of text, every label, button, placeholder, tooltip, error message: written in ' + lang + '.\n' +
-      '4. Market: designed for ' + countryName + '. Use ' + currency + ' if monetary values are needed.\n' +
-      '5. UI: dark theme — background #12121e, accent #6c5ce7, white text, rounded cards, Inter/system sans-serif.\n' +
-      '6. The app must be genuinely FUNCTIONAL and INTERACTIVE — real logic, not placeholders.\n' +
-      '7. Be complete — close all tags, finish all JS. No TODO comments, no incomplete features.\n' +
-      '8. Keep the total HTML under 3500 tokens so it fits completely without truncation.';
+    var sys = 'You are a senior frontend developer and UX/UI designer. You build premium, self-contained single-file web applications that feel like real SaaS products.\n\n' +
+      'ABSOLUTE RULES — zero exceptions:\n' +
+      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no explanation, no markdown fences.\n' +
+      '2. ONE file — all CSS inside <style>, all JS inside <script>. Zero CDN links, zero external dependencies.\n' +
+      '3. Every word, label, button, placeholder, tooltip, error: written in ' + lang + '.\n' +
+      '4. Market: ' + countryName + '. Currency: ' + currency + ' when needed.\n' +
+      '5. Visual design: dark premium theme — bg #0f0f1a, cards #1a1a2e, accent #6c5ce7, secondary accent #a29bfe, text #e8e8f0. Rounded-xl cards, subtle box-shadows, smooth CSS transitions. Font: system-ui or Inter.\n' +
+      '6. THE MOST CRITICAL RULE — DYNAMIC PERSONALIZATION: The app MUST produce COMPLETELY DIFFERENT content for different input combinations. Use JavaScript data objects or switch/if-else blocks that map each profession/role to specific, unique action items, skills, milestones, or advice. Never show the same text for two different professions. Never use generic placeholders like "relevant actions" or "key activities".\n' +
+      '7. EXPERIENCE LEVEL must also change the output: junior (<3 years) gets foundational actions; mid (3-7 years) gets growth/specialization actions; senior (7+ years) gets leadership/strategic actions.\n' +
+      '8. UX quality: multi-step or tabbed UI, visual progress indicators (progress bars, step circles, or phase cards), interactive checkboxes or toggles that persist in localStorage, print/export button.\n' +
+      '9. Be complete — close all tags, finish all JS. No TODO comments.\n' +
+      '10. Keep total HTML under 3800 tokens.';
 
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Analyze this ebook and create the interactive tool that would best complement it as a companion product. The tool must be directly useful for the ebook\'s topic and audience.\n\nEbook data:\n' + ebookContext +
-        (context ? '\n\nSpecific requirements from the user: ' + context : '');
+      userMsg = 'Analyze this ebook carefully and create the ideal interactive companion tool. The tool must be DIRECTLY tied to the ebook topic with profession/role-specific content.\n\n' +
+        'Key requirement: if the tool collects profession or role from the user, it MUST generate visibly different, specific content for each profession — not generic advice. Use a JS data object mapping professions to unique action lists.\n\n' +
+        'Ebook data:\n' + ebookContext +
+        (context ? '\n\nUser requirements: ' + context : '');
     } else {
-      userMsg = 'Create an interactive tool for this topic: "' + topic + '"' +
-        (ebookContext ? '\n\nThis tool complements this ebook:\n' + ebookContext : '') +
-        (context ? '\n\nAdditional requirements: ' + context : '');
+      userMsg = 'Create an interactive tool for: "' + topic + '"\n\n' +
+        'Key requirement: if the tool asks for profession/role/experience, it MUST produce clearly different, specific content per input — not generic advice. Use a JS data object mapping inputs to unique content.\n\n' +
+        (ebookContext ? 'This tool complements this ebook:\n' + ebookContext + '\n\n' : '') +
+        (context ? 'Additional requirements: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 4500, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 5500, true, 'claude-sonnet-4-6');
     var html = (result.text || result || '').trim();
     // Strip markdown fences (case-insensitive, any variant)
     html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
