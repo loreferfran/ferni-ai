@@ -673,6 +673,12 @@ select option { background: #1e2d52; }
 
             <div id="cr-app-form">
               <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — la herramienta se alineará con ese ebook)</span></div>
+                <select id="cr-app-ebook-sel" onchange="onCrearEbookChange('cr-app')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="">— Sin ebook base (tema libre) —</option>
+                </select>
+              </div>
+              <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
                 <select id="cr-app-country" onchange="crAppAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                   <option value="España">🇪🇸 España</option>
@@ -732,6 +738,12 @@ select option { background: #1e2d52; }
             <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera un <strong style="color:var(--text)">Skill Pack IA</strong> — conjunto de prompts profesionales listos para copiar y pegar en ChatGPT, Claude, Gemini o cualquier IA. El comprador obtiene resultados expertos al instante.</div>
 
             <div id="cr-skill-form">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — el Skill Pack se alineará con ese ebook)</span></div>
+                <select id="cr-skill-ebook-sel" onchange="onCrearEbookChange('cr-skill')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="">— Sin ebook base (tema libre) —</option>
+                </select>
+              </div>
               <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
                 <select id="cr-skill-country" onchange="crSkillAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
@@ -874,6 +886,12 @@ select option { background: #1e2d52; }
             <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera una <strong style="color:var(--text)">Herramienta Interactiva de Escritorio</strong> en el idioma del país seleccionado arriba. El comprador la descarga y usa offline.</div>
             <div id="dir-app-form">
               <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — auto-rellena el tema)</span></div>
+                <select id="dir-app-ebook-sel" onchange="onCrearEbookChange('dir-app')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="">— Sin ebook base (tema libre) —</option>
+                </select>
+              </div>
+              <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Qué herramienta necesitas?</div>
                 <textarea id="dir-app-topic" rows="4" placeholder="Ejemplos:&#10;• Calculadora de calorías y macros&#10;• Tracker de hábitos con racha de días&#10;• Planificador de rutinas de ejercicio&#10;• Quiz de diagnóstico de tipo de piel&#10;• Calculadora de ROI para inversiones" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
               </div>
@@ -903,6 +921,12 @@ select option { background: #1e2d52; }
           <div id="dir-sub-skill" class="hidden">
             <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera un <strong style="color:var(--text)">Skill Pack IA</strong> — prompts profesionales listos para usar en ChatGPT, Claude o Gemini, en el idioma del país seleccionado arriba.</div>
             <div id="dir-skill-form">
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — auto-rellena el tema)</span></div>
+                <select id="dir-skill-ebook-sel" onchange="onCrearEbookChange('dir-skill')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="">— Sin ebook base (tema libre) —</option>
+                </select>
+              </div>
               <div style="margin-bottom:18px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tema del Skill Pack</div>
                 <textarea id="dir-skill-topic" rows="4" placeholder="Ejemplos:&#10;• Copywriting persuasivo para ventas&#10;• Nutrición y dietas saludables&#10;• Productividad y gestión del tiempo&#10;• Marketing en redes sociales&#10;• Finanzas personales e inversión" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
@@ -1019,7 +1043,14 @@ select option { background: #1e2d52; }
               <div id="imp-chapters-list"></div>
             </div>
             <button onclick="sendToEbook()" class="btn btn-teal" style="width:100%;font-size:15px;padding:14px;margin-bottom:8px;">📖 Enviar al módulo Ebook → continuar flujo normal</button>
-            <div style="font-size:12px;color:var(--muted);text-align:center;">El ebook mejorado quedará disponible para verificación, correcciones, PDF y todos los módulos.</div>
+            <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px;">El ebook mejorado quedará disponible para verificación, correcciones, PDF y todos los módulos.</div>
+            <div style="border-top:1px solid rgba(108,92,231,0.18);padding-top:14px;">
+              <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">También puedes crear directamente</div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="sendImpToCrear('app')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">📱 Generar Herramienta</button>
+                <button onclick="sendImpToCrear('skill')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">⚡ Generar Skill Pack</button>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1146,7 +1177,7 @@ function showTab(id,el){
   if(el)el.classList.add('active'); 
   if(id==='hist') renderHist();
   if(id==='ebook') restoreEbookTab();
-  if(id==='crear') { /* Crear tab — no restore needed, forms are stateless */ }
+  if(id==='crear') { populateCrearSel(); }
   if(id==='extras'){
     populateExtrasSels();
     if(S.extrasData && S.extrasData.length){
@@ -5219,6 +5250,26 @@ async function saveExtraEdit(){
   }
 }
 
+// Desde Importar: va al módulo Crear con el ebook importado pre-seleccionado
+function sendImpToCrear(type) {
+  // Primero enviar al flujo de ebook para que quede en S.ebookData
+  sendToEbook();
+  // Luego abrir tab Crear en el sub-panel correcto
+  setTimeout(function(){
+    var tabBtn = document.querySelector('.tab[onclick*="crear"]');
+    if(tabBtn) { showTab('crear', tabBtn); tabBtn.classList.add('active'); }
+    showCrearTab(type, null);
+    populateCrearSel();
+    // Auto-seleccionar el ebook recién cargado
+    var selId = 'cr-'+type+'-ebook-sel';
+    var sel = document.getElementById(selId);
+    if(sel && sel.options.length > 1) {
+      sel.selectedIndex = 1; // primer ebook = el actual
+      onCrearEbookChange('cr-'+type);
+    }
+  }, 300);
+}
+
 // ===== CREAR MODULE (panel-crear) =====
 var S_crApp = null;
 var S_crSkill = null;
@@ -5239,26 +5290,117 @@ function showCrearTab(type, el) {
   });
 }
 
-function crAppAutoFill(){
-  var country = document.getElementById('cr-app-country').value;
-  window._crAppCountry = country;
+function crAppAutoFill(){ /* país → no es crítico, el idioma viene de DIR_LANG_MAP en genApp */ }
+function crSkillAutoFill(){ /* ídem */ }
+
+// Puebla los 4 selectores de ebook en Crear + Directo
+function populateCrearSel() {
+  var selIds = ['cr-app-ebook-sel','cr-skill-ebook-sel','dir-app-ebook-sel','dir-skill-ebook-sel'];
+  selIds.forEach(function(selId) {
+    var sel = document.getElementById(selId);
+    if(!sel) return;
+    var currentVal = sel.value;
+    sel.innerHTML = '<option value="">— Sin ebook base (tema libre) —</option>';
+    var seenTitles = {};
+    var activeEbook = S.finalEbook || S.ebookData;
+    if(S.selOpp && activeEbook) {
+      var title = activeEbook.title || S.selOpp.tituloEbook || S.selOpp.ebookTitle || 'Ebook actual';
+      seenTitles[title] = true;
+      var opt = document.createElement('option');
+      opt.value = 'current';
+      opt.textContent = '★ ' + title + ' — ' + (S.selOpp.pais||S.selOpp.country||'');
+      sel.appendChild(opt);
+    }
+    (S.history||[]).forEach(function(h) {
+      var eb = h.finalEbook || h.ebook || h.ebookData;
+      if(!eb) return;
+      var opp = h.selOpp || (h.opps&&h.opps[0]);
+      if(!opp) return;
+      var title = eb.title || (opp&&(opp.tituloEbook||opp.ebookTitle)) || 'Ebook';
+      if(seenTitles[title]) return;
+      seenTitles[title] = true;
+      var opt = document.createElement('option');
+      opt.value = 'hist_'+h.id;
+      opt.textContent = title + ' — ' + (h.country||opp.pais||opp.country||'');
+      sel.appendChild(opt);
+    });
+    if(currentVal) {
+      for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===currentVal){ sel.value=currentVal; break; } }
+    }
+  });
 }
-function crSkillAutoFill(){
-  var country = document.getElementById('cr-skill-country').value;
-  window._crSkillCountry = country;
+
+// Obtiene datos del ebook desde el valor del selector
+function getCrearEbookData(val) {
+  if(!val) return null;
+  if(val === 'current') {
+    var activeEbook = S.finalEbook || S.ebookData;
+    if(!S.selOpp || !activeEbook) return null;
+    return { opp: S.selOpp, ebook: activeEbook, lang: S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'Español' };
+  }
+  if(val.startsWith('hist_')) {
+    var id = parseInt(val.replace('hist_',''));
+    var h = (S.history||[]).find(function(x){ return x.id===id; });
+    if(!h) return null;
+    var eb = h.finalEbook || h.ebook || h.ebookData;
+    if(!eb) return null;
+    var opp = h.selOpp || (h.opps&&h.opps[0]);
+    return { opp: opp||{}, ebook: eb, lang: h.language||'Español' };
+  }
+  return null;
+}
+
+// Auto-rellena topic y país al seleccionar un ebook
+function onCrearEbookChange(prefix) {
+  var sel = document.getElementById(prefix+'-ebook-sel');
+  if(!sel) return;
+  var data = getCrearEbookData(sel.value);
+  if(!data) return;
+  var eb = data.ebook; var o = data.opp||{};
+  var topicEl = document.getElementById(prefix+'-topic');
+  if(topicEl && !topicEl.value.trim()) {
+    var problema = o.problema||o.problem||'';
+    topicEl.value = ((eb.title||o.tituloEbook||o.ebookTitle||'')+(problema?' — '+problema:'')).substring(0,200);
+  }
+  var countryEl = document.getElementById(prefix+'-country');
+  if(countryEl) {
+    var ck = o.pais||o.country||'';
+    for(var i=0;i<countryEl.options.length;i++){ if(countryEl.options[i].value===ck){ countryEl.selectedIndex=i; break; } }
+  }
+}
+
+// Construye el string de contexto del ebook para el API
+function _buildEbookContext(data) {
+  if(!data || !data.ebook) return '';
+  var eb = data.ebook; var o = data.opp||{};
+  var ctx = 'Title: '+(eb.title||o.tituloEbook||'')+'\n';
+  ctx += 'Problem: '+(o.problema||o.problem||'')+'\n';
+  ctx += 'Audience: '+(o.rangoEdad||o.ageRange||'')+(o.genero?' '+o.genero:'')+'\n';
+  if(eb.intro) ctx += 'Intro: '+eb.intro.substring(0,250)+'\n';
+  if(eb.chapters&&eb.chapters.length) {
+    eb.chapters.slice(0,4).forEach(function(ch,i){
+      ctx += 'Ch'+(i+1)+': '+(ch.title||'')+(ch.content?'. '+ch.content.substring(0,120):'')+'\n';
+    });
+  }
+  return ctx.trim();
 }
 
 async function genApp(){
   var topic = (document.getElementById('cr-app-topic').value||'').trim();
+  var selVal = (document.getElementById('cr-app-ebook-sel')||{}).value||'';
+  var ebData = getCrearEbookData(selVal);
+  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
   if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
   var country = document.getElementById('cr-app-country').value || 'España';
   var lang = DIR_LANG_MAP[country] || 'Español';
+  if(ebData) lang = ebData.lang || lang;
   var context = (document.getElementById('cr-app-context').value||'').trim();
+  var ebookContext = _buildEbookContext(ebData);
 
   hide('cr-app-form'); show('cr-app-loading'); hide('cr-app-content');
   try {
     var r = await fetch('/api/generate-app',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context})});
+      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando herramienta');
     S_crApp = d.html;
@@ -5274,14 +5416,19 @@ async function genApp(){
 
 async function genSkill(){
   var topic = (document.getElementById('cr-skill-topic').value||'').trim();
+  var selVal = (document.getElementById('cr-skill-ebook-sel')||{}).value||'';
+  var ebData = getCrearEbookData(selVal);
+  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
   if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
   var country = document.getElementById('cr-skill-country').value || 'España';
   var lang = DIR_LANG_MAP[country] || 'Español';
+  if(ebData) lang = ebData.lang || lang;
+  var ebookContext = _buildEbookContext(ebData);
 
   hide('cr-skill-form'); show('cr-skill-loading'); hide('cr-skill-content');
   try {
     var r = await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:topic, country:country, lang:lang})});
+      body:JSON.stringify({topic:topic, country:country, lang:lang, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando skill pack');
     S_crSkill = d.text;
@@ -5353,19 +5500,25 @@ function showDirSubTab(type, el){
       btn.style.cssText = 'font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);';
     }
   });
+  if(type === 'app' || type === 'skill') populateCrearSel();
 }
 
 async function genDirApp(){
   var topic = (document.getElementById('dir-app-topic').value||'').trim();
+  var selVal = (document.getElementById('dir-app-ebook-sel')||{}).value||'';
+  var ebData = getCrearEbookData(selVal);
+  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
   if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
   var country = document.getElementById('dir-country').value || 'España';
   var lang = document.getElementById('dir-lang').value || 'Español';
+  if(ebData) lang = ebData.lang || lang;
   var context = (document.getElementById('dir-app-context').value||'').trim();
+  var ebookContext = _buildEbookContext(ebData);
 
   hide('dir-app-form'); show('dir-app-loading'); hide('dir-app-content');
   try {
     var r = await fetch('/api/generate-app',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context})});
+      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando herramienta');
     S_dirApp = d.html;
@@ -5380,14 +5533,19 @@ async function genDirApp(){
 
 async function genDirSkill(){
   var topic = (document.getElementById('dir-skill-topic').value||'').trim();
+  var selVal = (document.getElementById('dir-skill-ebook-sel')||{}).value||'';
+  var ebData = getCrearEbookData(selVal);
+  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
   if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
   var country = document.getElementById('dir-country').value || 'España';
   var lang = document.getElementById('dir-lang').value || 'Español';
+  if(ebData) lang = ebData.lang || lang;
+  var ebookContext = _buildEbookContext(ebData);
 
   hide('dir-skill-form'); show('dir-skill-loading'); hide('dir-skill-content');
   try {
     var r = await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:topic, country:country, lang:lang})});
+      body:JSON.stringify({topic:topic, country:country, lang:lang, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando skill pack');
     S_dirSkill = d.text;

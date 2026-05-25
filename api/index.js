@@ -2437,7 +2437,9 @@ app.post('/api/generate-app', async function(req, res) {
       '- Complete and working — do not truncate or leave TODOs.\n' +
       '- Return ONLY the raw HTML starting with <!DOCTYPE html>. No markdown, no code blocks, no explanation.';
 
+    var ebookContext = req.body.ebookContext || '';
     var userMsg = 'Create an interactive tool/app for this topic: "' + topic + '"' +
+      (ebookContext ? '\n\nThis tool is a companion product to an ebook with the following content:\n' + ebookContext : '') +
       (context ? '\n\nAdditional requirements: ' + context : '');
 
     var html = await claudeCall(sys, userMsg, 4000, false, 'claude-sonnet-4-6');
@@ -2475,7 +2477,9 @@ app.post('/api/generate-skill', async function(req, res) {
       '- Use clean markdown formatting (## headers, ### subheaders, code blocks for prompts).\n' +
       '- Return only the Skill Pack content. No meta-commentary.';
 
-    var userMsg = 'Create a Skill Pack for this topic: "' + topic + '"';
+    var ebookContext = req.body.ebookContext || '';
+    var userMsg = 'Create a Skill Pack for this topic: "' + topic + '"' +
+      (ebookContext ? '\n\nThis Skill Pack is a companion product to an ebook with the following content:\n' + ebookContext : '');
 
     var text = await claudeCall(sys, userMsg, 3000, false, 'claude-sonnet-4-6');
     res.json({ success: true, text: text.trim() });
