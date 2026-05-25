@@ -672,44 +672,38 @@ select option { background: #1e2d52; }
             <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">Genera una <strong style="color:var(--text)">Herramienta Interactiva de Escritorio</strong> — un mini-software que tu comprador descarga y usa offline. Calculadoras, trackers, planificadores, quizzes y más.</div>
 
             <div id="cr-app-form">
+              <!-- Selector de ebook (siempre visible) -->
               <div style="margin-bottom:14px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — la herramienta se alineará con ese ebook)</span></div>
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
                 <select id="cr-app-ebook-sel" onchange="onCrearEbookChange('cr-app')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                   <option value="">— Sin ebook base (tema libre) —</option>
                 </select>
               </div>
+              <!-- País (siempre visible, se auto-rellena si hay ebook) -->
               <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
-                <select id="cr-app-country" onchange="crAppAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
-                  <option value="España">🇪🇸 España</option>
-                  <option value="Mexico">🇲🇽 México</option>
-                  <option value="Argentina">🇦🇷 Argentina</option>
-                  <option value="Colombia">🇨🇴 Colombia</option>
-                  <option value="Chile">🇨🇱 Chile</option>
-                  <option value="Peru">🇵🇪 Perú</option>
-                  <option value="Uruguay">🇺🇾 Uruguay</option>
-                  <option value="Ecuador">🇪🇨 Ecuador</option>
-                  <option value="Brazil">🇧🇷 Brasil</option>
-                  <option value="France">🇫🇷 Francia</option>
-                  <option value="Germany">🇩🇪 Alemania</option>
-                  <option value="Italy">🇮🇹 Italia</option>
-                  <option value="Portugal">🇵🇹 Portugal</option>
-                  <option value="United States">🇺🇸 Estados Unidos</option>
-                  <option value="United Kingdom">🇬🇧 Reino Unido</option>
-                  <option value="Canada">🇨🇦 Canadá</option>
-                  <option value="Australia">🇦🇺 Australia</option>
-                  <option value="Netherlands">🇳🇱 Países Bajos</option>
-                  <option value="Sweden">🇸🇪 Suecia</option>
-                  <option value="Poland">🇵🇱 Polonia</option>
+                <select id="cr-app-country" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="España">🇪🇸 España</option><option value="Mexico">🇲🇽 México</option><option value="Argentina">🇦🇷 Argentina</option><option value="Colombia">🇨🇴 Colombia</option><option value="Chile">🇨🇱 Chile</option><option value="Peru">🇵🇪 Perú</option><option value="Uruguay">🇺🇾 Uruguay</option><option value="Ecuador">🇪🇨 Ecuador</option><option value="Brazil">🇧🇷 Brasil</option><option value="France">🇫🇷 Francia</option><option value="Germany">🇩🇪 Alemania</option><option value="Italy">🇮🇹 Italia</option><option value="Portugal">🇵🇹 Portugal</option><option value="United States">🇺🇸 Estados Unidos</option><option value="United Kingdom">🇬🇧 Reino Unido</option><option value="Canada">🇨🇦 Canadá</option><option value="Australia">🇦🇺 Australia</option><option value="Netherlands">🇳🇱 Países Bajos</option><option value="Sweden">🇸🇪 Suecia</option><option value="Poland">🇵🇱 Polonia</option>
                 </select>
               </div>
-              <div style="margin-bottom:14px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Qué herramienta necesitas?</div>
-                <textarea id="cr-app-topic" rows="4" placeholder="Ejemplos:&#10;• Calculadora de calorías y macros para dieta cetogénica&#10;• Planificador de rutinas de entrenamiento semanal&#10;• Tracker de hábitos con racha y progreso diario&#10;• Quiz de diagnóstico de tipo de piel&#10;• Calculadora de retorno de inversión inmobiliaria" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+              <!-- MODO LIBRE: sin ebook seleccionado -->
+              <div id="cr-app-free-section">
+                <div style="margin-bottom:14px;">
+                  <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">¿Qué herramienta necesitas?</div>
+                  <textarea id="cr-app-topic" rows="4" placeholder="Ejemplos:&#10;• Calculadora de calorías y macros para dieta cetogénica&#10;• Tracker de hábitos con racha y progreso diario&#10;• Quiz de diagnóstico de tipo de piel&#10;• Calculadora de retorno de inversión inmobiliaria" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+                </div>
               </div>
+              <!-- MODO EBOOK: Claude decide qué crear -->
+              <div id="cr-app-ebook-section" class="hidden" style="margin-bottom:14px;">
+                <div style="background:rgba(108,92,231,0.12);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:12px 16px;">
+                  <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px;">✦ Claude analizará el ebook y decidirá qué herramienta crear</div>
+                  <div style="font-size:12px;color:var(--muted);">Basará la herramienta en el tema, el problema que resuelve el ebook y el perfil del comprador.</div>
+                </div>
+              </div>
+              <!-- Requisitos extra (siempre visible, opcional) -->
               <div style="margin-bottom:18px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Instrucciones extra <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
-                <input id="cr-app-context" type="text" placeholder="Ej: incluir gráfico de progreso, modo claro/oscuro, botón de exportar..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Requisitos específicos <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — agrega si tienes algo en mente)</span></div>
+                <input id="cr-app-context" type="text" placeholder="Ej: incluir gráfico de progreso, modo claro/oscuro, exportar a PDF..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
               </div>
               <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genApp()">⚡ Generar Herramienta</button>
             </div>
@@ -721,15 +715,16 @@ select option { background: #1e2d52; }
             </div>
 
             <div id="cr-app-content" class="hidden">
-              <div class="row-hd" style="margin-bottom:10px;">
-                <div class="sec-lbl" id="cr-app-lbl">Herramienta lista</div>
+              <div class="row-hd" style="margin-bottom:6px;">
+                <div class="sec-lbl">Herramienta lista</div>
                 <div style="display:flex;gap:8px;">
                   <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlApp()">⬇ Descargar ZIP</button>
                   <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetApp()">↺ Nueva herramienta</button>
                 </div>
               </div>
+              <div id="cr-app-product-name" style="font-size:13px;color:var(--accent);font-weight:600;margin-bottom:8px;"></div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Vista previa — El ZIP incluye la herramienta + instrucciones de instalación</div>
-              <iframe id="cr-app-preview" style="background:white;border-radius:10px;border:1px solid var(--border);height:600px;width:100%;display:block;" frameborder="0"></iframe>
+              <iframe id="cr-app-preview" style="border-radius:10px;border:1px solid var(--border);height:600px;width:100%;display:block;" frameborder="0"></iframe>
             </div>
           </div>
 
@@ -739,39 +734,33 @@ select option { background: #1e2d52; }
 
             <div id="cr-skill-form">
               <div style="margin-bottom:14px;">
-                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional — el Skill Pack se alineará con ese ebook)</span></div>
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Ebook base <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
                 <select id="cr-skill-ebook-sel" onchange="onCrearEbookChange('cr-skill')" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                   <option value="">— Sin ebook base (tema libre) —</option>
                 </select>
               </div>
               <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">País destino</div>
-                <select id="cr-skill-country" onchange="crSkillAutoFill()" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
-                  <option value="España">🇪🇸 España</option>
-                  <option value="Mexico">🇲🇽 México</option>
-                  <option value="Argentina">🇦🇷 Argentina</option>
-                  <option value="Colombia">🇨🇴 Colombia</option>
-                  <option value="Chile">🇨🇱 Chile</option>
-                  <option value="Peru">🇵🇪 Perú</option>
-                  <option value="Uruguay">🇺🇾 Uruguay</option>
-                  <option value="Ecuador">🇪🇨 Ecuador</option>
-                  <option value="Brazil">🇧🇷 Brasil</option>
-                  <option value="France">🇫🇷 Francia</option>
-                  <option value="Germany">🇩🇪 Alemania</option>
-                  <option value="Italy">🇮🇹 Italia</option>
-                  <option value="Portugal">🇵🇹 Portugal</option>
-                  <option value="United States">🇺🇸 Estados Unidos</option>
-                  <option value="United Kingdom">🇬🇧 Reino Unido</option>
-                  <option value="Canada">🇨🇦 Canadá</option>
-                  <option value="Australia">🇦🇺 Australia</option>
-                  <option value="Netherlands">🇳🇱 Países Bajos</option>
-                  <option value="Sweden">🇸🇪 Suecia</option>
-                  <option value="Poland">🇵🇱 Polonia</option>
+                <select id="cr-skill-country" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <option value="España">🇪🇸 España</option><option value="Mexico">🇲🇽 México</option><option value="Argentina">🇦🇷 Argentina</option><option value="Colombia">🇨🇴 Colombia</option><option value="Chile">🇨🇱 Chile</option><option value="Peru">🇵🇪 Perú</option><option value="Uruguay">🇺🇾 Uruguay</option><option value="Ecuador">🇪🇨 Ecuador</option><option value="Brazil">🇧🇷 Brasil</option><option value="France">🇫🇷 Francia</option><option value="Germany">🇩🇪 Alemania</option><option value="Italy">🇮🇹 Italia</option><option value="Portugal">🇵🇹 Portugal</option><option value="United States">🇺🇸 Estados Unidos</option><option value="United Kingdom">🇬🇧 Reino Unido</option><option value="Canada">🇨🇦 Canadá</option><option value="Australia">🇦🇺 Australia</option><option value="Netherlands">🇳🇱 Países Bajos</option><option value="Sweden">🇸🇪 Suecia</option><option value="Poland">🇵🇱 Polonia</option>
                 </select>
               </div>
-              <div style="margin-bottom:18px;">
+              <!-- MODO LIBRE -->
+              <div id="cr-skill-free-section" style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Tema del Skill Pack</div>
-                <textarea id="cr-skill-topic" rows="4" placeholder="Ejemplos:&#10;• Copywriting persuasivo para landing pages&#10;• Nutrición y planificación de dietas&#10;• Mindset y productividad personal&#10;• Marketing de contenidos para redes sociales&#10;• Finanzas personales e inversión para principiantes" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+                <textarea id="cr-skill-topic" rows="4" placeholder="Ejemplos:&#10;• Copywriting persuasivo para landing pages&#10;• Nutrición y planificación de dietas&#10;• Mindset y productividad personal&#10;• Marketing de contenidos para redes sociales" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;"></textarea>
+              </div>
+              <!-- MODO EBOOK: Claude decide el tema -->
+              <div id="cr-skill-ebook-section" class="hidden" style="margin-bottom:14px;">
+                <div style="background:rgba(108,92,231,0.12);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:12px 16px;">
+                  <div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px;">✦ Claude analizará el ebook y creará el Skill Pack más útil para su tema</div>
+                  <div style="font-size:12px;color:var(--muted);">Los prompts estarán diseñados para que el comprador del ebook profundice en el tema usando IA.</div>
+                </div>
+              </div>
+              <!-- Requisitos extra -->
+              <div style="margin-bottom:18px;">
+                <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Requisitos específicos <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></div>
+                <input id="cr-skill-context" type="text" placeholder="Ej: incluir prompts para redes sociales, enfocarse en principiantes..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
               </div>
               <button class="btn btn-p" style="font-size:15px;padding:12px 28px;" onclick="genSkill()">⚡ Generar Skill Pack</button>
             </div>
@@ -5350,22 +5339,26 @@ function getCrearEbookData(val) {
   return null;
 }
 
-// Auto-rellena topic y país al seleccionar un ebook
+// Cambia entre modo libre y modo ebook según la selección
 function onCrearEbookChange(prefix) {
   var sel = document.getElementById(prefix+'-ebook-sel');
   if(!sel) return;
   var data = getCrearEbookData(sel.value);
-  if(!data) return;
-  var eb = data.ebook; var o = data.opp||{};
-  var topicEl = document.getElementById(prefix+'-topic');
-  if(topicEl && !topicEl.value.trim()) {
-    var problema = o.problema||o.problem||'';
-    topicEl.value = ((eb.title||o.tituloEbook||o.ebookTitle||'')+(problema?' — '+problema:'')).substring(0,200);
-  }
-  var countryEl = document.getElementById(prefix+'-country');
-  if(countryEl) {
-    var ck = o.pais||o.country||'';
-    for(var i=0;i<countryEl.options.length;i++){ if(countryEl.options[i].value===ck){ countryEl.selectedIndex=i; break; } }
+  // Toggle secciones libre / ebook
+  var freeSection = document.getElementById(prefix+'-free-section');
+  var ebookSection = document.getElementById(prefix+'-ebook-section');
+  if(data) {
+    if(freeSection) freeSection.classList.add('hidden');
+    if(ebookSection) ebookSection.classList.remove('hidden');
+    // Auto-setear país desde el ebook
+    var countryEl = document.getElementById(prefix+'-country');
+    if(countryEl) {
+      var ck = (data.opp||{}).pais||(data.opp||{}).country||'';
+      for(var i=0;i<countryEl.options.length;i++){ if(countryEl.options[i].value===ck){ countryEl.selectedIndex=i; break; } }
+    }
+  } else {
+    if(freeSection) freeSection.classList.remove('hidden');
+    if(ebookSection) ebookSection.classList.add('hidden');
   }
 }
 
@@ -5386,14 +5379,17 @@ function _buildEbookContext(data) {
 }
 
 async function genApp(){
-  var topic = (document.getElementById('cr-app-topic').value||'').trim();
   var selVal = (document.getElementById('cr-app-ebook-sel')||{}).value||'';
   var ebData = getCrearEbookData(selVal);
-  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
-  if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
+  var topic = '';
+  if(!ebData) {
+    // Modo libre: topic es requerido
+    topic = (document.getElementById('cr-app-topic').value||'').trim();
+    if(!topic){ alert('Describe la herramienta que necesitas.'); return; }
+  }
+  // Modo ebook: topic vacío → Claude decide basado en ebookContext
   var country = document.getElementById('cr-app-country').value || 'España';
-  var lang = DIR_LANG_MAP[country] || 'Español';
-  if(ebData) lang = ebData.lang || lang;
+  var lang = ebData ? (ebData.lang||DIR_LANG_MAP[country]||'Español') : (DIR_LANG_MAP[country]||'Español');
   var context = (document.getElementById('cr-app-context').value||'').trim();
   var ebookContext = _buildEbookContext(ebData);
 
@@ -5404,9 +5400,11 @@ async function genApp(){
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando herramienta');
     S_crApp = d.html;
-    window._crAppTopic = topic;
+    window._crAppTopic = d.productName || topic || 'Herramienta';
     hide('cr-app-loading'); show('cr-app-content');
-    document.getElementById('cr-app-lbl').textContent = 'Herramienta lista — '+topic.substring(0,40);
+    var nameEl = document.getElementById('cr-app-product-name');
+    if(nameEl) nameEl.textContent = d.productName ? '✦ '+d.productName : '';
+    if(d.truncated) { var nameEl2=document.getElementById('cr-app-product-name'); if(nameEl2) nameEl2.textContent+=' ⚠ Generación incompleta — prueba de nuevo'; }
     document.getElementById('cr-app-preview').srcdoc = d.html;
   } catch(e){
     hide('cr-app-loading'); show('cr-app-form');
@@ -5415,26 +5413,28 @@ async function genApp(){
 }
 
 async function genSkill(){
-  var topic = (document.getElementById('cr-skill-topic').value||'').trim();
   var selVal = (document.getElementById('cr-skill-ebook-sel')||{}).value||'';
   var ebData = getCrearEbookData(selVal);
-  if(!topic && ebData){ var eb=ebData.ebook,o=ebData.opp||{}; topic=(eb.title||o.tituloEbook||o.ebookTitle||'').substring(0,100); }
-  if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
+  var topic = '';
+  if(!ebData) {
+    topic = (document.getElementById('cr-skill-topic').value||'').trim();
+    if(!topic){ alert('Describe el tema del Skill Pack.'); return; }
+  }
   var country = document.getElementById('cr-skill-country').value || 'España';
-  var lang = DIR_LANG_MAP[country] || 'Español';
-  if(ebData) lang = ebData.lang || lang;
+  var lang = ebData ? (ebData.lang||DIR_LANG_MAP[country]||'Español') : (DIR_LANG_MAP[country]||'Español');
+  var context = (document.getElementById('cr-skill-context').value||'').trim();
   var ebookContext = _buildEbookContext(ebData);
 
   hide('cr-skill-form'); show('cr-skill-loading'); hide('cr-skill-content');
   try {
     var r = await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({topic:topic, country:country, lang:lang, ebookContext:ebookContext})});
+      body:JSON.stringify({topic:topic, country:country, lang:lang, context:context, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando skill pack');
     S_crSkill = d.text;
-    window._crSkillTopic = topic;
+    window._crSkillTopic = topic || 'skill-pack';
     hide('cr-skill-loading'); show('cr-skill-content');
-    document.getElementById('cr-skill-lbl').textContent = 'Skill Pack — '+topic.substring(0,40);
+    document.getElementById('cr-skill-lbl').textContent = 'Skill Pack listo';
     document.getElementById('cr-skill-out').value = d.text;
   } catch(e){
     hide('cr-skill-loading'); show('cr-skill-form');

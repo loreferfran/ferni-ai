@@ -2417,39 +2417,55 @@ app.post('/api/import-chapter', async function(req, res) {
 
 app.post('/api/generate-app', async function(req, res) {
   try {
-    var topic   = req.body.topic   || '';
-    var country = req.body.country || 'España';
-    var lang    = req.body.lang    || 'Español';
-    var context = req.body.context || '';
+    var topic        = req.body.topic        || '';
+    var country      = req.body.country      || 'España';
+    var lang         = req.body.lang         || 'Español';
+    var context      = req.body.context      || '';
+    var ebookContext = req.body.ebookContext  || '';
 
     var countryName = getCountryName(country);
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are an expert frontend developer and UX/UI designer. Generate a complete, self-contained HTML file that functions as a beautiful, interactive desktop tool.\n\n' +
-      'CRITICAL RULES:\n' +
-      '- ONE single HTML file — all CSS and JavaScript must be inline. Zero external dependencies.\n' +
-      '- The entire app MUST be written in ' + lang + '. ALL text, labels, buttons, placeholders, messages, and tooltips: in ' + lang + '.\n' +
-      '- Designed for the ' + countryName + ' market. Use ' + currency + ' for any monetary values if relevant.\n' +
-      '- Dark theme UI: deep dark background (#0f0f1a), purple/indigo accent (#6c5ce7), clean modern sans-serif font.\n' +
-      '- Must be genuinely USEFUL and INTERACTIVE — real functionality (calculations, tracking, scoring, step logic, etc.).\n' +
-      '- Mobile-friendly responsive layout.\n' +
-      '- Complete and working — do not truncate or leave TODOs.\n' +
-      '- Return ONLY the raw HTML starting with <!DOCTYPE html>. No markdown, no code blocks, no explanation.';
+    var sys = 'You are an expert frontend developer and UX/UI designer specializing in self-contained single-file web applications.\n\n' +
+      'ABSOLUTE RULES — no exceptions:\n' +
+      '1. Output ONLY raw HTML. Start your response with <!DOCTYPE html>. No preamble, no explanation, no markdown, no code fences.\n' +
+      '2. The entire app must be ONE single HTML file — all CSS in <style> tags, all JS in <script> tags. Zero external dependencies.\n' +
+      '3. Language: EVERY word of text, every label, button, placeholder, tooltip, error message: written in ' + lang + '.\n' +
+      '4. Market: designed for ' + countryName + '. Use ' + currency + ' if monetary values are needed.\n' +
+      '5. UI: dark theme — background #12121e, accent #6c5ce7, white text, rounded cards, Inter/system sans-serif.\n' +
+      '6. The app must be genuinely FUNCTIONAL and INTERACTIVE — real logic, not placeholders.\n' +
+      '7. Be complete — close all tags, finish all JS. No TODO comments, no incomplete features.\n' +
+      '8. Keep the total HTML under 3500 tokens so it fits completely without truncation.';
 
-    var ebookContext = req.body.ebookContext || '';
-    var userMsg = 'Create an interactive tool/app for this topic: "' + topic + '"' +
-      (ebookContext ? '\n\nThis tool is a companion product to an ebook with the following content:\n' + ebookContext : '') +
-      (context ? '\n\nAdditional requirements: ' + context : '');
-
-    var html = await claudeCall(sys, userMsg, 4000, false, 'claude-sonnet-4-6');
-    html = html.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-    if (!html.toLowerCase().startsWith('<!doctype') && !html.toLowerCase().startsWith('<html')) {
-      var idx = html.indexOf('<!DOCTYPE');
-      if (idx === -1) idx = html.indexOf('<html');
-      if (idx > 0) html = html.slice(idx);
+    var userMsg;
+    if(ebookContext && !topic) {
+      userMsg = 'Analyze this ebook and create the interactive tool that would best complement it as a companion product. The tool must be directly useful for the ebook\'s topic and audience.\n\nEbook data:\n' + ebookContext +
+        (context ? '\n\nSpecific requirements from the user: ' + context : '');
+    } else {
+      userMsg = 'Create an interactive tool for this topic: "' + topic + '"' +
+        (ebookContext ? '\n\nThis tool complements this ebook:\n' + ebookContext : '') +
+        (context ? '\n\nAdditional requirements: ' + context : '');
     }
-    res.json({ success: true, html: html });
+
+    var result = await claudeCall(sys, userMsg, 4500, true, 'claude-sonnet-4-6');
+    var html = (result.text || result || '').trim();
+    // Strip markdown fences (case-insensitive, any variant)
+    html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
+    // Find start of HTML if there's preamble text
+    var htmlLow = html.toLowerCase();
+    if(!htmlLow.startsWith('<!doctype') && !htmlLow.startsWith('<html')) {
+      var idx = htmlLow.indexOf('<!doctype');
+      if(idx === -1) idx = htmlLow.indexOf('<html');
+      if(idx > 0) html = html.slice(idx);
+    }
+    if(!html || html.length < 200) {
+      return res.json({ success: false, error: 'La herramienta generada quedó vacía o incompleta. Intenta de nuevo.' });
+    }
+    // Extract product name from <title> tag
+    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    var productName = titleMatch ? titleMatch[1].trim() : '';
+    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' });
   } catch(err) {
     res.json({ success: false, error: err.message });
   }
@@ -2478,8 +2494,16 @@ app.post('/api/generate-skill', async function(req, res) {
       '- Return only the Skill Pack content. No meta-commentary.';
 
     var ebookContext = req.body.ebookContext || '';
-    var userMsg = 'Create a Skill Pack for this topic: "' + topic + '"' +
-      (ebookContext ? '\n\nThis Skill Pack is a companion product to an ebook with the following content:\n' + ebookContext : '');
+    var context = req.body.context || '';
+    var userMsg;
+    if(ebookContext && !topic) {
+      userMsg = 'Analyze this ebook and create a Skill Pack with the most useful prompts to complement it. The prompts must help readers deepen their understanding and application of the ebook\'s topic using AI assistants.\n\nEbook data:\n' + ebookContext +
+        (context ? '\n\nSpecific requirements: ' + context : '');
+    } else {
+      userMsg = 'Create a Skill Pack for this topic: "' + topic + '"' +
+        (ebookContext ? '\n\nThis Skill Pack complements this ebook:\n' + ebookContext : '') +
+        (context ? '\n\nAdditional requirements: ' + context : '');
+    }
 
     var text = await claudeCall(sys, userMsg, 3000, false, 'claude-sonnet-4-6');
     res.json({ success: true, text: text.trim() });

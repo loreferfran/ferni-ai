@@ -1,4 +1,34 @@
-# Progreso FERNI AI — Estado Actual (22 Mayo 2026)
+# Progreso FERNI AI — Estado Actual (24 Mayo 2026)
+
+## ÚLTIMOS CAMBIOS (sesión 24 Mayo)
+
+### Nuevo módulo 📱 Crear (reemplaza tab Traducción)
+- Tab `🌍 Traducción` → `📱 Crear` (panel-crear)
+- Sub-tabs: **Herramienta Interactiva** y **Skill Pack IA**
+- **Herramienta Interactiva**: country selector → Claude Sonnet genera HTML completo autocontenido → vista previa en iframe → descarga como ZIP (JSZip CDN cargado on-demand) con instrucciones LEEME.txt incluido
+- **Skill Pack IA**: country selector → Claude Sonnet genera pack de prompts estructurados → textarea editable → descargar .txt o copiar al portapapeles
+- Idioma siempre del mercado elegido (mapa DIR_LANG_MAP)
+- Nunca se llama "archivo HTML" — siempre "Herramienta Interactiva de Escritorio" o "Skill Pack IA"
+
+### Sub-menú en módulo ✍️ Directo
+- 3 sub-tabs al tope: **📄 Ebook** (contenido existente intacto) · **📱 Herramienta** · **⚡ Skill Pack**
+- Herramienta y Skill Pack heredan país/idioma del selector del módulo Ebook
+- Estado independiente: `S_dirApp`, `S_dirSkill` (no interfiere con el ebook)
+- Mismos endpoints backend que el módulo Crear
+
+### Fix DIR_LANG_MAP
+- Añadidos Uruguay y Ecuador al mapa país → idioma (faltaban desde sesión LatAm)
+
+### Nuevos endpoints backend
+| Endpoint | Modelo | Función |
+|----------|--------|---------|
+| `/api/generate-app` | Sonnet | HTML completo autocontenido (herramienta interactiva) |
+| `/api/generate-skill` | Sonnet | Skill Pack — prompts estructurados en idioma del mercado |
+
+### Commits sesión 24 Mayo
+- `bdbf302` — Add Crear module (App + Skill Pack) + Direct module sub-tabs
+
+---
 
 ## ÚLTIMOS CAMBIOS (sesión 22 Mayo)
 
@@ -119,6 +149,8 @@ Agregados a todos los sistemas:
 - Persistencia total: localStorage + ferni_extras (con marketing) + IndexedDB
 - **📥 Importar & Mejorar: PDF/DOCX/TXT → capítulo por capítulo → flujo normal ✅**
 - **🌎 LatAm: México, Colombia, Argentina, Chile, Perú, Uruguay, Ecuador, Brasil ✅**
+- **📱 Crear: Herramienta Interactiva (ZIP) + Skill Pack IA (.txt) ✅**
+- **✍️ Directo: sub-menú Ebook | Herramienta | Skill Pack ✅**
 
 ## Stack Técnico
 - **Frontend**: public/index.html (vanilla JS, sin framework)
@@ -179,6 +211,8 @@ Tab Meta Ads → selecciona ebook (solo finales, sin duplicados)
 | `/api/generate-hotmart` | Sonnet | Kit completo Hotmart |
 | `/api/generate-meta` | Sonnet | Kit completo Meta Ads |
 | `/api/generate-ebook` | Sonnet | Borrador ebook |
+| `/api/generate-app` | Sonnet | Herramienta Interactiva HTML completo |
+| `/api/generate-skill` | Sonnet | Skill Pack — prompts estructurados |
 | `/api/generate-image` | gpt-image-1 | Imagen DALL-E |
 
 ## Pendiente
@@ -193,9 +227,9 @@ Tab Meta Ads → selecciona ebook (solo finales, sin duplicados)
 | 🛒 Hotmart | Kit completo + 5 imágenes DALL-E + Canvas overlay ✅ |
 | 📣 Meta Ads | Anuncios + RRSS + precio real + corrector ✅ |
 | 🎁 Bonus Pack | 4 PDFs + corrector natural + kit marketing (imagen + textos) ✅ |
-| ✍️ Directo | Tema libre → PDF |
+| ✍️ Directo | Ebook directo · Herramienta · Skill Pack (sub-menú) ✅ |
 | 📥 Importar | PDF/DOCX/TXT → mejora capítulo a capítulo → flujo normal ✅ |
-| 🌍 Traducción | 28 idiomas |
+| 📱 Crear | Herramienta Interactiva (ZIP) + Skill Pack IA (.txt) ✅ |
 | 🕐 Historial | Ver, restaurar, borrar |
 
 ## Países soportados
