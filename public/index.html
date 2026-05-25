@@ -771,15 +771,17 @@ select option { background: #1e2d52; }
             </div>
 
             <div id="cr-skill-content" class="hidden">
-              <div class="row-hd" style="margin-bottom:10px;">
-                <div class="sec-lbl" id="cr-skill-lbl">Skill Pack listo</div>
+              <div class="row-hd" style="margin-bottom:8px;">
+                <div>
+                  <div class="sec-lbl">Skill Pack listo</div>
+                  <div id="cr-skill-product-name" style="font-size:13px;color:var(--accent);font-weight:600;margin-top:2px;"></div>
+                </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlSkill()">⬇ Descargar .txt</button>
-                  <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="copySkill()">📋 Copiar todo</button>
+                  <button class="btn btn-gold" style="font-size:12px;padding:7px 16px;" onclick="dlSkill()">⬇ Descargar ZIP</button>
                   <button class="btn" style="font-size:12px;padding:7px 16px;background:transparent;border:1px solid var(--border);color:var(--muted);" onclick="resetSkill()">↺ Nuevo Skill Pack</button>
                 </div>
               </div>
-              <textarea id="cr-skill-out" rows="24" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;line-height:1.6;box-sizing:border-box;resize:vertical;"></textarea>
+              <iframe id="cr-skill-preview" style="border-radius:10px;border:1px solid var(--border);height:640px;width:100%;display:block;" frameborder="0"></iframe>
             </div>
           </div>
 
@@ -5431,11 +5433,13 @@ async function genSkill(){
       body:JSON.stringify({topic:topic, country:country, lang:lang, context:context, ebookContext:ebookContext})});
     var d = await r.json();
     if(!d.success) throw new Error(d.error||'Error generando skill pack');
-    S_crSkill = d.text;
-    window._crSkillTopic = topic || 'skill-pack';
+    S_crSkill = d.html;
+    window._crSkillTopic = d.productName || topic || 'skill-pack';
     hide('cr-skill-loading'); show('cr-skill-content');
-    document.getElementById('cr-skill-lbl').textContent = 'Skill Pack listo';
-    document.getElementById('cr-skill-out').value = d.text;
+    var nameEl = document.getElementById('cr-skill-product-name');
+    if(nameEl) nameEl.textContent = d.productName ? '✦ '+d.productName : '';
+    if(d.truncated && nameEl) nameEl.textContent += ' ⚠ Generación incompleta — prueba de nuevo';
+    document.getElementById('cr-skill-preview').srcdoc = d.html;
   } catch(e){
     hide('cr-skill-loading'); show('cr-skill-form');
     alert('Error: '+e.message);
@@ -5464,19 +5468,26 @@ async function dlApp(){
   } catch(e){ alert('Error al crear ZIP: '+e.message); }
 }
 
-function dlSkill(){
-  var text = document.getElementById('cr-skill-out').value;
-  if(!text) return;
-  var blob = new Blob([text],{type:'text/plain;charset=utf-8'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a'); a.href=url;
-  a.download='skill-pack-'+(window._crSkillTopic||'ia').replace(/[^\w]/g,'-').substring(0,30)+'.txt';
-  a.click(); URL.revokeObjectURL(url);
-}
-
-function copySkill(){
-  var text = document.getElementById('cr-skill-out').value;
-  if(navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+async function dlSkill(){
+  if(!S_crSkill) return;
+  try {
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    var zip = new JSZip();
+    var topicSlug = (window._crSkillTopic||'skill-pack').replace(/[^\w\s]/g,'').trim().substring(0,30).replace(/\s+/g,'-');
+    zip.file('skill-pack.html', S_crSkill);
+    var readme = 'SKILL PACK IA — INSTRUCCIONES\n==============================\n\n'+
+      'Producto: '+(window._crSkillTopic||'')+'\n\n'+
+      '1. Abre "skill-pack.html" con cualquier navegador (Chrome, Edge, Firefox)\n'+
+      '2. Haz clic en cada card para ver el prompt completo\n'+
+      '3. Usa el botón "Copiar" para pegarlo directamente en ChatGPT, Claude o Gemini\n'+
+      '4. Rellena los campos marcados en color con tu información personal\n\n'+
+      'No necesitas internet para usarlo.';
+    zip.file('LEEME - Instrucciones de uso.txt', readme);
+    var blob = await zip.generateAsync({type:'blob'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href=url; a.download=topicSlug+'-skill-pack.zip'; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e){ alert('Error al crear ZIP: '+e.message); }
 }
 
 function resetApp(){ S_crApp=null; hide('cr-app-content'); hide('cr-app-loading'); show('cr-app-form'); }

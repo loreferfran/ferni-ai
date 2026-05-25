@@ -2484,34 +2484,60 @@ app.post('/api/generate-skill', async function(req, res) {
 
     var countryName = getCountryName(country);
 
-    var sys = 'You are an expert AI prompt engineer and instructional designer. Create a complete Skill Pack for the given topic — a set of structured, ready-to-use prompts that anyone can copy and paste into any AI assistant (ChatGPT, Claude, Gemini, Copilot, etc.).\n\n' +
-      'CRITICAL RULES:\n' +
-      '- Write ENTIRELY in ' + lang + '. ALL text, titles, instructions, and prompt content: in ' + lang + '.\n' +
-      '- Designed for the ' + countryName + ' market — use appropriate cultural context, examples, and references.\n' +
-      '- Structure:\n' +
-      '  1. Brief intro (2-3 sentences explaining what this Skill Pack does)\n' +
-      '  2. One powerful SYSTEM PROMPT (persona + context + rules for the AI)\n' +
-      '  3. Five to seven specialized ACTION PROMPTS — each ready to copy-paste, clearly labeled\n' +
-      '  4. Brief usage instructions for each prompt (1-2 lines)\n' +
-      '- Each prompt must be complete, specific, and produce expert-level results immediately.\n' +
-      '- Do NOT mention prices, product names, or external links.\n' +
-      '- Use clean markdown formatting (## headers, ### subheaders, code blocks for prompts).\n' +
-      '- Return only the Skill Pack content. No meta-commentary.';
-
     var ebookContext = req.body.ebookContext || '';
     var context = req.body.context || '';
+
+    var sys = 'You are a senior UX/UI designer and AI prompt engineer. You create premium, self-contained single-file HTML Skill Packs — editorial documents that look and feel like a paid digital product worth $47+.\n\n' +
+      'ABSOLUTE RULES:\n' +
+      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown fences.\n' +
+      '2. ONE file — all CSS in <style>, all JS in <script>. You MAY use Google Fonts via <link rel="stylesheet">.\n' +
+      '3. Every word in ' + lang + '. Market: ' + countryName + '.\n' +
+      '4. VISUAL DESIGN — premium dark editorial:\n' +
+      '   - Background: #0a0a16\n' +
+      '   - Cards: #12122a border 1px solid rgba(255,255,255,0.07)\n' +
+      '   - Headings: Playfair Display (serif, elegant) — color #f0e6d3\n' +
+      '   - Body: DM Sans (clean, modern) — color #c8c4bc\n' +
+      '   - Accent: choose ONE color that fits the ebook topic (career=#6c5ce7, health=#00b894, finance=#f9ca24, marketing=#e17055). Use it for borders, buttons, highlights.\n' +
+      '   - Fields to fill by the user: wrap in <span class="field">[FIELD_NAME]</span> — styled with accent color background at 15% opacity.\n' +
+      '   - Rounded-2xl cards, 24px padding, subtle drop shadows.\n' +
+      '5. REQUIRED STRUCTURE:\n' +
+      '   a) Header: Skill Pack title (Playfair, large), subtitle, ebook topic badge.\n' +
+      '   b) "SYSTEM PROMPT" section: special hero card with crown icon, full system prompt (persona + context + rules), copy button.\n' +
+      '   c) 6-8 ACTION PROMPT CARDS — each collapsed by default. Shows: prompt title + one-line professional tip. Click to expand: full prompt with [FIELDS] highlighted + copy button.\n' +
+      '   d) "Pro Tip" badge on each card (small, accentuated) — a mentor-style insight about when/how to use this prompt for best results.\n' +
+      '   e) Footer: brief usage instructions.\n' +
+      '6. JAVASCRIPT:\n' +
+      '   - Toggle expand/collapse per card (smooth max-height transition).\n' +
+      '   - Copy button: copies the raw prompt text (strip HTML tags) to clipboard. Button shows "✓ Copiado" for 2s.\n' +
+      '   - All prompts must be complete and specific — no generic placeholders.\n' +
+      '7. Do NOT mention prices. Complete all tags and JS. Keep under 4500 tokens.';
+
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Analyze this ebook and create a Skill Pack with the most useful prompts to complement it. The prompts must help readers deepen their understanding and application of the ebook\'s topic using AI assistants.\n\nEbook data:\n' + ebookContext +
-        (context ? '\n\nSpecific requirements: ' + context : '');
+      userMsg = 'Analyze this ebook and create a premium HTML Skill Pack with 6-8 prompts that directly help readers apply and deepen the ebook\'s specific topic. Each prompt must be unique, expert-level, and topic-specific — not generic.\n\nEbook data:\n' + ebookContext +
+        (context ? '\n\nUser requirements: ' + context : '');
     } else {
-      userMsg = 'Create a Skill Pack for this topic: "' + topic + '"' +
-        (ebookContext ? '\n\nThis Skill Pack complements this ebook:\n' + ebookContext : '') +
-        (context ? '\n\nAdditional requirements: ' + context : '');
+      userMsg = 'Create a premium HTML Skill Pack for: "' + topic + '"\n\n' +
+        'Include 6-8 unique, expert-level prompts covering different aspects of this topic.\n\n' +
+        (ebookContext ? 'Complements this ebook:\n' + ebookContext + '\n\n' : '') +
+        (context ? 'Additional requirements: ' + context : '');
     }
 
-    var text = await claudeCall(sys, userMsg, 3000, false, 'claude-sonnet-4-6');
-    res.json({ success: true, text: text.trim() });
+    var result = await claudeCall(sys, userMsg, 5000, true, 'claude-sonnet-4-6');
+    var html = (result.text || result || '').trim();
+    html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
+    var htmlLow = html.toLowerCase();
+    if(!htmlLow.startsWith('<!doctype') && !htmlLow.startsWith('<html')) {
+      var idx = htmlLow.indexOf('<!doctype');
+      if(idx === -1) idx = htmlLow.indexOf('<html');
+      if(idx > 0) html = html.slice(idx);
+    }
+    if(!html || html.length < 200) {
+      return res.json({ success: false, error: 'El Skill Pack generado quedó vacío. Intenta de nuevo.' });
+    }
+    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    var productName = titleMatch ? titleMatch[1].trim() : '';
+    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' });
   } catch(err) {
     res.json({ success: false, error: err.message });
   }
