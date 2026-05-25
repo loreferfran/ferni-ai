@@ -2406,11 +2406,28 @@ app.post('/api/import-chapter', async function(req, res) {
     var context   = req.body.context   || '';
     var reference = req.body.reference || '';
 
-    var sys = 'You are an expert ebook editor. Improve the following chapter while STRICTLY preserving the author\'s personal voice, experiences, first-person anecdotes, and unique tone.\n\nRules:\n- Keep ALL personal stories and first-person experiences intact\n- Fix grammar, spelling, and improve sentence flow\n- Update outdated information to 2025\n- Add depth where content is shallow — in the author\'s own voice\n- Adapt for target market: ' + market + '\n- Write the improved chapter in: ' + lang + '\n- Do NOT genericize the content or remove personality\n' + (context ? '- Author notes: ' + context + '\n' : '') + (reference ? '- Reference: ' + reference + '\n' : '') + '\nReturn ONLY the improved chapter text. No JSON, no metadata, no headings from you.';
+    // If author explicitly says not to change text, skip improvement entirely
+    var noChange = /no cambi[ae]\b|no modifiq|conserva tal cual|sin cambio|solo format|no toques|preserve the text|do not change|keep.{0,10}exact/i.test(context);
+    if(noChange) {
+      return res.json({ success: true, title: chapterTitle, improved: chapterText.trim() });
+    }
 
-    var userMsg = 'Chapter ' + chapterNum + ' of ' + totalChapters + ': "' + chapterTitle + '"\n\n' + chapterText;
+    var sys = 'You are a careful ebook editor. Your job is to gently polish the chapter below — fix obvious typos and grammar errors ONLY. Do NOT rewrite, restructure, change order, add new content, remove paragraphs, or change the chapter title.\n\n' +
+      'RULES — no exceptions:\n' +
+      '- Preserve the EXACT order and structure of the original text\n' +
+      '- Keep ALL paragraphs in their original sequence\n' +
+      '- Do NOT add sections, summaries, or headings that were not in the original\n' +
+      '- Do NOT remove any paragraph, sentence, or fact\n' +
+      '- Preserve the author\'s voice, tone, and personal stories unchanged\n' +
+      '- Write in: ' + lang + '\n' +
+      '- Target market: ' + market + '\n' +
+      (context ? '- Author instructions (follow exactly, highest priority): ' + context + '\n' : '') +
+      (reference ? '- Reference material: ' + reference + '\n' : '') +
+      '\nReturn ONLY the polished chapter text. No JSON, no metadata, no added headings.';
 
-    var improved = await claudeCall(sys, userMsg, 2000, false, 'claude-haiku-4-5-20251001');
+    var userMsg = 'Section ' + chapterNum + ' of ' + totalChapters + ': "' + chapterTitle + '"\n\n' + chapterText;
+
+    var improved = await claudeCall(sys, userMsg, 3000, false, 'claude-haiku-4-5-20251001');
     res.json({ success: true, title: chapterTitle, improved: improved.trim() });
   } catch(err) {
     res.json({ success: false, error: err.message });
