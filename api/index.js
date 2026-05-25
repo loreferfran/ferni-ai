@@ -53,7 +53,8 @@ const REGS = {
   Peru: { legal: 'Ley 29733 protección de datos, Código de Protección al Consumidor Ley 29571, INDECOPI', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico.', guarantee: 'Derecho de arrepentimiento conforme al Código de Protección al Consumidor', dataProtection: 'Datos protegidos bajo Ley 29733.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'PEN' },
   Uruguay: { legal: 'Ley 18331 protección de datos, Ley 17189 relaciones de consumo, AGESIC', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no reemplaza el consejo médico.', guarantee: 'Derecho de rescisión conforme a Ley 17189', dataProtection: 'Datos protegidos bajo Ley 18331.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'UYU' },
   Ecuador: { legal: 'LOPDP Ley Orgánica de Protección de Datos, Ley Orgánica de Defensa del Consumidor', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico.', guarantee: 'Derecho de devolución conforme a Ley de Defensa del Consumidor', dataProtection: 'Datos protegidos bajo LOPDP.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'USD' },
-  Brazil: { legal: 'LGPD Lei Geral de Proteção de Dados, CDC Código de Defesa do Consumidor', healthDisclaimer: 'Este guia tem fins exclusivamente informativos e não substitui o aconselhamento médico.', guarantee: 'Direito de arrependimento 7 dias conforme CDC', dataProtection: 'Dados protegidos conforme LGPD.', forbidden: 'Proibidas promessas de resultados garantidos em saúde.', language: 'Portuguese', currency: 'BRL' }
+  Brazil: { legal: 'LGPD Lei Geral de Proteção de Dados, CDC Código de Defesa do Consumidor', healthDisclaimer: 'Este guia tem fins exclusivamente informativos e não substitui o aconselhamento médico.', guarantee: 'Direito de arrependimento 7 dias conforme CDC', dataProtection: 'Dados protegidos conforme LGPD.', forbidden: 'Proibidas promessas de resultados garantidos em saúde.', language: 'Portuguese', currency: 'BRL' },
+  LatAm: { legal: 'Normativas locales de protección al consumidor y protección de datos de cada país de la región (LFPDPPP, Ley 1581, Ley 25326, Ley 19628, Ley 29733, LGPD y equivalentes)', healthDisclaimer: 'Esta guía tiene fines exclusivamente informativos y no sustituye el consejo médico profesional.', guarantee: 'Derecho de arrepentimiento según la legislación de cada país', dataProtection: 'Datos protegidos conforme a la normativa vigente del país del usuario.', forbidden: 'Prohibidas promesas de resultados garantizados en salud.', language: 'Spanish', currency: 'USD', panRegion: true }
 };
 
 const POPULATION = {
@@ -78,7 +79,8 @@ const POPULATION = {
   Peru: '33 millones total, 24 millones adultos',
   Uruguay: '3.5 millones total, 2.7 millones adultos',
   Ecuador: '18 millones total, 13 millones adultos',
-  Brazil: '215 millones total, 160 millones adultos'
+  Brazil: '215 millones total, 160 millones adultos',
+  LatAm: '680 millones total (región completa), 500 millones adultos hispanohablantes + brasileños'
 };
 
 function getCountryName(countryStr) {
