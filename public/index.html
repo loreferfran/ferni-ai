@@ -1026,18 +1026,41 @@ select option { background: #1e2d52; }
 
           <!-- Content state -->
           <div id="imp-content" class="hidden">
-            <div class="row-hd">
-              <div class="sec-lbl">✅ Ebook mejorado</div>
+            <div class="row-hd" style="margin-bottom:10px;">
+              <div>
+                <div class="sec-lbl" id="imp-title-display">Ebook importado</div>
+                <div id="imp-result-info" style="font-size:12px;color:var(--muted);margin-top:2px;"></div>
+              </div>
               <button class="btn btn-ghost" onclick="resetImport()" style="font-size:12px;padding:6px 12px;">↺ Importar otro</button>
             </div>
-            <div id="imp-result-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></div>
-            <div style="background:var(--bg2);border-radius:10px;padding:12px 16px;margin-bottom:20px;">
-              <div id="imp-chapters-list"></div>
+
+            <!-- Per-chapter correction panel -->
+            <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:#00b894;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">✍️ Corregir una sección</div>
+              <div id="imp-ch-btns" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:0;"></div>
+              <div id="imp-ch-correction" class="hidden" style="margin-top:10px;">
+                <div id="imp-ch-label" style="font-size:12px;color:#00b894;font-weight:600;margin-bottom:6px;"></div>
+                <textarea id="imp-ch-instruction" rows="3" placeholder="Escribe qué quieres cambiar en esta sección. Ej: corrige la gramática · el índice empieza en la página 3 · amplía el contenido · cambia el tono a más formal · traduce al inglés..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(0,184,148,0.4);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+                  <button onclick="applyImpCorrection()" id="imp-corr-btn" style="padding:8px 20px;border-radius:8px;border:none;background:#00b894;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">✏️ Aplicar corrección</button>
+                  <div id="imp-ch-spinner" class="hidden"><div class="spinner" style="width:20px;height:20px;margin:0;border-width:2px;"></div></div>
+                  <button onclick="hide('imp-ch-correction')" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">Cancelar</button>
+                </div>
+              </div>
             </div>
-            <button onclick="sendToEbook()" class="btn btn-teal" style="width:100%;font-size:15px;padding:14px;margin-bottom:8px;">📖 Enviar al módulo Ebook → continuar flujo normal</button>
-            <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px;">El ebook mejorado quedará disponible para verificación, correcciones, PDF y todos los módulos.</div>
+
+            <!-- Action buttons -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+              <button onclick="downloadImpPDF()" class="btn btn-p" style="font-size:14px;padding:11px 22px;">📄 Descargar PDF</button>
+              <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Acceder a Hotmart, Meta Ads y Bonus Pack para este ebook">📊 Hotmart / Meta Ads / Bonus</button>
+            </div>
+
+            <!-- Preview iframe — all chapters, no limit -->
+            <iframe id="imp-preview" style="border-radius:10px;border:1px solid var(--border);height:660px;width:100%;display:block;margin-bottom:14px;" frameborder="0"></iframe>
+
+            <!-- Create complementary products -->
             <div style="border-top:1px solid rgba(108,92,231,0.18);padding-top:14px;">
-              <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">También puedes crear directamente</div>
+              <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Crear productos complementarios</div>
               <div style="display:flex;gap:8px;">
                 <button onclick="sendImpToCrear('app')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">📱 Generar Herramienta</button>
                 <button onclick="sendImpToCrear('skill')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">⚡ Generar Skill Pack</button>
@@ -1745,15 +1768,116 @@ async function startImport(){
   _renderImpResult();
 }
 
+var _impSelectedCh = -1;
+
 function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
-  var list = document.getElementById('imp-chapters-list');
-  if(info) info.textContent = _impMeta.fileName+' → '+_impChapters.length+' capítulos mejorados para '+_impMeta.market+' en '+_impMeta.lang;
-  if(list){
-    list.innerHTML = _impChapters.map(function(ch,i){
-      return '<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;"><span style="color:var(--teal);margin-right:8px;">✓</span>'+(ch.title||'Capítulo '+(i+1))+'</div>';
-    }).join('');
-  }
+  if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+_impMeta.market+' · '+_impMeta.lang;
+  var titleEl = document.getElementById('imp-title-display');
+  // Try to show detected ebook title
+  var detectedTitle = (_impChapters[0] && _impChapters[0].title) ? _impChapters[0].title : (_impMeta.fileName||'Ebook importado');
+  if(titleEl) titleEl.textContent = '✅ ' + (detectedTitle.length > 50 ? detectedTitle.substring(0,50)+'…' : detectedTitle);
+  _renderImpChBtns();
+  _renderImpPreview();
+}
+
+function _renderImpChBtns(){
+  var container = document.getElementById('imp-ch-btns');
+  if(!container) return;
+  container.innerHTML = _impChapters.map(function(ch, i){
+    var label = ((i+1)+'. '+(ch.title||'Sección '+(i+1))).substring(0, 28);
+    return '<button id="imp-chbtn-'+i+'" onclick="selectImpCh('+i+')" style="font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit;white-space:nowrap;">'+_escHtml(label)+'</button>';
+  }).join('');
+}
+
+function _escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function selectImpCh(i){
+  _impSelectedCh = i;
+  var ch = _impChapters[i];
+  var label = document.getElementById('imp-ch-label');
+  if(label) label.textContent = 'Sección: ' + (ch.title||'Sección '+(i+1));
+  var inst = document.getElementById('imp-ch-instruction');
+  if(inst) inst.value = '';
+  show('imp-ch-correction');
+  // Highlight selected button
+  document.querySelectorAll('#imp-ch-btns button').forEach(function(btn, idx){
+    btn.style.background = idx===i ? 'rgba(0,184,148,0.2)' : 'var(--bg2)';
+    btn.style.borderColor = idx===i ? '#00b894' : 'var(--border)';
+    btn.style.color = idx===i ? '#00b894' : 'var(--text2)';
+  });
+}
+
+async function applyImpCorrection(){
+  if(_impSelectedCh < 0) return;
+  var instruction = (document.getElementById('imp-ch-instruction').value||'').trim();
+  if(!instruction){ alert('Escribe la instrucción de corrección.'); return; }
+  var ch = _impChapters[_impSelectedCh];
+  show('imp-ch-spinner');
+  var btn = document.getElementById('imp-corr-btn');
+  if(btn) btn.disabled = true;
+  try {
+    var r = await fetch('/api/import-chapter',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chapterTitle:ch.title, chapterText:ch.improved||ch.original,
+        chapterNum:_impSelectedCh+1, totalChapters:_impChapters.length,
+        market:_impMeta.market, lang:_impMeta.lang, context:instruction, reference:''})});
+    var d = await r.json();
+    if(d.success){
+      _impChapters[_impSelectedCh].improved = d.improved;
+      _renderImpPreview();
+      hide('imp-ch-correction');
+      _impSelectedCh = -1;
+      document.querySelectorAll('#imp-ch-btns button').forEach(function(btn){
+        btn.style.background='var(--bg2)'; btn.style.borderColor='var(--border)'; btn.style.color='var(--text2)';
+      });
+    } else { alert('Error: '+(d.error||'Error desconocido')); }
+  } catch(e){ alert('Error: '+e.message); }
+  finally { hide('imp-ch-spinner'); if(btn) btn.disabled=false; }
+}
+
+function buildImportPreviewHtml(chapters, meta){
+  var title = meta.detectedTitle || meta.fileName || 'Ebook';
+  var lang = meta.lang||'Español'; var market = meta.market||'';
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+_escHtml(title)+'</title><style>';
+  html += 'body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:40px 52px;color:#1a1a2e;line-height:1.85;font-size:15px;}';
+  html += '@media print{body{padding:20px 32px;} h2{page-break-before:auto;}}';
+  html += 'h1{font-size:34px;color:#0a0a20;margin-bottom:8px;line-height:1.3;font-weight:700;}';
+  html += '.meta-bar{color:#888;font-size:13px;border-bottom:2px solid #6c5ce7;padding-bottom:16px;margin-bottom:48px;}';
+  html += 'h2{font-size:20px;color:#2d2d4e;margin-top:52px;margin-bottom:16px;border-left:4px solid #6c5ce7;padding-left:14px;page-break-after:avoid;}';
+  html += 'p{margin:0 0 14px;text-align:justify;}';
+  html += 'table{width:100%;border-collapse:collapse;margin:16px 0;}';
+  html += 'th,td{border:1px solid #ddd;padding:8px 12px;text-align:left;}';
+  html += 'th{background:#f0eeff;font-weight:600;}';
+  html += '</style></head><body>';
+  html += '<h1>'+_escHtml(title)+'</h1>';
+  html += '<div class="meta-bar">'+_escHtml(market)+' · '+_escHtml(lang)+' · '+chapters.length+' secciones</div>';
+  chapters.forEach(function(ch,i){
+    html += '<h2>'+_escHtml(ch.title||'Sección '+(i+1))+'</h2>';
+    var content = (ch.improved||ch.original||'');
+    // Convert double newlines to paragraphs, preserve single newlines
+    var paras = content.split(/\n\n+/).map(function(p){ return p.replace(/\n/g,'<br>'); });
+    html += paras.map(function(p){ return p.trim() ? '<p>'+p.trim()+'</p>' : ''; }).join('');
+  });
+  html += '</body></html>';
+  return html;
+}
+
+function _renderImpPreview(){
+  _impMeta.detectedTitle = document.getElementById('imp-title-display') ?
+    (document.getElementById('imp-title-display').textContent||'').replace(/^✅\s*/,'') : '';
+  var html = buildImportPreviewHtml(_impChapters, _impMeta);
+  var iframe = document.getElementById('imp-preview');
+  if(iframe) iframe.srcdoc = html;
+}
+
+function downloadImpPDF(){
+  if(!_impChapters.length) return;
+  var html = buildImportPreviewHtml(_impChapters, _impMeta);
+  var w = window.open('','_blank');
+  if(!w){ alert('Activa las ventanas emergentes para esta página'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  w.onload = function(){ setTimeout(function(){ try{ w.print(); }catch(e){} }, 500); };
+  setTimeout(function(){ try{ w.print(); }catch(e){} }, 1800);
 }
 
 function sendToEbook(){
@@ -1781,14 +1905,15 @@ function sendToEbook(){
   });
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
+  // Load into global state so Hotmart/Meta/Bonus modules can access this ebook
   S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
   S.hmKit = null; S.maKit = null; S.coverUrl = null;
   S.numChapters = chs.length;
   S.chapterImages = new Array(chs.length).fill(null);
-  // Treat imported ebook as final (already in target language) → go directly to approved view
   S.finalEbook = ebookData;
   S.approvedLang = _impMeta.lang;
-  S.pdfHtml = buildFinalPdfHtml(ebookData, opp, _impMeta.lang, _impMeta.market, null, []);
+  // Use the import preview HTML (handles any number of chapters)
+  S.pdfHtml = buildImportPreviewHtml(_impChapters, _impMeta);
   var id = 'imp_'+Date.now();
   S.currentHistId = id;
   var info = LANGS[_impMeta.market]||{lang:'Spanish',flag:'🌍'};
@@ -1797,11 +1922,11 @@ function sendToEbook(){
   showTab('ebook', document.querySelectorAll('.tab')[1]);
   setTimeout(function(){
     hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
-    document.getElementById('eb-approved-badge').textContent = '✓ ' + _impMeta.lang + ' · Importado';
+    document.getElementById('eb-approved-badge').textContent = '✓ ' + _impMeta.lang + ' · ' + chs.length + ' secciones';
     var prev = document.getElementById('eb-final-preview');
     if(prev) prev.srcdoc = S.pdfHtml;
-    rebuildRewriteBtns(chs.length);
-    addMsg('chat-ebook', '📄 Ebook importado listo. Descárgalo con "📄 Descargar PDF para Hotmart".\n\nPara corregir: usa los botones de capítulo del panel "✍️ Corregir un capítulo" que ves arriba. Escribe la instrucción y pulsa "Corregir texto".', 'ferni');
+    rebuildRewriteBtns(Math.min(chs.length, 8));
+    addMsg('chat-ebook', '📊 Ebook disponible para generar kit Hotmart, Meta Ads y Bonus Pack. Las correcciones y la descarga PDF las tienes en el módulo 📥 Importar.', 'ferni');
   }, 200);
 }
 
