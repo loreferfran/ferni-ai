@@ -1058,6 +1058,22 @@ select option { background: #1e2d52; }
               <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Acceder a Hotmart, Meta Ads y Bonus Pack para este ebook">📊 Hotmart / Meta Ads / Bonus</button>
             </div>
 
+            <!-- Imagen de portada -->
+            <div style="background:rgba(108,92,231,0.07);border:1px solid rgba(108,92,231,0.25);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
+              <div id="imp-cover-thumb" style="width:54px;height:72px;border-radius:6px;background:var(--bg2);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                <span style="font-size:20px;">🖼️</span>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:4px;">IMAGEN DE PORTADA</div>
+                <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Sube tu propia imagen para la portada del ebook</div>
+                <label style="cursor:pointer;display:inline-block;padding:6px 14px;border-radius:7px;border:1px solid var(--accent);color:var(--accent);font-size:12px;font-weight:600;">
+                  📁 Elegir imagen
+                  <input type="file" accept="image/*" onchange="setImpCoverImage(this)" style="display:none;">
+                </label>
+                <button id="imp-cover-clear" onclick="clearImpCoverImage()" class="hidden" style="margin-left:8px;padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;">✕ Quitar</button>
+              </div>
+            </div>
+
             <!-- Preview iframe — all chapters, no limit -->
             <iframe id="imp-preview" style="border-radius:10px;border:1px solid var(--border);height:660px;width:100%;display:block;margin-bottom:14px;" frameborder="0"></iframe>
 
@@ -1788,6 +1804,31 @@ async function startImport(skipEdit){
 
 var _impSelectedCh = -1;
 
+function setImpCoverImage(input){
+  var file = input && input.files && input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _impMeta.coverDataUrl = e.target.result;
+    // Mostrar thumbnail
+    var thumb = document.getElementById('imp-cover-thumb');
+    if(thumb) thumb.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;">';
+    show('imp-cover-clear');
+    _saveImpToStorage();
+    _renderImpPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImpCoverImage(){
+  delete _impMeta.coverDataUrl;
+  var thumb = document.getElementById('imp-cover-thumb');
+  if(thumb) thumb.innerHTML = '<span style="font-size:20px;">🖼️</span>';
+  hide('imp-cover-clear');
+  _saveImpToStorage();
+  _renderImpPreview();
+}
+
 function _saveImpToStorage(){
   try {
     localStorage.setItem('ferni_imp_chapters', JSON.stringify(_impChapters));
@@ -1812,9 +1853,14 @@ function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
   if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+_impMeta.market+' · '+_impMeta.lang;
   var titleEl = document.getElementById('imp-title-display');
-  // Try to show detected ebook title
   var detectedTitle = (_impChapters[0] && _impChapters[0].title) ? _impChapters[0].title : (_impMeta.fileName||'Ebook importado');
   if(titleEl) titleEl.textContent = '✅ ' + (detectedTitle.length > 50 ? detectedTitle.substring(0,50)+'…' : detectedTitle);
+  // Restaurar thumbnail de portada si hay imagen guardada
+  if(_impMeta.coverDataUrl){
+    var thumb = document.getElementById('imp-cover-thumb');
+    if(thumb) thumb.innerHTML = '<img src="'+_impMeta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;">';
+    show('imp-cover-clear');
+  }
   _renderImpChBtns();
   _renderImpPreview();
 }
@@ -1913,8 +1959,17 @@ function buildImportPreviewHtml(chapters, meta){
   h += '.empty-note{color:#aaa;font-style:italic;}';
   h += '</style></head><body>';
 
-  // Portada
-  h += '<div class="pg cover page-break"><h1>'+_escHtml(title)+'</h1><div class="sub">'+_escHtml(lang)+'</div></div>';
+  // Portada — imagen propia o gradiente de nicho
+  if(meta.coverDataUrl){
+    h += '<div class="pg page-break" style="position:relative;height:1123px;overflow:hidden;padding:0;">';
+    h += '<img src="'+meta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;">';
+    h += '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.75));padding:40px;color:white;">';
+    h += '<h1 style="font-size:32px;font-weight:900;margin:0 0 8px;line-height:1.2;text-shadow:0 2px 8px rgba(0,0,0,0.5);">'+_escHtml(title)+'</h1>';
+    h += '<div style="font-size:15px;opacity:0.85;">'+_escHtml(lang)+'</div>';
+    h += '</div></div>';
+  } else {
+    h += '<div class="pg cover page-break"><h1>'+_escHtml(title)+'</h1><div class="sub">'+_escHtml(lang)+'</div></div>';
+  }
 
   // Capítulos
   chapters.forEach(function(ch, i){
