@@ -1747,21 +1747,30 @@ async function startImport(skipEdit){
   }
 
   _setImpProgress(15, 'Detectando estructura del ebook...', '');
-  var chapters = _splitChapters(rawText.trim());
-  if(!chapters.length){ hide('imp-loading'); show('imp-empty'); alert('No se encontraron secciones en el archivo.'); return; }
-  if(chapters.length > 20) chapters = chapters.slice(0, 20);
-
   _impChapters = [];
-  _impMeta = { market:market, lang:lang, totalChapters:chapters.length, fileName:file.name };
 
   if(skipEdit){
-    // Sin edición: carga directa, cero tokens
-    chapters.forEach(function(ch){
-      _impChapters.push({title:ch.title, original:ch.content, improved:ch.content});
+    // Sin edición: chunker secuencial puro — sin detección de capítulos, sin reordenar nada.
+    // Divide el texto en bloques de ~1200 palabras en orden estricto.
+    var words = rawText.trim().split(/\s+/);
+    var chunkSize = 1200;
+    var chunks = [];
+    for(var ci=0; ci<words.length; ci+=chunkSize){
+      var chunk = words.slice(ci, ci+chunkSize).join(' ');
+      if(chunk.trim().length > 50) chunks.push(chunk);
+    }
+    if(!chunks.length){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
+    _impMeta = { market:market, lang:lang, totalChapters:chunks.length, fileName:file.name };
+    chunks.forEach(function(c, idx){
+      _impChapters.push({title:'Sección '+(idx+1), original:c, improved:c});
     });
     _setImpProgress(100, 'Listo.', '');
   } else {
-    // Con mejora por IA capítulo a capítulo
+    // Con mejora por IA — detectar capítulos y mejorar con Claude
+    var chapters = _splitChapters(rawText.trim());
+    if(!chapters.length){ hide('imp-loading'); show('imp-empty'); alert('No se encontraron secciones en el archivo.'); return; }
+    if(chapters.length > 20) chapters = chapters.slice(0, 20);
+    _impMeta = { market:market, lang:lang, totalChapters:chapters.length, fileName:file.name };
     var refText = ref;
     if(ref && (ref.startsWith('http://') || ref.startsWith('https://'))){
       _setImpProgress(8, 'Leyendo referencia...', ref.substring(0,60)+'...');
