@@ -1680,6 +1680,66 @@ async function _extractText(file){
   throw new Error('Formato no soportado. Usa PDF, DOCX o TXT.');
 }
 
+// Detector línea a línea para "Solo importar" — texto exacto, títulos reales, orden garantizado.
+function _splitByLines(text){
+  // Para PDFs donde los encabezados pueden venir en medio de una línea larga,
+  // insertar \n antes de palabras clave de capítulo antes de escanear líneas.
+  var prep = text
+    .replace(/([^\n])\s*(Cap[ií]tulo\s+\d)/gi,   '$1\n$2')
+    .replace(/([^\n])\s*(CAPÍTULO\s+\d)/g,        '$1\n$2')
+    .replace(/([^\n])\s*(Chapter\s+\d)/gi,         '$1\n$2')
+    .replace(/([^\n])\s*(Bonus\s*[\d:—\-])/gi,    '$1\n$2')
+    .replace(/([^\n])\s*(Parte\s+\d)/gi,           '$1\n$2')
+    .replace(/([^\n])\s*(Conclusi[oó]n\b)/gi,      '$1\n$2')
+    .replace(/([^\n])\s*(Introducci[oó]n\b)/gi,    '$1\n$2');
+
+  // Regex que identifica una línea como título de sección
+  var headRx = /^(Cap[ií]tulo|CAPÍTULO|Chapter|CHAPTER|Chapitre|Kapitel|Capitolo|Bonus|BONUS|Parte?\s*\d|Part\s*\d|Secci[oó]n\s*\d|Introducci[oó]n|INTRODUCCI[OÓ]N|Conclusi[oó]n|CONCLUSI[OÓ]N|Introduction|Conclusion|Appendix|Ap[eé]ndice)\b/i;
+
+  var lines   = prep.split('\n');
+  var chapters = [];
+  var curTitle   = null;
+  var curLines   = [];
+
+  lines.forEach(function(line){
+    var tr = line.trim();
+    // Consideramos encabezado: empieza con keyword, longitud razonable para un título
+    if(tr.length >= 3 && tr.length <= 130 && headRx.test(tr)){
+      var content = curLines.join('\n').trim();
+      if(content.length > 30){
+        chapters.push({ title: curTitle || content.split('\n')[0].substring(0,80).trim() || 'Inicio', content: content });
+      }
+      curTitle = tr;
+      curLines = [];
+    } else {
+      curLines.push(line);
+    }
+  });
+
+  // Último bloque
+  var last = curLines.join('\n').trim();
+  if(last.length > 30){
+    chapters.push({ title: curTitle || 'Final', content: last });
+  }
+
+  if(chapters.length >= 2) return chapters;
+
+  // Fallback: si no detectó capítulos (sin encabezados reconocibles),
+  // dividir en bloques de ~1000 palabras usando la primera oración como título.
+  var words = text.split(/\s+/);
+  var fb = [];
+  for(var i=0;i<words.length;i+=1000){
+    var chunk = words.slice(i,i+1000).join(' ').trim();
+    if(chunk.length > 50){
+      // Primera frase completa como título aproximado
+      var dot = chunk.indexOf('. ');
+      var auto = dot > 10 && dot < 80 ? chunk.substring(0, dot).trim() : chunk.substring(0,70).trim();
+      fb.push({ title: auto, content: chunk });
+    }
+  }
+  return fb;
+}
+
 function _splitChapters(text){
   // PDF.js joins items with spaces and only adds \n at page breaks.
   // Insert \n\n before chapter keywords found mid-text so the regex below can match them.
@@ -1750,19 +1810,12 @@ async function startImport(skipEdit){
   _impChapters = [];
 
   if(skipEdit){
-    // Sin edición: chunker secuencial puro — sin detección de capítulos, sin reordenar nada.
-    // Divide el texto en bloques de ~1200 palabras en orden estricto.
-    var words = rawText.trim().split(/\s+/);
-    var chunkSize = 1200;
-    var chunks = [];
-    for(var ci=0; ci<words.length; ci+=chunkSize){
-      var chunk = words.slice(ci, ci+chunkSize).join(' ');
-      if(chunk.trim().length > 50) chunks.push(chunk);
-    }
-    if(!chunks.length){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
-    _impMeta = { market:market, lang:lang, totalChapters:chunks.length, fileName:file.name };
-    chunks.forEach(function(c, idx){
-      _impChapters.push({title:'Sección '+(idx+1), original:c, improved:c});
+    // Sin edición: detector línea a línea — usa títulos reales, preserva texto exacto, nunca reordena.
+    var detected = _splitByLines(rawText.trim());
+    if(!detected.length){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
+    _impMeta = { market:market, lang:lang, totalChapters:detected.length, fileName:file.name };
+    detected.forEach(function(ch){
+      _impChapters.push({title:ch.title, original:ch.content, improved:ch.content});
     });
     _setImpProgress(100, 'Listo.', '');
   } else {
