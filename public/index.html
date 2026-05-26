@@ -1192,6 +1192,7 @@ function showTab(id,el){
   if(el)el.classList.add('active'); 
   if(id==='hist') renderHist();
   if(id==='ebook') restoreEbookTab();
+  if(id==='import' && !_impChapters.length && _restoreImpFromStorage()){ hide('imp-empty'); hide('imp-loading'); show('imp-content'); _renderImpResult(); }
   if(id==='crear') { populateCrearSel(); }
   if(id==='extras'){
     populateExtrasSels();
@@ -1770,11 +1771,32 @@ async function startImport(){
   }
 
   _setImpProgress(100, 'Listo.', '');
+  _saveImpToStorage();
   hide('imp-loading'); show('imp-content');
   _renderImpResult();
 }
 
 var _impSelectedCh = -1;
+
+function _saveImpToStorage(){
+  try {
+    localStorage.setItem('ferni_imp_chapters', JSON.stringify(_impChapters));
+    localStorage.setItem('ferni_imp_meta', JSON.stringify(_impMeta));
+  } catch(e){}
+}
+
+function _restoreImpFromStorage(){
+  try {
+    var ch = localStorage.getItem('ferni_imp_chapters');
+    var meta = localStorage.getItem('ferni_imp_meta');
+    if(ch && meta){
+      _impChapters = JSON.parse(ch);
+      _impMeta = JSON.parse(meta);
+      return _impChapters.length > 0;
+    }
+  } catch(e){}
+  return false;
+}
 
 function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
@@ -1830,6 +1852,7 @@ async function applyImpCorrection(){
     var d = await r.json();
     if(d.success){
       _impChapters[_impSelectedCh].improved = d.improved;
+      _saveImpToStorage();
       _renderImpPreview();
       hide('imp-ch-correction');
       _impSelectedCh = -1;
@@ -1946,6 +1969,7 @@ function sendToEbook(){
 
 function resetImport(){
   _impChapters = []; _impMeta = {};
+  try { localStorage.removeItem('ferni_imp_chapters'); localStorage.removeItem('ferni_imp_meta'); } catch(e){}
   hide('imp-content'); hide('imp-loading'); show('imp-empty');
   var fi = document.getElementById('imp-file'); if(fi) fi.value='';
   var fn = document.getElementById('imp-file-name'); if(fn) fn.style.display='none';
