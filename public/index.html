@@ -1011,7 +1011,10 @@ select option { background: #1e2d52; }
               <input type="text" id="imp-ref" placeholder="ej: nombre de un libro de referencia, tendencia del mercado, URL de artículo..." style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;box-sizing:border-box;">
             </div>
 
-            <button onclick="startImport()" class="btn btn-teal" style="width:100%;font-size:15px;padding:14px;">📥 Importar y Mejorar</button>
+            <div style="display:flex;gap:10px;">
+              <button onclick="startImport(false)" class="btn btn-teal" style="flex:1;font-size:14px;padding:12px;">✨ Importar y Mejorar</button>
+              <button onclick="startImport(true)" class="btn btn-ghost" style="flex:1;font-size:14px;padding:12px;">📥 Solo importar (sin edición)</button>
+            </div>
           </div>
 
           <!-- Loading state -->
@@ -1704,7 +1707,7 @@ function _setImpProgress(pct, txt, sub){
   if(subEl && sub !== undefined) subEl.textContent = sub;
 }
 
-async function startImport(){
+async function startImport(skipEdit){
   var fileInput = document.getElementById('imp-file');
   var file = fileInput && fileInput.files[0];
   if(!file){ alert('Por favor selecciona un archivo primero.'); return; }
@@ -1727,50 +1730,57 @@ async function startImport(){
     return;
   }
 
-  // Si la referencia es una URL, fetchearla una sola vez antes de los capítulos
-  var refText = ref;
-  if(ref && (ref.startsWith('http://') || ref.startsWith('https://'))){
-    _setImpProgress(8, 'Leyendo contenido de la referencia...', ref.substring(0,60)+'...');
-    try {
-      var frResp = await fetch('/api/fetch-url', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url:ref}) });
-      var frData = await frResp.json();
-      if(frData.success && frData.text) refText = '[Contenido de referencia extraído de ' + ref + ']:\n' + frData.text;
-    } catch(e){ /* fallback: usar URL como texto */ }
-  }
-
-  _setImpProgress(12, 'Detectando estructura del ebook...', '');
+  _setImpProgress(15, 'Detectando estructura del ebook...', '');
   var chapters = _splitChapters(rawText.trim());
   if(!chapters.length){ hide('imp-loading'); show('imp-empty'); alert('No se encontraron secciones en el archivo.'); return; }
-  if(chapters.length > 15) chapters = chapters.slice(0, 15);
+  if(chapters.length > 20) chapters = chapters.slice(0, 20);
 
   _impChapters = [];
   _impMeta = { market:market, lang:lang, totalChapters:chapters.length, fileName:file.name };
 
-  for(var i=0;i<chapters.length;i++){
-    var pct = 12 + Math.round(((i+1)/chapters.length)*80);
-    _setImpProgress(pct, 'Mejorando capítulo '+(i+1)+' de '+chapters.length+'...', chapters[i].title||'');
-    try {
-      var resp = await fetch('/api/import-chapter', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          chapterTitle: chapters[i].title,
-          chapterText: chapters[i].content.substring(0, 6000),
-          chapterNum: i+1, totalChapters: chapters.length,
-          market:market, lang:lang, context:context, reference:refText
-        })
-      });
-      var d = await resp.json();
-      if(d.success){
-        _impChapters.push({title:d.title||chapters[i].title, original:chapters[i].content, improved:d.improved});
-      } else {
+  if(skipEdit){
+    // Sin edición: carga directa, cero tokens
+    chapters.forEach(function(ch){
+      _impChapters.push({title:ch.title, original:ch.content, improved:ch.content});
+    });
+    _setImpProgress(100, 'Listo.', '');
+  } else {
+    // Con mejora por IA capítulo a capítulo
+    var refText = ref;
+    if(ref && (ref.startsWith('http://') || ref.startsWith('https://'))){
+      _setImpProgress(8, 'Leyendo referencia...', ref.substring(0,60)+'...');
+      try {
+        var frResp = await fetch('/api/fetch-url', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url:ref}) });
+        var frData = await frResp.json();
+        if(frData.success && frData.text) refText = '[Contenido de referencia extraído de ' + ref + ']:\n' + frData.text;
+      } catch(e){}
+    }
+    for(var i=0;i<chapters.length;i++){
+      var pct = 15 + Math.round(((i+1)/chapters.length)*80);
+      _setImpProgress(pct, 'Mejorando sección '+(i+1)+' de '+chapters.length+'...', chapters[i].title||'');
+      try {
+        var resp = await fetch('/api/import-chapter', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            chapterTitle: chapters[i].title,
+            chapterText: chapters[i].content.substring(0, 6000),
+            chapterNum: i+1, totalChapters: chapters.length,
+            market:market, lang:lang, context:context, reference:refText
+          })
+        });
+        var d = await resp.json();
+        if(d.success){
+          _impChapters.push({title:d.title||chapters[i].title, original:chapters[i].content, improved:d.improved});
+        } else {
+          _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
+        }
+      } catch(e){
         _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
       }
-    } catch(e){
-      _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
     }
+    _setImpProgress(100, 'Listo.', '');
   }
 
-  _setImpProgress(100, 'Listo.', '');
   _saveImpToStorage();
   hide('imp-loading'); show('imp-content');
   _renderImpResult();
