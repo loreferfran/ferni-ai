@@ -2453,11 +2453,19 @@ app.post('/api/generate-app', async function(req, res) {
       '3. Every word, label, button, placeholder, tooltip, error: written in ' + lang + '.\n' +
       '4. Market: ' + countryName + '. Currency: ' + currency + ' when needed.\n' +
       '5. Visual design: dark premium theme — bg #0f0f1a, cards #1a1a2e, accent #6c5ce7, secondary accent #a29bfe, text #e8e8f0. Rounded-xl cards, subtle box-shadows, smooth CSS transitions. Font: system-ui or Inter.\n' +
-      '6. DYNAMIC PERSONALIZATION: The app MUST produce COMPLETELY DIFFERENT content for different input combinations. Use a single JS data object mapping each profession/role to specific action items. Never generic placeholders.\n' +
-      '7. EXPERIENCE LEVEL changes output: junior gets foundational actions; mid gets growth actions; senior gets leadership actions.\n' +
-      '8. UX: 3-5 step or tabbed UI, progress indicators, checkboxes that persist in localStorage.\n' +
-      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. Never truncate. The output must be a fully working app.\n' +
-      '10. Write compact, efficient code. Reuse CSS classes. Keep JS data objects concise (3-4 items per profession is enough).';
+      '6. DEEP INPUT COLLECTION — Step 1 of the app must collect rich profile data before showing any results. Required fields:\n' +
+      '   • Name + current role/profession (text)\n' +
+      '   • Years of experience (select: <2 / 2-5 / 5-10 / 10+)\n' +
+      '   • Main daily tasks — what they actually do every day (textarea, 2 rows)\n' +
+      '   • Top 3 skills they consider their strength (textarea or 3 text inputs)\n' +
+      '   • Tools/software they use daily (text, comma-separated)\n' +
+      '   • Weekly work hours (select: <20 / 20-40 / 40-50 / 50+)\n' +
+      '   • Their main goal right now (select or radio with 3-4 topic-specific options)\n' +
+      '   The "Generate my plan" button only appears after all required fields have a value.\n' +
+      '7. HYPER-PERSONALIZED OUTPUT — Results must use the actual values entered. Show the user\'s name, reference their specific tasks and tools by name in recommendations. Never generic advice. If they said they use Excel → recommend Power Query. If they work 50h weeks → address burnout risk.\n' +
+      '8. UX: 2-step flow (Profile → Results), results in tabs or cards, progress indicator, checkboxes that persist in localStorage, PDF/print button.\n' +
+      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. The output must be a 100% working app.\n' +
+      '10. Write compact, efficient code. Reuse CSS classes.';
 
     var userMsg;
     if(ebookContext && !topic) {
