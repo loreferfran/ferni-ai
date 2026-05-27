@@ -1811,13 +1811,12 @@ async function startImport(skipEdit){
   _impChapters = [];
 
   if(skipEdit){
-    // Sin edición: detector línea a línea — usa títulos reales, preserva texto exacto, nunca reordena.
-    var detected = _splitByLines(rawText.trim());
-    if(!detected.length){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
-    _impMeta = { market:market, lang:lang, totalChapters:detected.length, fileName:file.name };
-    detected.forEach(function(ch){
-      _impChapters.push({title:ch.title, original:ch.content, improved:ch.content});
-    });
+    // Solo importar: CERO manipulación. El texto entra tal cual, un único bloque.
+    var rawTrimmed = rawText.trim();
+    if(rawTrimmed.length < 50){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
+    var bookName = file.name.replace(/\.[^/.]+$/, '');
+    _impMeta = { market:market, lang:lang, totalChapters:1, fileName:file.name, bookTitle:bookName, rawMode:true };
+    _impChapters = [{ title:bookName, original:rawTrimmed, improved:rawTrimmed }];
     _setImpProgress(100, 'Listo.', '');
   } else {
     // Con mejora por IA — detectar capítulos y mejorar con Claude
@@ -2040,7 +2039,9 @@ function buildImportPreviewHtml(chapters, meta){
   // Capítulos
   chapters.forEach(function(ch, i){
     h += '<div class="pg"><div class="chapter">';
-    h += '<div class="ch-header"><div class="ch-num">Sección '+(i+1)+'</div><div class="ch-title">'+_escHtml(ch.title||'Sección '+(i+1))+'</div></div>';
+    if(!meta.rawMode){
+      h += '<div class="ch-header"><div class="ch-num">Sección '+(i+1)+'</div><div class="ch-title">'+_escHtml(ch.title||'Sección '+(i+1))+'</div></div>';
+    }
 
     var content = (ch.improved||ch.original||'').trim();
     if(!content){
