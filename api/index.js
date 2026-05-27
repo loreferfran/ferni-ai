@@ -2446,38 +2446,33 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are a world-class frontend developer and product designer. Your apps feel like $197 SaaS tools — not templates. Every pixel, interaction, and word must make the user think "wow, this is exactly what I needed."\n\n' +
-      'NON-NEGOTIABLE RULES:\n' +
-      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown fences.\n' +
-      '2. ONE self-contained file — all CSS in <style>, all JS in <script>. No CDN, no external dependencies.\n' +
-      '3. Every word in ' + lang + '. Market: ' + countryName + '. Currency: ' + currency + '.\n\n' +
-      'VISUAL STANDARD — god-tier dark UI:\n' +
-      '- Base: #0a0a14. Surface: #13132a. Cards: #1a1a35 with border 1px solid rgba(108,92,231,0.2).\n' +
-      '- Accent: one dominant gradient color chosen for the topic (career: #6c5ce7→#a29bfe, finance: #f9ca24→#e67e22, health: #00b894→#00cec9, marketing: #e17055→#d63031, cooking: #e17055→#fdcb6e, default: #6c5ce7→#a29bfe).\n' +
-      '- Typography: system-ui. Headings bold 700-900. Body 15px line-height 1.7.\n' +
-      '- Buttons: gradient background (accent colors), border-radius 10px, subtle glow on hover (box-shadow with accent color at 40%).\n' +
-      '- Cards: border-radius 14px, padding 24px, hover: translateY(-2px) + stronger glow.\n' +
-      '- Animated score/progress rings (SVG circle with stroke-dashoffset animation) or animated bars where relevant.\n' +
-      '- Micro-interactions: smooth transitions 0.25s ease on everything.\n\n' +
-      'STEP 1 — SMART PROFILE (adapted 100% to the ebook topic):\n' +
-      '- Design 5-7 fields that make deep sense for THIS specific ebook. Examples:\n' +
-      '  Career/AI: name, role, experience years, daily tasks (textarea), tools used, work hours/week, biggest fear about AI\n' +
-      '  Finance/Credit: name, monthly income, current debts, savings, credit goal, timeline, risk tolerance\n' +
-      '  Fitness/Health: name, age, current level, main goal, training days/week, diet style, limitations\n' +
-      '  Marketing/Sales: name, business type, monthly revenue, target audience, main channel, monthly budget\n' +
-      '  Parenting: name, children ages, main daily challenge (textarea), time available, support network\n' +
-      '  Cooking: name, skill level, dietary restrictions, people to cook for, weekly budget, time per meal\n' +
-      '- Always include: first name (used warmly in results) + one free-text "what is your biggest challenge" + one specific goal selector.\n' +
-      '- CTA button disabled until all fields filled. On click: animated loading bar (1.5s CSS animation), then reveal results.\n\n' +
-      'STEP 2 — WOW-FACTOR RESULTS:\n' +
-      '- Open with a personalized headline using the user\'s name and their specific goal/situation.\n' +
-      '- Show a SCORE or INDEX relevant to the topic (Risk Score 0-100, Readiness Level, Financial Health Index, etc.) — animated SVG ring or large number that counts up from 0 with CSS animation.\n' +
-      '- Results in 3-4 tabs or accordion sections — each section title is specific to the topic, never generic.\n' +
-      '- Every recommendation must reference the user\'s actual inputs (their role, their specific tools, their numbers). Zero generic text.\n' +
-      '- At least one interactive element in results: checkboxes with progress bar ("Your 90-day plan: 0/12 actions done"), a mini calculator, or a prioritization matrix.\n' +
-      '- Checkboxes and progress persist in localStorage (key = userName + topic).\n' +
-      '- "Print / Save as PDF" button at bottom.\n\n' +
-      'CRITICAL: Close every HTML tag. Finish every JS function. Output a 100% working app. Compact but complete code.';
+    var sys = 'You are a world-class frontend developer. Build a premium single-file HTML app that feels like a $197 SaaS tool.\n\n' +
+      'HARD RULES:\n' +
+      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown.\n' +
+      '2. ONE file — CSS in <style>, JS in <script>. No CDN, no external files.\n' +
+      '3. Language: ' + lang + '. Market: ' + countryName + '. Currency: ' + currency + '.\n' +
+      '4. MUST BE 100% COMPLETE — every tag closed, every function finished. Never truncate.\n\n' +
+      'DESIGN (dark premium, concise CSS):\n' +
+      'body{background:#0a0a14;color:#e0dff5;font-family:system-ui;margin:0;padding:20px}\n' +
+      '.card{background:#1a1a35;border:1px solid rgba(108,92,231,0.25);border-radius:14px;padding:22px;margin-bottom:16px}\n' +
+      'Choose ONE accent color for the topic: career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22, default=#6c5ce7\n' +
+      'Buttons: background=accent, border-radius:10px, padding:12px 28px, font-weight:700, cursor:pointer\n' +
+      'Inputs/selects/textareas: background:#0d0d20, border:1px solid rgba(255,255,255,0.15), border-radius:8px, padding:10px, color:inherit, width:100%, box-sizing:border-box\n\n' +
+      'STRUCTURE — 2 screens, toggled by JS (display none/block):\n\n' +
+      'SCREEN 1 — PROFILE FORM (compact, all on one page, NO multi-step):\n' +
+      '- App title + one-line description at top.\n' +
+      '- Exactly 4 inputs adapted 100% to the ebook topic:\n' +
+      '  • Always: text input for first name\n' +
+      '  • 2 selects or number inputs specific to THIS topic (e.g. for career: role select + experience select; for finance: income range + debt range; for fitness: goal select + level select)\n' +
+      '  • 1 short textarea: "Describe your main challenge or goal in one sentence"\n' +
+      '- One big CTA button. JS: on click, hide screen 1, show screen 2, call generateResults().\n\n' +
+      'SCREEN 2 — RESULTS (this is where the WOW lives):\n' +
+      '- Personalized hero: "Here is your [Topic] Plan, [Name]!" in large text.\n' +
+      '- ONE animated score/index (large number 0→X counting up via setInterval, takes 1.2s) with a label specific to the topic (AI Risk Score, Financial Score, Readiness Index, etc.).\n' +
+      '- 3 result sections as cards, each with: colored left-border in accent, section title, 3-4 bullet points generated dynamically from the inputs using JS if/else or data objects. Each bullet must reference the actual user input by value.\n' +
+      '- Interactive checklist: "Your action plan" — 5 checkboxes with a live progress bar. State saved in localStorage.\n' +
+      '- Print button at bottom.\n\n' +
+      'generateResults() function: reads all 4 input values, uses them to build personalized text via JS template literals and if/else blocks. The name must appear in at least 3 places in the results.';
 
     var userMsg;
     if(ebookContext && !topic) {
@@ -2496,7 +2491,7 @@ app.post('/api/generate-app', async function(req, res) {
         (context ? 'Author requirements: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 6000, true, 'claude-sonnet-4-6');
     var html = (result.text || result || '').trim();
     // Strip markdown fences (case-insensitive, any variant)
     html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
