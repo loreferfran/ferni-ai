@@ -1682,19 +1682,20 @@ async function _extractText(file){
 
 // Detector línea a línea para "Solo importar" — texto exacto, títulos reales, orden garantizado.
 function _splitByLines(text){
-  // Para PDFs donde los encabezados pueden venir en medio de una línea larga,
-  // insertar \n antes de palabras clave de capítulo antes de escanear líneas.
+  // Para PDFs donde encabezados vienen en medio de una línea larga,
+  // insertar \n antes. IMPORTANTE: usar \d+ para capturar números de 2+ dígitos (Cap. 10, 11...).
   var prep = text
-    .replace(/([^\n])\s*(Cap[ií]tulo\s+\d)/gi,   '$1\n$2')
-    .replace(/([^\n])\s*(CAPÍTULO\s+\d)/g,        '$1\n$2')
-    .replace(/([^\n])\s*(Chapter\s+\d)/gi,         '$1\n$2')
-    .replace(/([^\n])\s*(Bonus\s*[\d:—\-])/gi,    '$1\n$2')
-    .replace(/([^\n])\s*(Parte\s+\d)/gi,           '$1\n$2')
-    .replace(/([^\n])\s*(Conclusi[oó]n\b)/gi,      '$1\n$2')
-    .replace(/([^\n])\s*(Introducci[oó]n\b)/gi,    '$1\n$2');
+    .replace(/([^\n])\s*(Cap[ií]tulo\s+\d+)/gi,   '$1\n$2')
+    .replace(/([^\n])\s*(CAPÍTULO\s+\d+)/g,        '$1\n$2')
+    .replace(/([^\n])\s*(Chapter\s+\d+)/gi,         '$1\n$2')
+    .replace(/([^\n])\s*(Bonus\s*[\d:—\-])/gi,     '$1\n$2')
+    .replace(/([^\n])\s*(Parte\s+\d+)/gi,           '$1\n$2')
+    .replace(/([^\n])\s*(Conclusi[oó]n\b)/gi,       '$1\n$2')
+    .replace(/([^\n])\s*(Introducci[oó]n\b)/gi,     '$1\n$2');
 
-  // Regex que identifica una línea como título de sección
-  var headRx = /^(Cap[ií]tulo|CAPÍTULO|Chapter|CHAPTER|Chapitre|Kapitel|Capitolo|Bonus|BONUS|Parte?\s*\d|Part\s*\d|Secci[oó]n\s*\d|Introducci[oó]n|INTRODUCCI[OÓ]N|Conclusi[oó]n|CONCLUSI[OÓ]N|Introduction|Conclusion|Appendix|Ap[eé]ndice)\b/i;
+  // Detecta línea como título: empieza con keyword de capítulo, longitud razonable.
+  // \d+ para capturar "Capítulo 10", "Chapter 12", etc.
+  var headRx = /^(Cap[ií]tulo|CAPÍTULO|Chapter|CHAPTER|Chapitre|Kapitel|Capitolo|Bonus|BONUS|Parte\s+\d+|Part\s+\d+|Secci[oó]n\s+\d+|Introducci[oó]n|INTRODUCCI[OÓ]N|Conclusi[oó]n|CONCLUSI[OÓ]N|Introduction|Conclusion|Appendix|Ap[eé]ndice)\b/i;
 
   var lines   = prep.split('\n');
   var chapters = [];
@@ -1915,8 +1916,10 @@ function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
   if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+_impMeta.market+' · '+_impMeta.lang;
   var titleEl = document.getElementById('imp-title-display');
-  var detectedTitle = (_impChapters[0] && _impChapters[0].title) ? _impChapters[0].title : (_impMeta.fileName||'Ebook importado');
-  if(titleEl) titleEl.textContent = '✅ ' + (detectedTitle.length > 50 ? detectedTitle.substring(0,50)+'…' : detectedTitle);
+  // Título del ebook = nombre del archivo sin extensión (no el primer capítulo)
+  var bookTitle = (_impMeta.fileName||'Ebook importado').replace(/\.[^/.]+$/, '');
+  _impMeta.bookTitle = bookTitle;
+  if(titleEl) titleEl.textContent = '✅ ' + (bookTitle.length > 50 ? bookTitle.substring(0,50)+'…' : bookTitle);
   // Restaurar thumbnail de portada si hay imagen guardada
   if(_impMeta.coverDataUrl){
     var thumb = document.getElementById('imp-cover-thumb');
@@ -1983,7 +1986,8 @@ async function applyImpCorrection(){
 }
 
 function buildImportPreviewHtml(chapters, meta){
-  var title = meta.detectedTitle || meta.fileName || 'Ebook';
+  // Título = nombre del archivo sin extensión (nunca el título de un capítulo)
+  var title = meta.bookTitle || (meta.fileName ? meta.fileName.replace(/\.[^/.]+$/, '') : 'Ebook');
   var lang = meta.lang || 'Español';
 
   // Detectar nicho desde el contenido de los capítulos para aplicar la paleta correcta
