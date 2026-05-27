@@ -2453,18 +2453,19 @@ app.post('/api/generate-app', async function(req, res) {
       '3. Every word, label, button, placeholder, tooltip, error: written in ' + lang + '.\n' +
       '4. Market: ' + countryName + '. Currency: ' + currency + ' when needed.\n' +
       '5. Visual design: dark premium theme — bg #0f0f1a, cards #1a1a2e, accent #6c5ce7, secondary accent #a29bfe, text #e8e8f0. Rounded-xl cards, subtle box-shadows, smooth CSS transitions. Font: system-ui or Inter.\n' +
-      '6. DEEP INPUT COLLECTION — Step 1 of the app must collect rich profile data before showing any results. Required fields:\n' +
-      '   • Name + current role/profession (text)\n' +
-      '   • Years of experience (select: <2 / 2-5 / 5-10 / 10+)\n' +
-      '   • Main daily tasks — what they actually do every day (textarea, 2 rows)\n' +
-      '   • Top 3 skills they consider their strength (textarea or 3 text inputs)\n' +
-      '   • Tools/software they use daily (text, comma-separated)\n' +
-      '   • Weekly work hours (select: <20 / 20-40 / 40-50 / 50+)\n' +
-      '   • Their main goal right now (select or radio with 3-4 topic-specific options)\n' +
-      '   The "Generate my plan" button only appears after all required fields have a value.\n' +
-      '7. HYPER-PERSONALIZED OUTPUT — Results must use the actual values entered. Show the user\'s name, reference their specific tasks and tools by name in recommendations. Never generic advice. If they said they use Excel → recommend Power Query. If they work 50h weeks → address burnout risk.\n' +
-      '8. UX: 2-step flow (Profile → Results), results in tabs or cards, progress indicator, checkboxes that persist in localStorage, PDF/print button.\n' +
-      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. The output must be a 100% working app.\n' +
+      '6. DEEP INPUT COLLECTION — Step 1 must collect a rich profile ADAPTED TO THE EBOOK TOPIC before showing results.\n' +
+      '   Design 5-7 input fields that make sense for THIS specific topic. Examples by category:\n' +
+      '   • Career/AI/Business: name, role, years experience, daily tasks (textarea), tools used, weekly hours, main goal\n' +
+      '   • Finance/Credit/Investment: name, monthly income, current savings, debts, financial goal, timeline, risk tolerance\n' +
+      '   • Fitness/Health/Nutrition: name, age, current fitness level, goal (lose weight/gain muscle/endurance), weekly training days, diet type, limitations\n' +
+      '   • Parenting/Family: name, children ages, main challenge (textarea), available time per day, support network\n' +
+      '   • Cooking/Recipes: name, cooking skill level, dietary restrictions, weekly budget, time per meal, cooking for how many people\n' +
+      '   • Marketing/Sales: name, business type, current monthly revenue, target customer, main channel, budget\n' +
+      '   Always include: name (used in results) + one textarea for context + one goal/priority selector.\n' +
+      '   The action button only activates after all required fields have a value (JS validation).\n' +
+      '7. HYPER-PERSONALIZED OUTPUT — Results must reference the actual entered values by name. Show the user\'s name. If they mentioned specific data (a tool, a number, a limitation) → use it directly in recommendations. Never show generic advice that ignores the input.\n' +
+      '8. UX: 2-step flow (Profile → Results), results in tabs or cards, progress indicator, checkboxes that persist in localStorage, print button.\n' +
+      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. 100% working app.\n' +
       '10. Write compact, efficient code. Reuse CSS classes.';
 
     var userMsg;
