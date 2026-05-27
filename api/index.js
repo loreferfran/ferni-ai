@@ -2448,37 +2448,38 @@ app.post('/api/generate-app', async function(req, res) {
 
     var accentMap = 'career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22, default=#6c5ce7';
     var sys = 'You are a world-class frontend developer. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown, no code fences.\n\n' +
-      'LANGUAGE: ' + lang + '. MARKET: ' + countryName + '. CURRENCY: ' + currency + '.\n\n' +
-      '=== MANDATORY ELEMENT IDs — JS depends on these exact IDs ===\n' +
-      'id="s1"        → screen 1 (form), visible by default\n' +
-      'id="s2"        → screen 2 (results), hidden: style="display:none"\n' +
-      'id="f-name"    → <input type="text"> first name\n' +
-      'id="f-a"       → <select> or <input> — topic-specific field 1\n' +
-      'id="f-b"       → <select> or <input> — topic-specific field 2\n' +
-      'id="f-goal"    → <textarea> main challenge / goal\n' +
-      'id="score-num" → the animated score digit\n' +
-      'id="r-hero"    → personalized hero div\n' +
-      'id="r-cards"   → 3 result cards div\n' +
-      'id="r-check"   → checklist div\n\n' +
-      '=== EXACT JS — paste this verbatim, only fill generateResults() body ===\n' +
+      '⚠ IDIOMA OBLIGATORIO: ' + lang + '. TODO el texto visible al usuario debe estar en ' + lang + '. CERO palabras en inglés en la interfaz.\n' +
+      'MERCADO: ' + countryName + '. MONEDA: ' + currency + '.\n\n' +
+      '=== IDs OBLIGATORIOS — el JS depende de estos IDs exactos ===\n' +
+      'id="s1"        → pantalla 1 (formulario), visible por defecto\n' +
+      'id="s2"        → pantalla 2 (resultados), oculta: style="display:none"\n' +
+      'id="f-name"    → <input type="text"> nombre del usuario\n' +
+      'id="f-a"       → <select> o <input> — campo específico del tema 1\n' +
+      'id="f-b"       → <select> o <input> — campo específico del tema 2\n' +
+      'id="f-goal"    → <textarea> desafío / objetivo principal\n' +
+      'id="score-num" → dígito del score animado\n' +
+      'id="r-hero"    → div del héroe personalizado\n' +
+      'id="r-cards"   → div con las 3 tarjetas de resultados\n' +
+      'id="r-check"   → div con el checklist\n\n' +
+      '=== JS EXACTO — copiar verbatim, solo completar el cuerpo de generateResults() ===\n' +
       'function goToResults(){\n' +
       '  document.getElementById("s1").style.display="none";\n' +
       '  document.getElementById("s2").style.display="block";\n' +
       '  generateResults();\n' +
       '}\n' +
       'function generateResults(){\n' +
-      '  var name=document.getElementById("f-name").value.trim()||"Friend";\n' +
+      '  var name=document.getElementById("f-name").value.trim()||"Usuario";\n' +
       '  var a=document.getElementById("f-a").value;\n' +
       '  var b=document.getElementById("f-b").value;\n' +
-      '  var goal=document.getElementById("f-goal").value.trim()||"reach your goals";\n' +
-      '  /* FILL: animate score, populate r-hero r-cards r-check using name/a/b/goal */\n' +
-      '  /* Animate: var n=0,max=87;var t=setInterval(function(){n++;document.getElementById("score-num").textContent=n;if(n>=max)clearInterval(t);},14); */\n' +
-      '  /* Use innerHTML to set r-hero, r-cards, r-check. Name must appear 3+ times. */\n' +
-      '  /* Checklist localStorage key: "chk_"+i. Restore on load with DOMContentLoaded. */\n' +
+      '  var goal=document.getElementById("f-goal").value.trim()||"alcanzar tus objetivos";\n' +
+      '  /* COMPLETAR: animar score, poblar r-hero, r-cards, r-check usando name/a/b/goal */\n' +
+      '  /* Animación: var n=0,max=87;var t=setInterval(function(){n++;document.getElementById("score-num").textContent=n;if(n>=max)clearInterval(t);},14); */\n' +
+      '  /* Usar innerHTML para poblar r-hero, r-cards, r-check. El nombre debe aparecer 3+ veces. */\n' +
+      '  /* Checklist localStorage clave: "chk_"+i. Restaurar con DOMContentLoaded. */\n' +
       '}\n\n' +
-      '=== CSS (copy exactly, set --ac to the topic accent) ===\n' +
-      ':root{--ac:' + '#6c5ce7' + '}\n' +
-      'Choose --ac by topic: ' + accentMap + '\n' +
+      '=== CSS (copiar exacto, ajustar --ac al acento del tema) ===\n' +
+      ':root{--ac:#6c5ce7}\n' +
+      'Elegir --ac según tema: ' + accentMap + '\n' +
       'body{background:#0a0a14;color:#e0dff5;font-family:system-ui,sans-serif;margin:0;padding:20px;max-width:680px;margin-left:auto;margin-right:auto}\n' +
       '.card{background:#1a1a35;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;margin-bottom:14px}\n' +
       '.r-card{border-left:4px solid var(--ac)}\n' +
@@ -2490,17 +2491,17 @@ app.post('/api/generate-app', async function(req, res) {
       '.score-big{font-size:72px;font-weight:900;color:var(--ac);line-height:1}\n' +
       'h1{margin:0 0 4px;font-size:22px} h2{margin:0 0 12px;font-size:18px} h3{margin:0 0 8px;font-size:15px;color:var(--ac)}\n' +
       'ul{margin:6px 0;padding-left:18px;line-height:1.7}\n\n' +
-      '=== CONTENT TO GENERATE (topic-specific, adapt 100% to ebook) ===\n' +
-      'SCREEN 1 (id="s1"):\n' +
-      '- App title (h1) + one-line subtitle inside a .card\n' +
-      '- 4 labeled inputs using the exact IDs above: f-name always first name; f-a and f-b must be 100% topic-specific selects/numbers; f-goal is textarea\n' +
-      '- <button class="btn" onclick="goToResults()">CTA text in ' + lang + '</button>\n\n' +
-      'SCREEN 2 (id="s2", display:none):\n' +
-      '- id="r-hero": hero card — "Tu Plan de [Topic], <span id=\\"hero-name\\"></span>!" + topic description\n' +
-      '- Score card: <div class="score-big" id="score-num">0</div> + score label\n' +
-      '- id="r-cards": 3 .card.r-card divs with h3 + ul — content filled by generateResults()\n' +
-      '- id="r-check": checklist card with 5 checkboxes + .progress + .progress-bar\n' +
-      '- <button class="btn" onclick="window.print()">Print</button>\n\n' +
+      '=== CONTENIDO A GENERAR (100% específico al ebook y al tema) ===\n' +
+      'PANTALLA 1 (id="s1"):\n' +
+      '- Título de la app (h1) + subtítulo en una línea dentro de .card\n' +
+      '- 4 campos con los IDs exactos de arriba: f-name siempre para el nombre; f-a y f-b deben ser 100% específicos al tema (selects/números); f-goal es textarea\n' +
+      '- <button class="btn" onclick="goToResults()">Texto del botón en ' + lang + '</button>\n\n' +
+      'PANTALLA 2 (id="s2", display:none):\n' +
+      '- id="r-hero": tarjeta héroe — mostrar nombre del usuario de forma destacada\n' +
+      '- Tarjeta del score: <div class="score-big" id="score-num">0</div> + etiqueta del score en ' + lang + '\n' +
+      '- id="r-cards": 3 divs .card.r-card con h3 + ul — contenido generado por generateResults()\n' +
+      '- id="r-check": tarjeta checklist con 5 checkboxes + .progress + .progress-bar\n' +
+      '- <button class="btn" onclick="window.print()">Imprimir</button>\n\n' +
       'Be concise. Every tag closed. All 10 mandatory IDs present. generateResults() must be complete.';
 
     var userMsg;
