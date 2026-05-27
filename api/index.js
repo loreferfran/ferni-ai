@@ -2434,6 +2434,23 @@ app.post('/api/import-chapter', async function(req, res) {
   }
 });
 
+function buildAppHtml(d, lang, market, currency) {
+  var ac = d.accentColor || '#6c5ce7';
+  var fa = d.fields.a || {};
+  var fb = d.fields.b || {};
+  var optA = (fa.options||[]).map(function(o){ return '<option>'+o+'</option>'; }).join('');
+  var optB = (fb.options||[]).map(function(o){ return '<option>'+o+'</option>'; }).join('');
+  var cards = (d.cards||[]).map(function(c,i){
+    var bullets = (c.bullets||[]).map(function(b){ return '<li id="rb'+i+'_'+((c.bullets||[]).indexOf(b))+'">'+b+'</li>'; }).join('');
+    return '<div class="card r-card"><h3>'+c.title+'</h3><ul id="ru'+i+'">'+bullets+'</ul></div>';
+  }).join('');
+  var checklist = (d.checklistItems||[]).map(function(item,i){
+    return '<label style="display:flex;align-items:center;gap:10px;margin:8px 0;cursor:pointer"><input type="checkbox" id="chk'+i+'" onchange="updProg()" style="width:18px;height:18px;accent-color:var(--ac);cursor:pointer"><span style="font-size:14px">'+item+'</span></label>';
+  }).join('');
+  var dataJson = JSON.stringify(d).replace(/<\/script>/gi, '<\\/script>');
+  return '<!DOCTYPE html>\n<html lang="'+lang+'">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>'+(d.appTitle||'Herramienta')+'</title>\n<style>\n:root{--ac:'+ac+'}\n*{box-sizing:border-box}\nbody{background:#0a0a14;color:#e0dff5;font-family:system-ui,sans-serif;margin:0;padding:20px;max-width:680px;margin-left:auto;margin-right:auto}\n.card{background:#1a1a35;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;margin-bottom:14px}\n.r-card{border-left:4px solid var(--ac)}\ninput,select,textarea{background:#0d0d20;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px;color:#e0dff5;width:100%;margin-top:6px;font-size:14px;font-family:inherit}\nlabel.lbl{font-size:13px;color:#a09ab5;display:block;margin-top:14px}\n.btn{width:100%;padding:14px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px}\n.btn-sec{background:transparent;border:1px solid rgba(255,255,255,0.15);color:#a09ab5}\n.score-wrap{text-align:center;padding:16px 0 8px}\n.score-big{font-size:80px;font-weight:900;color:var(--ac);line-height:1}\n.score-lbl{font-size:14px;color:#a09ab5;margin-top:6px}\n.progress{background:#0d0d20;border-radius:8px;height:8px;margin:10px 0}\n.progress-bar{background:var(--ac);height:100%;border-radius:8px;transition:width .4s;width:0%}\nh1{margin:0 0 6px;font-size:23px;color:#fff}\nh2{margin:0 0 8px;font-size:18px}\nh3{margin:0 0 8px;font-size:15px;color:var(--ac)}\np{margin:4px 0;color:#a09ab5;font-size:14px}\nul{margin:6px 0;padding-left:18px;line-height:1.9}\nli{font-size:14px}\n.hi{color:var(--ac);font-weight:700}\n</style>\n</head>\n<body>\n\n<div id="s1">\n  <div class="card">\n    <h1>'+(d.appTitle||'Herramienta')+'</h1>\n    <p>'+(d.subtitle||'')+'</p>\n  </div>\n  <div class="card">\n    <label class="lbl">'+(d.fields.name||'Tu nombre')+'<input type="text" id="f-name" placeholder="Ej: María"></label>\n    <label class="lbl">'+fa.label+'<select id="f-a">'+optA+'</select></label>\n    <label class="lbl">'+fb.label+'<select id="f-b">'+optB+'</select></label>\n    <label class="lbl">'+(d.fields.goal||'Tu objetivo')+'<textarea id="f-goal" rows="3" placeholder="'+(d.goalPlaceholder||'Descríbelo brevemente...')+'"></textarea></label>\n    <button class="btn" onclick="goToResults()">'+(d.ctaText||'Ver mis resultados')+'</button>\n  </div>\n</div>\n\n<div id="s2" style="display:none">\n  <div class="card" id="r-hero">\n    <h2>'+(d.heroPrefix||'Tu plan personalizado,')+'&nbsp;<span class="hi" id="hero-name"></span></h2>\n    <p id="hero-sub"></p>\n  </div>\n  <div class="card score-wrap">\n    <div class="score-big" id="score-num">0</div>\n    <div class="score-lbl">'+(d.scoreLabel||'Puntuación')+'</div>\n  </div>\n  <div id="r-cards">'+cards+'</div>\n  <div class="card" id="r-check">\n    <h3>'+(d.checklistTitle||'Tu plan de acción')+'</h3>\n    <div id="chk-list">'+checklist+'</div>\n    <div class="progress"><div class="progress-bar" id="prog-bar"></div></div>\n    <p id="prog-txt" style="font-size:12px;text-align:right;color:#a09ab5"></p>\n  </div>\n  <button class="btn" onclick="window.print()">'+(d.printText||'Imprimir')+'</button>\n  <button class="btn btn-sec" onclick="goBack()">'+(d.backText||'← Volver')+'</button>\n</div>\n\n<script>\nvar DATA='+dataJson+';\nfunction goToResults(){\n  var name=document.getElementById("f-name").value.trim()||"Usuario";\n  var fa=document.getElementById("f-a").value;\n  var fb=document.getElementById("f-b").value;\n  var goal=document.getElementById("f-goal").value.trim()||"alcanzar tus metas";\n  document.getElementById("s1").style.display="none";\n  document.getElementById("s2").style.display="block";\n  window.scrollTo(0,0);\n  document.getElementById("hero-name").textContent=name;\n  var hs=document.getElementById("hero-sub");\n  if(hs) hs.textContent=(DATA.heroSub||"Basado en tu perfil, aquí está tu análisis personalizado.").replace(/\\{name\\}/g,name).replace(/\\{a\\}/g,fa).replace(/\\{b\\}/g,fb);\n  var max=DATA.scoreMax||100;\n  var score=Math.min(max,Math.round(max*0.55+Math.random()*(max*0.4)));\n  var n=0;\n  var t=setInterval(function(){n+=2;document.getElementById("score-num").textContent=n;if(n>=score){document.getElementById("score-num").textContent=score;clearInterval(t);}},16);\n  (DATA.cards||[]).forEach(function(card,i){\n    var ul=document.getElementById("ru"+i);\n    if(!ul)return;\n    ul.innerHTML="";\n    (card.bullets||[]).forEach(function(b){\n      var li=document.createElement("li");\n      li.textContent=b.replace(/\\{name\\}/g,name).replace(/\\{a\\}/g,fa).replace(/\\{b\\}/g,fb).replace(/\\{goal\\}/g,goal);\n      ul.appendChild(li);\n    });\n  });\n  restoreChk();\n}\nfunction goBack(){\n  document.getElementById("s2").style.display="none";\n  document.getElementById("s1").style.display="block";\n  window.scrollTo(0,0);\n}\nfunction updProg(){\n  var cbs=document.querySelectorAll("#chk-list input[type=checkbox]");\n  var done=0;\n  cbs.forEach(function(cb,i){localStorage.setItem("chk_"+i,cb.checked?"1":"0");if(cb.checked)done++;});\n  var pct=cbs.length?Math.round(done/cbs.length*100):0;\n  document.getElementById("prog-bar").style.width=pct+"%";\n  var pt=document.getElementById("prog-txt");\n  if(pt) pt.textContent=done+"/"+cbs.length+" completados";\n}\nfunction restoreChk(){\n  var cbs=document.querySelectorAll("#chk-list input[type=checkbox]");\n  cbs.forEach(function(cb,i){cb.checked=localStorage.getItem("chk_"+i)==="1";});\n  updProg();\n}\n</script>\n</body>\n</html>';
+}
+
 app.post('/api/generate-app', async function(req, res) {
   try {
     var topic        = req.body.topic        || '';
@@ -2446,102 +2463,62 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var accentMap = 'career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22, default=#6c5ce7';
-    var sys = 'You are a world-class frontend developer. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown, no code fences.\n\n' +
-      '⚠ IDIOMA OBLIGATORIO: ' + lang + '. TODO el texto visible al usuario debe estar en ' + lang + '. CERO palabras en inglés en la interfaz.\n' +
-      'MERCADO: ' + countryName + '. MONEDA: ' + currency + '.\n\n' +
-      '=== IDs OBLIGATORIOS — el JS depende de estos IDs exactos ===\n' +
-      'id="s1"        → pantalla 1 (formulario), visible por defecto\n' +
-      'id="s2"        → pantalla 2 (resultados), oculta: style="display:none"\n' +
-      'id="f-name"    → <input type="text"> nombre del usuario\n' +
-      'id="f-a"       → <select> o <input> — campo específico del tema 1\n' +
-      'id="f-b"       → <select> o <input> — campo específico del tema 2\n' +
-      'id="f-goal"    → <textarea> desafío / objetivo principal\n' +
-      'id="score-num" → dígito del score animado\n' +
-      'id="r-hero"    → div del héroe personalizado\n' +
-      'id="r-cards"   → div con las 3 tarjetas de resultados\n' +
-      'id="r-check"   → div con el checklist\n\n' +
-      '=== JS EXACTO — copiar verbatim, solo completar el cuerpo de generateResults() ===\n' +
-      'function goToResults(){\n' +
-      '  document.getElementById("s1").style.display="none";\n' +
-      '  document.getElementById("s2").style.display="block";\n' +
-      '  generateResults();\n' +
-      '}\n' +
-      'function generateResults(){\n' +
-      '  var name=document.getElementById("f-name").value.trim()||"Usuario";\n' +
-      '  var a=document.getElementById("f-a").value;\n' +
-      '  var b=document.getElementById("f-b").value;\n' +
-      '  var goal=document.getElementById("f-goal").value.trim()||"alcanzar tus objetivos";\n' +
-      '  /* COMPLETAR: animar score, poblar r-hero, r-cards, r-check usando name/a/b/goal */\n' +
-      '  /* Animación: var n=0,max=87;var t=setInterval(function(){n++;document.getElementById("score-num").textContent=n;if(n>=max)clearInterval(t);},14); */\n' +
-      '  /* Usar innerHTML para poblar r-hero, r-cards, r-check. El nombre debe aparecer 3+ veces. */\n' +
-      '  /* Checklist localStorage clave: "chk_"+i. Restaurar con DOMContentLoaded. */\n' +
+    var sys = 'Eres un diseñador UX y copywriter experto. Devuelve SOLO un objeto JSON válido (sin markdown, sin explicación, sin código extra).\n\n' +
+      'IDIOMA: ' + lang + '. MERCADO: ' + countryName + '. MONEDA: ' + currency + '.\n\n' +
+      'Todo el texto visible al usuario debe estar en ' + lang + '.\n\n' +
+      'Esquema JSON a devolver:\n' +
+      '{\n' +
+      '  "appTitle": "nombre de la app (en ' + lang + ')",\n' +
+      '  "subtitle": "descripción en una línea",\n' +
+      '  "accentColor": "hex — elige según tema: career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22",\n' +
+      '  "scoreLabel": "etiqueta del score (ej: Índice de Resiliencia IA, Puntuación Financiera...)",\n' +
+      '  "scoreMax": 100,\n' +
+      '  "fields": {\n' +
+      '    "name": "etiqueta del campo nombre",\n' +
+      '    "a": { "label": "etiqueta", "options": ["op1","op2","op3","op4","op5"] },\n' +
+      '    "b": { "label": "etiqueta", "options": ["op1","op2","op3","op4"] },\n' +
+      '    "goal": "etiqueta del textarea",\n' +
+      '    "goalPlaceholder": "texto placeholder del textarea"\n' +
+      '  },\n' +
+      '  "ctaText": "texto del botón CTA",\n' +
+      '  "heroPrefix": "texto antes del nombre del usuario (ej: Tu Plan de Finanzas,)",\n' +
+      '  "heroSub": "texto de apoyo — puede usar {name} {a} {b} como placeholders",\n' +
+      '  "cards": [\n' +
+      '    { "title": "título tarjeta 1", "bullets": ["bullet con {a} {b} {name} {goal}", "...3-4 bullets..."] },\n' +
+      '    { "title": "título tarjeta 2", "bullets": ["..."] },\n' +
+      '    { "title": "título tarjeta 3", "bullets": ["..."] }\n' +
+      '  ],\n' +
+      '  "checklistTitle": "título del checklist",\n' +
+      '  "checklistItems": ["ítem 1","ítem 2","ítem 3","ítem 4","ítem 5"],\n' +
+      '  "printText": "Imprimir",\n' +
+      '  "backText": "← Volver al inicio"\n' +
       '}\n\n' +
-      '=== CSS (copiar exacto, ajustar --ac al acento del tema) ===\n' +
-      ':root{--ac:#6c5ce7}\n' +
-      'Elegir --ac según tema: ' + accentMap + '\n' +
-      'body{background:#0a0a14;color:#e0dff5;font-family:system-ui,sans-serif;margin:0;padding:20px;max-width:680px;margin-left:auto;margin-right:auto}\n' +
-      '.card{background:#1a1a35;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;margin-bottom:14px}\n' +
-      '.r-card{border-left:4px solid var(--ac)}\n' +
-      'input,select,textarea{background:#0d0d20;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px;color:#e0dff5;width:100%;box-sizing:border-box;margin-top:6px;font-size:14px}\n' +
-      'label{font-size:13px;color:#a09ab5;display:block;margin-top:14px}\n' +
-      '.btn{width:100%;padding:14px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px}\n' +
-      '.progress{background:#1a1a35;border-radius:8px;height:8px;margin:10px 0}\n' +
-      '.progress-bar{background:var(--ac);height:100%;border-radius:8px;transition:width .3s}\n' +
-      '.score-big{font-size:72px;font-weight:900;color:var(--ac);line-height:1}\n' +
-      'h1{margin:0 0 4px;font-size:22px} h2{margin:0 0 12px;font-size:18px} h3{margin:0 0 8px;font-size:15px;color:var(--ac)}\n' +
-      'ul{margin:6px 0;padding-left:18px;line-height:1.7}\n\n' +
-      '=== CONTENIDO A GENERAR (100% específico al ebook y al tema) ===\n' +
-      'PANTALLA 1 (id="s1"):\n' +
-      '- Título de la app (h1) + subtítulo en una línea dentro de .card\n' +
-      '- 4 campos con los IDs exactos de arriba: f-name siempre para el nombre; f-a y f-b deben ser 100% específicos al tema (selects/números); f-goal es textarea\n' +
-      '- <button class="btn" onclick="goToResults()">Texto del botón en ' + lang + '</button>\n\n' +
-      'PANTALLA 2 (id="s2", display:none):\n' +
-      '- id="r-hero": tarjeta héroe — mostrar nombre del usuario de forma destacada\n' +
-      '- Tarjeta del score: <div class="score-big" id="score-num">0</div> + etiqueta del score en ' + lang + '\n' +
-      '- id="r-cards": 3 divs .card.r-card con h3 + ul — contenido generado por generateResults()\n' +
-      '- id="r-check": tarjeta checklist con 5 checkboxes + .progress + .progress-bar\n' +
-      '- <button class="btn" onclick="window.print()">Imprimir</button>\n\n' +
-      'Be concise. Every tag closed. All 10 mandatory IDs present. generateResults() must be complete.';
+      'Los bullets de las cards DEBEN usar los placeholders {name}, {a}, {b}, {goal} para personalizar con los datos del usuario.\n' +
+      'Sé específico al tema del ebook — nada genérico.';
 
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Read this ebook data carefully. Design the PERFECT companion app for it — the one tool that, once the reader uses it, makes them say "I needed this exactly." The app must:\n' +
-        '- Be 100% specific to this ebook\'s topic and target audience\n' +
-        '- Ask for inputs that only make sense in THIS ebook\'s context\n' +
-        '- Show results that directly apply the ebook\'s core concepts and advice\n' +
-        '- Feel like the natural digital extension of the ebook\n\n' +
-        'Ebook data:\n' + ebookContext +
-        (context ? '\n\nAdditional requirements from author: ' + context : '');
+      userMsg = 'Analiza este ebook y diseña la app complementaria perfecta para él — la herramienta que el lector usará y dirá "exactamente esto necesitaba".\n\nDatos del ebook:\n' + ebookContext +
+        (context ? '\n\nRequerimientos adicionales del autor: ' + context : '');
     } else {
-      userMsg = 'Create a premium interactive tool for: "' + topic + '"\n\n' +
-        'The tool must feel purpose-built for this exact topic — not a generic template adapted to it. ' +
-        'Every field, every result, every label must prove it was designed specifically for this use case.\n\n' +
-        (ebookContext ? 'Related ebook context:\n' + ebookContext + '\n\n' : '') +
-        (context ? 'Author requirements: ' + context : '');
+      userMsg = 'Crea el JSON para una herramienta interactiva premium sobre: "' + topic + '"\n' +
+        (ebookContext ? '\nContexto del ebook relacionado:\n' + ebookContext + '\n' : '') +
+        (context ? '\nRequerimientos del autor: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 6500, true, 'claude-sonnet-4-6');
-    var html = (result.text || result || '').trim();
-    // Strip markdown fences (case-insensitive, any variant)
-    html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
-    // Find start of HTML if there's preamble text
-    var htmlLow = html.toLowerCase();
-    if(!htmlLow.startsWith('<!doctype') && !htmlLow.startsWith('<html')) {
-      var idx = htmlLow.indexOf('<!doctype');
-      if(idx === -1) idx = htmlLow.indexOf('<html');
-      if(idx > 0) html = html.slice(idx);
+    var result = await claudeCall(sys, userMsg, 2000, true, 'claude-sonnet-4-6');
+    var raw = (result.text || result || '').trim();
+    raw = raw.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
+    var d;
+    try { d = JSON.parse(raw); } catch(e) {
+      var m = raw.match(/\{[\s\S]*\}/);
+      if(m) d = JSON.parse(m[0]);
+      else return res.json({ success: false, error: 'Error generando la herramienta. Intenta de nuevo.' });
     }
-    if(!html || html.length < 200) {
-      return res.json({ success: false, error: 'La herramienta generada quedó vacía o incompleta. Intenta de nuevo.' });
-    }
-    // Validate mandatory IDs are present — if any missing, mark truncated so UI warns user
-    var mandatoryIds = ['id="s1"','id="s2"','id="f-name"','id="f-a"','id="f-b"','id="f-goal"','id="score-num"'];
-    var missingId = mandatoryIds.some(function(id){ return html.indexOf(id) === -1; });
-    // Extract product name from <title> tag
-    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    var productName = titleMatch ? titleMatch[1].trim() : '';
-    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' || missingId });
+    if(!d.cards || !d.fields) return res.json({ success: false, error: 'Datos incompletos. Intenta de nuevo.' });
+    var html = buildAppHtml(d, lang, countryName, currency);
+    var productName = d.appTitle || '';
+    res.json({ success: true, html: html, productName: productName, truncated: false });
   } catch(err) {
     res.json({ success: false, error: err.message });
   }
