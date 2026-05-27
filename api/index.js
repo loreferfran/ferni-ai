@@ -2446,33 +2446,62 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are a world-class frontend developer. Build a premium single-file HTML app that feels like a $197 SaaS tool.\n\n' +
-      'HARD RULES:\n' +
-      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown.\n' +
-      '2. ONE file — CSS in <style>, JS in <script>. No CDN, no external files.\n' +
-      '3. Language: ' + lang + '. Market: ' + countryName + '. Currency: ' + currency + '.\n' +
-      '4. MUST BE 100% COMPLETE — every tag closed, every function finished. Never truncate.\n\n' +
-      'DESIGN (dark premium, concise CSS):\n' +
-      'body{background:#0a0a14;color:#e0dff5;font-family:system-ui;margin:0;padding:20px}\n' +
-      '.card{background:#1a1a35;border:1px solid rgba(108,92,231,0.25);border-radius:14px;padding:22px;margin-bottom:16px}\n' +
-      'Choose ONE accent color for the topic: career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22, default=#6c5ce7\n' +
-      'Buttons: background=accent, border-radius:10px, padding:12px 28px, font-weight:700, cursor:pointer\n' +
-      'Inputs/selects/textareas: background:#0d0d20, border:1px solid rgba(255,255,255,0.15), border-radius:8px, padding:10px, color:inherit, width:100%, box-sizing:border-box\n\n' +
-      'STRUCTURE — 2 screens, toggled by JS (display none/block):\n\n' +
-      'SCREEN 1 — PROFILE FORM (compact, all on one page, NO multi-step):\n' +
-      '- App title + one-line description at top.\n' +
-      '- Exactly 4 inputs adapted 100% to the ebook topic:\n' +
-      '  • Always: text input for first name\n' +
-      '  • 2 selects or number inputs specific to THIS topic (e.g. for career: role select + experience select; for finance: income range + debt range; for fitness: goal select + level select)\n' +
-      '  • 1 short textarea: "Describe your main challenge or goal in one sentence"\n' +
-      '- One big CTA button. JS: on click, hide screen 1, show screen 2, call generateResults().\n\n' +
-      'SCREEN 2 — RESULTS (this is where the WOW lives):\n' +
-      '- Personalized hero: "Here is your [Topic] Plan, [Name]!" in large text.\n' +
-      '- ONE animated score/index (large number 0→X counting up via setInterval, takes 1.2s) with a label specific to the topic (AI Risk Score, Financial Score, Readiness Index, etc.).\n' +
-      '- 3 result sections as cards, each with: colored left-border in accent, section title, 3-4 bullet points generated dynamically from the inputs using JS if/else or data objects. Each bullet must reference the actual user input by value.\n' +
-      '- Interactive checklist: "Your action plan" — 5 checkboxes with a live progress bar. State saved in localStorage.\n' +
-      '- Print button at bottom.\n\n' +
-      'generateResults() function: reads all 4 input values, uses them to build personalized text via JS template literals and if/else blocks. The name must appear in at least 3 places in the results.';
+    var accentMap = 'career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22, default=#6c5ce7';
+    var sys = 'You are a world-class frontend developer. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown, no code fences.\n\n' +
+      'LANGUAGE: ' + lang + '. MARKET: ' + countryName + '. CURRENCY: ' + currency + '.\n\n' +
+      '=== MANDATORY ELEMENT IDs — JS depends on these exact IDs ===\n' +
+      'id="s1"        → screen 1 (form), visible by default\n' +
+      'id="s2"        → screen 2 (results), hidden: style="display:none"\n' +
+      'id="f-name"    → <input type="text"> first name\n' +
+      'id="f-a"       → <select> or <input> — topic-specific field 1\n' +
+      'id="f-b"       → <select> or <input> — topic-specific field 2\n' +
+      'id="f-goal"    → <textarea> main challenge / goal\n' +
+      'id="score-num" → the animated score digit\n' +
+      'id="r-hero"    → personalized hero div\n' +
+      'id="r-cards"   → 3 result cards div\n' +
+      'id="r-check"   → checklist div\n\n' +
+      '=== EXACT JS — paste this verbatim, only fill generateResults() body ===\n' +
+      'function goToResults(){\n' +
+      '  document.getElementById("s1").style.display="none";\n' +
+      '  document.getElementById("s2").style.display="block";\n' +
+      '  generateResults();\n' +
+      '}\n' +
+      'function generateResults(){\n' +
+      '  var name=document.getElementById("f-name").value.trim()||"Friend";\n' +
+      '  var a=document.getElementById("f-a").value;\n' +
+      '  var b=document.getElementById("f-b").value;\n' +
+      '  var goal=document.getElementById("f-goal").value.trim()||"reach your goals";\n' +
+      '  /* FILL: animate score, populate r-hero r-cards r-check using name/a/b/goal */\n' +
+      '  /* Animate: var n=0,max=87;var t=setInterval(function(){n++;document.getElementById("score-num").textContent=n;if(n>=max)clearInterval(t);},14); */\n' +
+      '  /* Use innerHTML to set r-hero, r-cards, r-check. Name must appear 3+ times. */\n' +
+      '  /* Checklist localStorage key: "chk_"+i. Restore on load with DOMContentLoaded. */\n' +
+      '}\n\n' +
+      '=== CSS (copy exactly, set --ac to the topic accent) ===\n' +
+      ':root{--ac:' + '#6c5ce7' + '}\n' +
+      'Choose --ac by topic: ' + accentMap + '\n' +
+      'body{background:#0a0a14;color:#e0dff5;font-family:system-ui,sans-serif;margin:0;padding:20px;max-width:680px;margin-left:auto;margin-right:auto}\n' +
+      '.card{background:#1a1a35;border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:22px;margin-bottom:14px}\n' +
+      '.r-card{border-left:4px solid var(--ac)}\n' +
+      'input,select,textarea{background:#0d0d20;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px;color:#e0dff5;width:100%;box-sizing:border-box;margin-top:6px;font-size:14px}\n' +
+      'label{font-size:13px;color:#a09ab5;display:block;margin-top:14px}\n' +
+      '.btn{width:100%;padding:14px;background:var(--ac);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px}\n' +
+      '.progress{background:#1a1a35;border-radius:8px;height:8px;margin:10px 0}\n' +
+      '.progress-bar{background:var(--ac);height:100%;border-radius:8px;transition:width .3s}\n' +
+      '.score-big{font-size:72px;font-weight:900;color:var(--ac);line-height:1}\n' +
+      'h1{margin:0 0 4px;font-size:22px} h2{margin:0 0 12px;font-size:18px} h3{margin:0 0 8px;font-size:15px;color:var(--ac)}\n' +
+      'ul{margin:6px 0;padding-left:18px;line-height:1.7}\n\n' +
+      '=== CONTENT TO GENERATE (topic-specific, adapt 100% to ebook) ===\n' +
+      'SCREEN 1 (id="s1"):\n' +
+      '- App title (h1) + one-line subtitle inside a .card\n' +
+      '- 4 labeled inputs using the exact IDs above: f-name always first name; f-a and f-b must be 100% topic-specific selects/numbers; f-goal is textarea\n' +
+      '- <button class="btn" onclick="goToResults()">CTA text in ' + lang + '</button>\n\n' +
+      'SCREEN 2 (id="s2", display:none):\n' +
+      '- id="r-hero": hero card — "Tu Plan de [Topic], <span id=\\"hero-name\\"></span>!" + topic description\n' +
+      '- Score card: <div class="score-big" id="score-num">0</div> + score label\n' +
+      '- id="r-cards": 3 .card.r-card divs with h3 + ul — content filled by generateResults()\n' +
+      '- id="r-check": checklist card with 5 checkboxes + .progress + .progress-bar\n' +
+      '- <button class="btn" onclick="window.print()">Print</button>\n\n' +
+      'Be concise. Every tag closed. All 10 mandatory IDs present. generateResults() must be complete.';
 
     var userMsg;
     if(ebookContext && !topic) {
@@ -2491,7 +2520,7 @@ app.post('/api/generate-app', async function(req, res) {
         (context ? 'Author requirements: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 6000, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 6500, true, 'claude-sonnet-4-6');
     var html = (result.text || result || '').trim();
     // Strip markdown fences (case-insensitive, any variant)
     html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -2505,10 +2534,13 @@ app.post('/api/generate-app', async function(req, res) {
     if(!html || html.length < 200) {
       return res.json({ success: false, error: 'La herramienta generada quedó vacía o incompleta. Intenta de nuevo.' });
     }
+    // Validate mandatory IDs are present — if any missing, mark truncated so UI warns user
+    var mandatoryIds = ['id="s1"','id="s2"','id="f-name"','id="f-a"','id="f-b"','id="f-goal"','id="score-num"'];
+    var missingId = mandatoryIds.some(function(id){ return html.indexOf(id) === -1; });
     // Extract product name from <title> tag
     var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     var productName = titleMatch ? titleMatch[1].trim() : '';
-    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' });
+    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' || missingId });
   } catch(err) {
     res.json({ success: false, error: err.message });
   }
