@@ -2520,24 +2520,25 @@ app.post('/api/generate-skill', async function(req, res) {
       '2. ONE file — all CSS in <style>, all JS in <script>. You MAY use Google Fonts via <link rel="stylesheet">.\n' +
       '3. Every word in ' + lang + '. Market: ' + countryName + '.\n' +
       '4. VISUAL DESIGN — premium dark editorial:\n' +
-      '   - Background: #0a0a16\n' +
-      '   - Cards: #12122a border 1px solid rgba(255,255,255,0.07)\n' +
-      '   - Headings: Playfair Display (serif, elegant) — color #f0e6d3\n' +
-      '   - Body: DM Sans (clean, modern) — color #c8c4bc\n' +
-      '   - Accent: choose ONE color that fits the ebook topic (career=#6c5ce7, health=#00b894, finance=#f9ca24, marketing=#e17055). Use it for borders, buttons, highlights.\n' +
-      '   - Fields to fill by the user: wrap in <span class="field">[FIELD_NAME]</span> — styled with accent color background at 15% opacity.\n' +
-      '   - Rounded-2xl cards, 24px padding, subtle drop shadows.\n' +
+      '   - Background: #0a0a16. Cards: #12122a, border 1px solid rgba(255,255,255,0.07).\n' +
+      '   - Headings: Playfair Display (serif) — color #f0e6d3. Body: DM Sans — color #c8c4bc.\n' +
+      '   - Accent: ONE color by topic (career=#6c5ce7, health=#00b894, finance=#f9ca24, marketing=#e17055).\n' +
+      '   - [FIELD] placeholders: <span class="field">[FIELD]</span> with accent bg at 15% opacity.\n' +
       '5. REQUIRED STRUCTURE:\n' +
-      '   a) Header: Skill Pack title (Playfair, large), subtitle, ebook topic badge.\n' +
-      '   b) "SYSTEM PROMPT" section: special hero card with crown icon, full system prompt (persona + context + rules), copy button.\n' +
-      '   c) 6-8 ACTION PROMPT CARDS — each collapsed by default. Shows: prompt title + one-line professional tip. Click to expand: full prompt with [FIELDS] highlighted + copy button.\n' +
-      '   d) "Pro Tip" badge on each card (small, accentuated) — a mentor-style insight about when/how to use this prompt for best results.\n' +
-      '   e) Footer: brief usage instructions.\n' +
-      '6. JAVASCRIPT:\n' +
-      '   - Toggle expand/collapse per card (smooth max-height transition).\n' +
-      '   - Copy button: copies the raw prompt text (strip HTML tags) to clipboard. Button shows "✓ Copiado" for 2s.\n' +
-      '   - All prompts must be complete and specific — no generic placeholders.\n' +
-      '7. Do NOT mention prices. Complete all tags and JS. Keep under 4500 tokens.';
+      '   a) Header: title (Playfair, large), subtitle, topic badge.\n' +
+      '   b) SYSTEM PROMPT card: crown icon, full system prompt text, copy button.\n' +
+      '   c) Exactly 5 ACTION PROMPT CARDS — collapsed by default, click header to expand/collapse.\n' +
+      '      Each card shows: number + title + one-line tip (collapsed). Expanded: full prompt + copy button + Pro Tip.\n' +
+      '   d) Footer: one-line usage note.\n' +
+      '6. JAVASCRIPT — use this exact toggle pattern for every card:\n' +
+      '   <div class="card" onclick="this.classList.toggle(\'open\')">\n' +
+      '     <div class="card-header">...</div>\n' +
+      '     <div class="card-body">...</div>\n' +
+      '   </div>\n' +
+      '   CSS: .card-body{display:none} .card.open .card-body{display:block}\n' +
+      '   Copy button: event.stopPropagation(); copies text; shows "✓" for 2s.\n' +
+      '7. CRITICAL — BE COMPLETE: finish every tag and every JS function. All 5 cards must be present.\n' +
+      '8. Write compact code. Do NOT mention prices.';
 
     var userMsg;
     if(ebookContext && !topic) {
@@ -2550,7 +2551,7 @@ app.post('/api/generate-skill', async function(req, res) {
         (context ? 'Additional requirements: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 5000, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
     var html = (result.text || result || '').trim();
     html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
     var htmlLow = html.toLowerCase();
