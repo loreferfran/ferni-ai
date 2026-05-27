@@ -2453,11 +2453,11 @@ app.post('/api/generate-app', async function(req, res) {
       '3. Every word, label, button, placeholder, tooltip, error: written in ' + lang + '.\n' +
       '4. Market: ' + countryName + '. Currency: ' + currency + ' when needed.\n' +
       '5. Visual design: dark premium theme — bg #0f0f1a, cards #1a1a2e, accent #6c5ce7, secondary accent #a29bfe, text #e8e8f0. Rounded-xl cards, subtle box-shadows, smooth CSS transitions. Font: system-ui or Inter.\n' +
-      '6. THE MOST CRITICAL RULE — DYNAMIC PERSONALIZATION: The app MUST produce COMPLETELY DIFFERENT content for different input combinations. Use JavaScript data objects or switch/if-else blocks that map each profession/role to specific, unique action items, skills, milestones, or advice. Never show the same text for two different professions. Never use generic placeholders like "relevant actions" or "key activities".\n' +
-      '7. EXPERIENCE LEVEL must also change the output: junior (<3 years) gets foundational actions; mid (3-7 years) gets growth/specialization actions; senior (7+ years) gets leadership/strategic actions.\n' +
-      '8. UX quality: multi-step or tabbed UI, visual progress indicators (progress bars, step circles, or phase cards), interactive checkboxes or toggles that persist in localStorage, print/export button.\n' +
-      '9. Be complete — close all tags, finish all JS. No TODO comments.\n' +
-      '10. Keep total HTML under 3800 tokens.';
+      '6. DYNAMIC PERSONALIZATION: The app MUST produce COMPLETELY DIFFERENT content for different input combinations. Use a single JS data object mapping each profession/role to specific action items. Never generic placeholders.\n' +
+      '7. EXPERIENCE LEVEL changes output: junior gets foundational actions; mid gets growth actions; senior gets leadership actions.\n' +
+      '8. UX: 3-5 step or tabbed UI, progress indicators, checkboxes that persist in localStorage.\n' +
+      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. Never truncate. The output must be a fully working app.\n' +
+      '10. Write compact, efficient code. Reuse CSS classes. Keep JS data objects concise (3-4 items per profession is enough).';
 
     var userMsg;
     if(ebookContext && !topic) {
@@ -2472,7 +2472,7 @@ app.post('/api/generate-app', async function(req, res) {
         (context ? 'Additional requirements: ' + context : '');
     }
 
-    var result = await claudeCall(sys, userMsg, 5500, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
     var html = (result.text || result || '').trim();
     // Strip markdown fences (case-insensitive, any variant)
     html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
