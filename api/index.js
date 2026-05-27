@@ -2446,39 +2446,54 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are a senior frontend developer and UX/UI designer. You build premium, self-contained single-file web applications that feel like real SaaS products.\n\n' +
-      'ABSOLUTE RULES — zero exceptions:\n' +
-      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no explanation, no markdown fences.\n' +
-      '2. ONE file — all CSS inside <style>, all JS inside <script>. Zero CDN links, zero external dependencies.\n' +
-      '3. Every word, label, button, placeholder, tooltip, error: written in ' + lang + '.\n' +
-      '4. Market: ' + countryName + '. Currency: ' + currency + ' when needed.\n' +
-      '5. Visual design: dark premium theme — bg #0f0f1a, cards #1a1a2e, accent #6c5ce7, secondary accent #a29bfe, text #e8e8f0. Rounded-xl cards, subtle box-shadows, smooth CSS transitions. Font: system-ui or Inter.\n' +
-      '6. DEEP INPUT COLLECTION — Step 1 must collect a rich profile ADAPTED TO THE EBOOK TOPIC before showing results.\n' +
-      '   Design 5-7 input fields that make sense for THIS specific topic. Examples by category:\n' +
-      '   • Career/AI/Business: name, role, years experience, daily tasks (textarea), tools used, weekly hours, main goal\n' +
-      '   • Finance/Credit/Investment: name, monthly income, current savings, debts, financial goal, timeline, risk tolerance\n' +
-      '   • Fitness/Health/Nutrition: name, age, current fitness level, goal (lose weight/gain muscle/endurance), weekly training days, diet type, limitations\n' +
-      '   • Parenting/Family: name, children ages, main challenge (textarea), available time per day, support network\n' +
-      '   • Cooking/Recipes: name, cooking skill level, dietary restrictions, weekly budget, time per meal, cooking for how many people\n' +
-      '   • Marketing/Sales: name, business type, current monthly revenue, target customer, main channel, budget\n' +
-      '   Always include: name (used in results) + one textarea for context + one goal/priority selector.\n' +
-      '   The action button only activates after all required fields have a value (JS validation).\n' +
-      '7. HYPER-PERSONALIZED OUTPUT — Results must reference the actual entered values by name. Show the user\'s name. If they mentioned specific data (a tool, a number, a limitation) → use it directly in recommendations. Never show generic advice that ignores the input.\n' +
-      '8. UX: 2-step flow (Profile → Results), results in tabs or cards, progress indicator, checkboxes that persist in localStorage, print button.\n' +
-      '9. CRITICAL — BE COMPLETE: close every HTML tag, finish every JS function. 100% working app.\n' +
-      '10. Write compact, efficient code. Reuse CSS classes.';
+    var sys = 'You are a world-class frontend developer and product designer. Your apps feel like $197 SaaS tools — not templates. Every pixel, interaction, and word must make the user think "wow, this is exactly what I needed."\n\n' +
+      'NON-NEGOTIABLE RULES:\n' +
+      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown fences.\n' +
+      '2. ONE self-contained file — all CSS in <style>, all JS in <script>. No CDN, no external dependencies.\n' +
+      '3. Every word in ' + lang + '. Market: ' + countryName + '. Currency: ' + currency + '.\n\n' +
+      'VISUAL STANDARD — god-tier dark UI:\n' +
+      '- Base: #0a0a14. Surface: #13132a. Cards: #1a1a35 with border 1px solid rgba(108,92,231,0.2).\n' +
+      '- Accent: one dominant gradient color chosen for the topic (career: #6c5ce7→#a29bfe, finance: #f9ca24→#e67e22, health: #00b894→#00cec9, marketing: #e17055→#d63031, cooking: #e17055→#fdcb6e, default: #6c5ce7→#a29bfe).\n' +
+      '- Typography: system-ui. Headings bold 700-900. Body 15px line-height 1.7.\n' +
+      '- Buttons: gradient background (accent colors), border-radius 10px, subtle glow on hover (box-shadow with accent color at 40%).\n' +
+      '- Cards: border-radius 14px, padding 24px, hover: translateY(-2px) + stronger glow.\n' +
+      '- Animated score/progress rings (SVG circle with stroke-dashoffset animation) or animated bars where relevant.\n' +
+      '- Micro-interactions: smooth transitions 0.25s ease on everything.\n\n' +
+      'STEP 1 — SMART PROFILE (adapted 100% to the ebook topic):\n' +
+      '- Design 5-7 fields that make deep sense for THIS specific ebook. Examples:\n' +
+      '  Career/AI: name, role, experience years, daily tasks (textarea), tools used, work hours/week, biggest fear about AI\n' +
+      '  Finance/Credit: name, monthly income, current debts, savings, credit goal, timeline, risk tolerance\n' +
+      '  Fitness/Health: name, age, current level, main goal, training days/week, diet style, limitations\n' +
+      '  Marketing/Sales: name, business type, monthly revenue, target audience, main channel, monthly budget\n' +
+      '  Parenting: name, children ages, main daily challenge (textarea), time available, support network\n' +
+      '  Cooking: name, skill level, dietary restrictions, people to cook for, weekly budget, time per meal\n' +
+      '- Always include: first name (used warmly in results) + one free-text "what is your biggest challenge" + one specific goal selector.\n' +
+      '- CTA button disabled until all fields filled. On click: animated loading bar (1.5s CSS animation), then reveal results.\n\n' +
+      'STEP 2 — WOW-FACTOR RESULTS:\n' +
+      '- Open with a personalized headline using the user\'s name and their specific goal/situation.\n' +
+      '- Show a SCORE or INDEX relevant to the topic (Risk Score 0-100, Readiness Level, Financial Health Index, etc.) — animated SVG ring or large number that counts up from 0 with CSS animation.\n' +
+      '- Results in 3-4 tabs or accordion sections — each section title is specific to the topic, never generic.\n' +
+      '- Every recommendation must reference the user\'s actual inputs (their role, their specific tools, their numbers). Zero generic text.\n' +
+      '- At least one interactive element in results: checkboxes with progress bar ("Your 90-day plan: 0/12 actions done"), a mini calculator, or a prioritization matrix.\n' +
+      '- Checkboxes and progress persist in localStorage (key = userName + topic).\n' +
+      '- "Print / Save as PDF" button at bottom.\n\n' +
+      'CRITICAL: Close every HTML tag. Finish every JS function. Output a 100% working app. Compact but complete code.';
 
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Analyze this ebook carefully and create the ideal interactive companion tool. The tool must be DIRECTLY tied to the ebook topic with profession/role-specific content.\n\n' +
-        'Key requirement: if the tool collects profession or role from the user, it MUST generate visibly different, specific content for each profession — not generic advice. Use a JS data object mapping professions to unique action lists.\n\n' +
+      userMsg = 'Read this ebook data carefully. Design the PERFECT companion app for it — the one tool that, once the reader uses it, makes them say "I needed this exactly." The app must:\n' +
+        '- Be 100% specific to this ebook\'s topic and target audience\n' +
+        '- Ask for inputs that only make sense in THIS ebook\'s context\n' +
+        '- Show results that directly apply the ebook\'s core concepts and advice\n' +
+        '- Feel like the natural digital extension of the ebook\n\n' +
         'Ebook data:\n' + ebookContext +
-        (context ? '\n\nUser requirements: ' + context : '');
+        (context ? '\n\nAdditional requirements from author: ' + context : '');
     } else {
-      userMsg = 'Create an interactive tool for: "' + topic + '"\n\n' +
-        'Key requirement: if the tool asks for profession/role/experience, it MUST produce clearly different, specific content per input — not generic advice. Use a JS data object mapping inputs to unique content.\n\n' +
-        (ebookContext ? 'This tool complements this ebook:\n' + ebookContext + '\n\n' : '') +
-        (context ? 'Additional requirements: ' + context : '');
+      userMsg = 'Create a premium interactive tool for: "' + topic + '"\n\n' +
+        'The tool must feel purpose-built for this exact topic — not a generic template adapted to it. ' +
+        'Every field, every result, every label must prove it was designed specifically for this use case.\n\n' +
+        (ebookContext ? 'Related ebook context:\n' + ebookContext + '\n\n' : '') +
+        (context ? 'Author requirements: ' + context : '');
     }
 
     var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
