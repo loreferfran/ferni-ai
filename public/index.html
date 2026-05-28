@@ -1815,11 +1815,15 @@ async function startImport(skipEdit){
   _impChapters = [];
 
   if(skipEdit){
-    // Solo importar: CERO manipulación. El texto entra tal cual, un único bloque.
+    // Solo importar: CERO manipulación. PDF se muestra directo via blob URL.
     var rawTrimmed = rawText.trim();
     if(rawTrimmed.length < 50){ hide('imp-loading'); show('imp-empty'); alert('No se pudo extraer texto suficiente.'); return; }
     var bookName = file.name.replace(/\.[^/.]+$/, '');
+    // Guardar el archivo como blob URL para mostrarlo exactamente igual
+    if(window._impBlobUrl) URL.revokeObjectURL(window._impBlobUrl);
+    window._impBlobUrl = URL.createObjectURL(file);
     _impMeta = { market:market, lang:lang, totalChapters:1, fileName:file.name, bookTitle:bookName, rawMode:true };
+    // El texto extraído se guarda solo para que la IA pueda generar app/skills
     _impChapters = [{ title:bookName, original:rawTrimmed, improved:rawTrimmed }];
     _setImpProgress(100, 'Listo.', '');
   } else {
@@ -2144,15 +2148,44 @@ function buildImportPreviewHtml(chapters, meta){
 }
 
 function _renderImpPreview(){
+  var iframe = document.getElementById('imp-preview');
+  if(!iframe) return;
+  if(_impMeta.rawMode){
+    // Modo raw: PDF original exacto, sin tocar nada
+    if(window._impBlobUrl){
+      if(_impMeta.coverDataUrl){
+        iframe.removeAttribute('src');
+        iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'
+          + 'body{margin:0;padding:20px;background:#555;display:flex;flex-direction:column;align-items:center;gap:20px}'
+          + 'img.cover{width:794px;height:1122px;object-fit:cover;display:block;box-shadow:0 6px 28px rgba(0,0,0,0.6)}'
+          + 'embed.pdf{width:794px;height:1122px;display:block;box-shadow:0 6px 28px rgba(0,0,0,0.6)}'
+          + '</style></head><body>'
+          + '<img class="cover" src="' + _impMeta.coverDataUrl + '">'
+          + '<embed class="pdf" src="' + window._impBlobUrl + '" type="application/pdf">'
+          + '</body></html>';
+      } else {
+        iframe.removeAttribute('srcdoc');
+        iframe.src = window._impBlobUrl;
+      }
+    }
+    return;
+  }
   _impMeta.detectedTitle = document.getElementById('imp-title-display') ?
     (document.getElementById('imp-title-display').textContent||'').replace(/^✅\s*/,'') : '';
   var html = buildImportPreviewHtml(_impChapters, _impMeta);
-  var iframe = document.getElementById('imp-preview');
-  if(iframe) iframe.srcdoc = html;
+  iframe.removeAttribute('src');
+  iframe.srcdoc = html;
 }
 
 function downloadImpPDF(){
   if(!_impChapters.length) return;
+  if(_impMeta.rawMode && window._impBlobUrl){
+    var a = document.createElement('a');
+    a.href = window._impBlobUrl;
+    a.download = _impMeta.fileName || 'ebook.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    return;
+  }
   var html = buildImportPreviewHtml(_impChapters, _impMeta);
   var w = window.open('','_blank');
   if(!w){ alert('Activa las ventanas emergentes para esta página'); return; }
