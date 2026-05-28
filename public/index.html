@@ -1930,7 +1930,7 @@ function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
   if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+(_impMeta.market||'')+' · '+(_impMeta.lang||'');
   var titleEl = document.getElementById('imp-title-display');
-  var bookTitle = (_impMeta.fileName||'Ebook importado').replace(/\.[^/.]+$/, '');
+  var bookTitle = (_impMeta.fileName||'Ebook importado').replace(/\.[^/.]+$/, '').replace(/[_\-]+/g, ' ').trim();
   _impMeta.bookTitle = bookTitle;
   if(titleEl) titleEl.textContent = '✅ ' + (bookTitle.length > 50 ? bookTitle.substring(0,50)+'…' : bookTitle);
 
@@ -2012,7 +2012,7 @@ async function applyImpCorrection(){
 
 function buildImportPreviewHtml(chapters, meta){
   // Título = nombre del archivo sin extensión (nunca el título de un capítulo)
-  var title = meta.bookTitle || (meta.fileName ? meta.fileName.replace(/\.[^/.]+$/, '') : 'Ebook');
+  var title = meta.bookTitle || (meta.fileName ? meta.fileName.replace(/\.[^/.]+$/, '').replace(/[_\-]+/g,' ').trim() : 'Ebook');
   var lang = meta.lang || 'Español';
 
   // Detectar nicho desde el contenido de los capítulos para aplicar la paleta correcta
