@@ -2011,11 +2011,43 @@ async function applyImpCorrection(){
 }
 
 function buildImportPreviewHtml(chapters, meta){
-  // Título = nombre del archivo sin extensión (nunca el título de un capítulo)
+  // ── MODO RAW: cero estilos propios, solo portada + texto limpio ──────────
+  if(meta.rawMode){
+    var rawContent = (chapters[0] && (chapters[0].improved||chapters[0].original||'')) || '';
+    var h = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>';
+    h += '@page{size:A4;margin:1.8cm}';
+    h += 'body{margin:0;padding:0;background:#fff;font-family:Georgia,serif;font-size:13px;color:#111;line-height:1.75}';
+    h += '@media screen{body{background:#666;padding:30px 0}.pg{width:794px;background:#fff;margin:0 auto 30px;box-shadow:0 6px 28px rgba(0,0,0,0.55)}}';
+    h += '@media print{.pg{box-shadow:none;margin:0;width:100%}}';
+    h += '.cover-pg{height:1122px;overflow:hidden;page-break-after:always;break-after:page}';
+    h += '.content-pg{padding:50px 60px;box-sizing:border-box;page-break-after:always;break-after:page}';
+    h += 'p{margin:0 0 12px;text-align:justify}';
+    h += '</style></head><body>';
+    // Página 1: portada — SOLO imagen o página en blanco, NUNCA texto añadido
+    h += '<div class="pg cover-pg">';
+    if(meta.coverDataUrl){
+      h += '<img src="'+meta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;">';
+    }
+    // sin coverDataUrl → página blanca pura, lista para la imagen
+    h += '</div>';
+    // Contenido: texto tal cual, sin headers ni colores
+    var lines = _escHtml(rawContent).split('\n');
+    var pageLines = [], pageCount = 0, linesPerPage = 55;
+    lines.forEach(function(line){
+      pageLines.push(line);
+      if(pageLines.length >= linesPerPage){
+        h += '<div class="pg content-pg"><p>'+pageLines.join('<br>').replace(/(<br>){2,}/g,'</p><p>')+'</p></div>';
+        pageLines = []; pageCount++;
+      }
+    });
+    if(pageLines.length) h += '<div class="pg content-pg"><p>'+pageLines.join('<br>').replace(/(<br>){2,}/g,'</p><p>')+'</p></div>';
+    h += '</body></html>';
+    return h;
+  }
+
+  // ── MODO NORMAL (Importar y Mejorar): estilos nativos Ferni AI ───────────
   var title = meta.bookTitle || (meta.fileName ? meta.fileName.replace(/\.[^/.]+$/, '').replace(/[_\-]+/g,' ').trim() : 'Ebook');
   var lang = meta.lang || 'Español';
-
-  // Detectar nicho desde el contenido de los capítulos para aplicar la paleta correcta
   var allText = chapters.map(function(c){ return (c.title||'')+' '+(c.improved||c.original||''); }).join(' ');
   var P = getNichePalette({ nicho: allText, problema: allText });
 
@@ -2025,16 +2057,13 @@ function buildImportPreviewHtml(chapters, meta){
   h += '@media screen{body{background:#555;padding:36px 0;}.pg{width:794px;background:white;margin:0 auto 36px auto;box-shadow:0 8px 36px rgba(0,0,0,0.6);display:block;}}';
   h += '@media print{.pg{box-shadow:none;margin:0;width:100%;}}';
   h += '.page-break{page-break-after:always;break-after:page;}';
-  // Portada
   h += '.cover{background:'+P.coverGrad+';color:'+P.coverText+';min-height:60vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
   h += '.cover h1{font-size:36px;font-weight:900;line-height:1.2;margin:0 0 16px;}';
   h += '.cover .sub{font-size:16px;font-style:italic;opacity:0.85;}';
-  // Capítulos
   h += '.chapter{max-width:720px;margin:0 auto;padding:30px 40px;}';
   h += '.ch-header{background:'+P.headerGrad+';color:white;padding:30px;border-radius:'+P.boxRadius+';margin-bottom:30px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}';
   h += '.ch-num{font-size:11px;text-transform:uppercase;letter-spacing:3px;opacity:0.7;margin-bottom:6px;}';
   h += '.ch-title{font-size:22px;font-weight:bold;line-height:1.3;}';
-  // Contenido
   h += 'p{margin:0 0 16px;text-align:justify;}';
   h += 'h2{color:'+P.primary+';font-size:18px;margin:28px 0 10px;}';
   h += 'h3{color:'+P.accent+';font-size:15px;margin:20px 0 8px;}';
@@ -2050,7 +2079,6 @@ function buildImportPreviewHtml(chapters, meta){
   h += '.empty-note{color:#aaa;font-style:italic;}';
   h += '</style></head><body>';
 
-  // Portada — imagen propia o gradiente de nicho
   if(meta.coverDataUrl){
     h += '<div class="pg page-break" style="position:relative;height:1123px;overflow:hidden;padding:0;">';
     h += '<img src="'+meta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;display:block;">';
@@ -2065,7 +2093,7 @@ function buildImportPreviewHtml(chapters, meta){
   // Capítulos
   chapters.forEach(function(ch, i){
     h += '<div class="pg"><div class="chapter">';
-    if(!meta.rawMode){
+    {
       h += '<div class="ch-header"><div class="ch-num">Sección '+(i+1)+'</div><div class="ch-title">'+_escHtml(ch.title||'Sección '+(i+1))+'</div></div>';
     }
 
