@@ -1037,8 +1037,8 @@ select option { background: #1e2d52; }
               <button class="btn btn-ghost" onclick="resetImport()" style="font-size:12px;padding:6px 12px;">↺ Importar otro</button>
             </div>
 
-            <!-- Per-chapter correction panel -->
-            <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+            <!-- Per-chapter correction panel (oculto en rawMode) -->
+            <div id="imp-ch-panel" style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
               <div style="font-size:11px;font-weight:700;color:#00b894;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">✍️ Corregir una sección</div>
               <div id="imp-ch-btns" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:0;"></div>
               <div id="imp-ch-correction" class="hidden" style="margin-top:10px;">
@@ -1794,6 +1794,10 @@ async function startImport(skipEdit){
   var context = document.getElementById('imp-context').value.trim();
   var ref = (document.getElementById('imp-ref').value||'').trim();
 
+  // Limpiar datos anteriores siempre que se inicia un nuevo import
+  _impChapters = []; _impMeta = {};
+  try { localStorage.removeItem('ferni_imp_chapters'); localStorage.removeItem('ferni_imp_meta'); } catch(e){}
+
   hide('imp-empty'); show('imp-loading');
   _setImpProgress(5, 'Extrayendo texto del archivo...', '');
 
@@ -1893,8 +1897,19 @@ function clearImpCoverImage(){
 
 function _saveImpToStorage(){
   try {
-    localStorage.setItem('ferni_imp_chapters', JSON.stringify(_impChapters));
-    localStorage.setItem('ferni_imp_meta', JSON.stringify(_impMeta));
+    // Guardar capítulos (sin el texto enorme en rawMode — solo necesitamos el meta)
+    var chaptersToSave = _impMeta.rawMode
+      ? _impChapters.map(function(ch){ return { title:ch.title }; })  // rawMode: solo el título, el texto se re-extrae
+      : _impChapters;
+    localStorage.setItem('ferni_imp_chapters', JSON.stringify(chaptersToSave));
+    // Intentar guardar meta con imagen; si falla por quota, guardar sin imagen
+    try {
+      localStorage.setItem('ferni_imp_meta', JSON.stringify(_impMeta));
+    } catch(e2){
+      var metaSinImg = Object.assign({}, _impMeta);
+      delete metaSinImg.coverDataUrl;
+      localStorage.setItem('ferni_imp_meta', JSON.stringify(metaSinImg));
+    }
   } catch(e){}
 }
 
@@ -1913,18 +1928,29 @@ function _restoreImpFromStorage(){
 
 function _renderImpResult(){
   var info = document.getElementById('imp-result-info');
-  if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+_impMeta.market+' · '+_impMeta.lang;
+  if(info) info.textContent = (_impMeta.fileName||'Ebook')+' · '+_impChapters.length+' secciones · '+(_impMeta.market||'')+' · '+(_impMeta.lang||'');
   var titleEl = document.getElementById('imp-title-display');
-  // Título del ebook = nombre del archivo sin extensión (no el primer capítulo)
   var bookTitle = (_impMeta.fileName||'Ebook importado').replace(/\.[^/.]+$/, '');
   _impMeta.bookTitle = bookTitle;
   if(titleEl) titleEl.textContent = '✅ ' + (bookTitle.length > 50 ? bookTitle.substring(0,50)+'…' : bookTitle);
-  // Restaurar thumbnail de portada si hay imagen guardada
-  if(_impMeta.coverDataUrl){
+
+  // Ocultar panel de corrección en rawMode (no tiene sentido corregir si no se tocó nada)
+  var chPanel = document.getElementById('imp-ch-panel');
+  if(chPanel) chPanel.style.display = _impMeta.rawMode ? 'none' : '';
+
+  // Validar y mostrar thumbnail de portada (limpiar si está corrupta)
+  if(_impMeta.coverDataUrl && typeof _impMeta.coverDataUrl === 'string' && _impMeta.coverDataUrl.startsWith('data:')){
     var thumb = document.getElementById('imp-cover-thumb');
-    if(thumb) thumb.innerHTML = '<img src="'+_impMeta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;">';
+    if(thumb) thumb.innerHTML = '<img src="'+_impMeta.coverDataUrl+'" style="width:100%;height:100%;object-fit:cover;" onerror="clearImpCoverImage()">';
     show('imp-cover-clear');
+  } else if(_impMeta.coverDataUrl) {
+    // Data URL inválida — limpiar
+    delete _impMeta.coverDataUrl;
+    var thumb2 = document.getElementById('imp-cover-thumb');
+    if(thumb2) thumb2.innerHTML = '📷';
+    hide('imp-cover-clear');
   }
+
   _renderImpChBtns();
   _renderImpPreview();
 }
