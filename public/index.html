@@ -2180,10 +2180,32 @@ function _renderImpPreview(){
 function downloadImpPDF(){
   if(!_impChapters.length) return;
   if(_impMeta.rawMode && window._impBlobUrl){
-    var a = document.createElement('a');
-    a.href = window._impBlobUrl;
-    a.download = _impMeta.fileName || 'ebook.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    if(_impMeta.coverDataUrl){
+      // Con portada: abrir ventana de impresión — portada página 1 + PDF original embebido.
+      // El usuario usa Ctrl+P → "Guardar como PDF" en Chrome para obtener el archivo combinado.
+      var w = window.open('','_blank');
+      if(!w){ alert('Activa las ventanas emergentes para esta página'); return; }
+      w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'
+        + '@page{margin:0;size:A4}'
+        + 'html,body{margin:0;padding:0;height:100%}'
+        + '.cover-page{width:21cm;height:29.7cm;page-break-after:always;break-after:page;overflow:hidden}'
+        + '.cover-page img{width:100%;height:100%;object-fit:cover;display:block}'
+        + '.pdf-page{width:21cm;height:29.7cm}'
+        + 'embed{width:100%;height:100%;display:block}'
+        + '</style></head><body>'
+        + '<div class="cover-page"><img src="'+_impMeta.coverDataUrl+'"></div>'
+        + '<div class="pdf-page"><embed src="'+window._impBlobUrl+'" type="application/pdf" width="100%" height="100%"></div>'
+        + '</body></html>');
+      w.document.close();
+      w.onload = function(){ setTimeout(function(){ w.print(); }, 1000); };
+      setTimeout(function(){ try{ w.print(); }catch(e){} }, 2000);
+    } else {
+      // Sin portada: descargar PDF original directo
+      var a = document.createElement('a');
+      a.href = window._impBlobUrl;
+      a.download = _impMeta.fileName || 'ebook.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
     return;
   }
   var html = buildImportPreviewHtml(_impChapters, _impMeta);
