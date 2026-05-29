@@ -2505,14 +2505,17 @@ app.post('/api/generate-app', async function(req, res) {
       'Card bullets MUST use {name}, {a}, {b}, {goal} placeholders to personalize results.\n' +
       'Be 100% specific to the ebook topic — nothing generic.';
 
+    var instrBlock = context
+      ? '🚨 MANDATORY AUTHOR INSTRUCTIONS — follow these EXACTLY, they override any default choice:\n' + context + '\n\n'
+      : '';
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Analiza este ebook y diseña la app complementaria perfecta para él — la herramienta que el lector usará y dirá "exactamente esto necesitaba".\n\nDatos del ebook:\n' + ebookContext +
-        (context ? '\n\nRequerimientos adicionales del autor: ' + context : '');
+      userMsg = instrBlock +
+        'Analiza este ebook y diseña la app complementaria perfecta para él — la herramienta que el lector usará y dirá "exactamente esto necesitaba".\n\nDatos del ebook:\n' + ebookContext;
     } else {
-      userMsg = 'Crea el JSON para una herramienta interactiva premium sobre: "' + topic + '"\n' +
-        (ebookContext ? '\nContexto del ebook relacionado:\n' + ebookContext + '\n' : '') +
-        (context ? '\nRequerimientos del autor: ' + context : '');
+      userMsg = instrBlock +
+        'Crea el JSON para una herramienta interactiva premium sobre: "' + topic + '"' +
+        (ebookContext ? '\n\nContexto del ebook relacionado:\n' + ebookContext : '');
     }
 
     var result = await claudeCall(sys, userMsg, 2000, true, 'claude-sonnet-4-6');
@@ -2570,15 +2573,17 @@ app.post('/api/generate-skill', async function(req, res) {
       '7. CRITICAL — BE COMPLETE: finish every tag and every JS function. All 5 cards must be present.\n' +
       '8. Write compact code. Do NOT mention prices.';
 
+    var instrBlockSkill = context
+      ? '🚨 MANDATORY AUTHOR INSTRUCTIONS — follow these EXACTLY, they override any default choice:\n' + context + '\n\n'
+      : '';
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = 'Analyze this ebook and create a premium HTML Skill Pack with 6-8 prompts that directly help readers apply and deepen the ebook\'s specific topic. Each prompt must be unique, expert-level, and topic-specific — not generic.\n\nEbook data:\n' + ebookContext +
-        (context ? '\n\nUser requirements: ' + context : '');
+      userMsg = instrBlockSkill +
+        'Analyze this ebook and create a premium HTML Skill Pack. Each prompt must be unique, expert-level, and 100% specific to this ebook — not generic.\n\nEbook data:\n' + ebookContext;
     } else {
-      userMsg = 'Create a premium HTML Skill Pack for: "' + topic + '"\n\n' +
-        'Include 6-8 unique, expert-level prompts covering different aspects of this topic.\n\n' +
-        (ebookContext ? 'Complements this ebook:\n' + ebookContext + '\n\n' : '') +
-        (context ? 'Additional requirements: ' + context : '');
+      userMsg = instrBlockSkill +
+        'Create a premium HTML Skill Pack for: "' + topic + '"' +
+        (ebookContext ? '\n\nComplements this ebook:\n' + ebookContext : '');
     }
 
     var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
