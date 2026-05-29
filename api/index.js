@@ -2686,112 +2686,60 @@ app.post('/api/generate-premium-app', async function(req, res) {
     var topic        = req.body.topic        || '';
     var country      = req.body.country      || 'España';
     var lang         = req.body.lang         || 'Español';
-    var ebookContext = req.body.ebookContext  || '';
+    var ebookContext = (req.body.ebookContext || '').slice(0, 5000); // cap to avoid token overflow
     var context      = req.body.context      || '';
     var countryName  = getCountryName(country);
     var year         = new Date().getFullYear();
+    var langCode     = lang.slice(0,2).toLowerCase();
 
-    var sys =
-      'You are an expert product designer creating premium interactive HTML apps as ebook bonuses.\n' +
-      'Return ONLY a valid JSON object — no markdown fences, no explanation, no trailing text.\n' +
-      'ALL text values must be in ' + lang + '. Market: ' + countryName + '.\n\n' +
-      (context ? '=== AUTHOR REQUIREMENTS — follow exactly ===\n' + context + '\n=== END ===\n\n' : '') +
-      'Choose 4–5 modules from: dashboard, checklist, simulator, comparador, quiz, plan, glosario, logros\n' +
-      'Always include "dashboard" and "logros". Pick remaining based on the ebook topic.\n' +
-      'finance/credit → add simulator+comparador; health/fitness → add quiz+checklist; career → add simulator+quiz; any → add plan+glosario\n\n' +
-      'Fill every empty string "" with specific, expert-level content. JSON schema:\n' +
-      '{\n' +
-      '  "appTitle":"", "appTagline":"",\n' +
-      '  "accentColor":"(ONE hex: career=#6c5ce7 finance=#f9ca24 health=#00b894 marketing=#e17055 other=#00cec9)",\n' +
-      '  "lang":"' + lang.slice(0,2).toLowerCase() + '",\n' +
-      '  "modules":["dashboard","checklist","plan","glosario","logros"],\n' +
-      '  "onboarding":{"fields":[\n' +
-      '    {"id":"name","label":"","type":"text","placeholder":""},\n' +
-      '    {"id":"q1","label":"","type":"select","options":["","","",""]},\n' +
-      '    {"id":"q2","label":"","type":"select","options":["","","",""]},\n' +
-      '    {"id":"q3","label":"","type":"select","options":["","","",""]}\n' +
-      '  ]},\n' +
-      '  "dashboard":{"title":"","greeting":"¡Hola, [name]! 👋","nextActionLabel":"","nextActions":["","","",""],"steps":["","","",""]},\n' +
-      '  "checklist":{"title":"","subtitle":"","phases":[\n' +
-      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
-      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
-      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
-      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""}]}\n' +
-      '  ]},\n' +
-      '  "simulator":{"title":"","metricName":"","sliders":[\n' +
-      '    {"label":"","weight":35,"defaultValue":50},\n' +
-      '    {"label":"","weight":30,"defaultValue":50},\n' +
-      '    {"label":"","weight":20,"defaultValue":50},\n' +
-      '    {"label":"","weight":15,"defaultValue":50}\n' +
-      '  ],"zones":[\n' +
-      '    {"min":0,"max":40,"label":"","color":"#e17055"},\n' +
-      '    {"min":41,"max":69,"label":"","color":"#fdcb6e"},\n' +
-      '    {"min":70,"max":89,"label":"","color":"#74b9ff"},\n' +
-      '    {"min":90,"max":100,"label":"","color":"#00b894"}\n' +
-      '  ]},\n' +
-      '  "comparador":{"title":"","sliderLabel":"","headers":["","","",""],\n' +
-      '    "items":[\n' +
-      '      {"name":"","level":"","minLevel":0,"values":["","","",""]},\n' +
-      '      {"name":"","level":"","minLevel":3,"values":["","","",""]},\n' +
-      '      {"name":"","level":"","minLevel":6,"values":["","","",""]},\n' +
-      '      {"name":"","level":"","minLevel":9,"values":["","","",""]}\n' +
-      '    ]\n' +
-      '  },\n' +
-      '  "quiz":{"title":"","subtitle":"","questions":[\n' +
-      '    {"text":"","riskIfNo":true},{"text":"","riskIfNo":true},{"text":"","riskIfNo":true},\n' +
-      '    {"text":"","riskIfYes":true},{"text":"","riskIfNo":true},{"text":"","riskIfYes":true},\n' +
-      '    {"text":"","riskIfNo":true},{"text":"","riskIfNo":true}\n' +
-      '  ],"riskLevels":[\n' +
-      '    {"min":0,"max":2,"label":"","color":"#00b894","message":""},\n' +
-      '    {"min":3,"max":5,"label":"","color":"#fdcb6e","message":""},\n' +
-      '    {"min":6,"max":8,"label":"","color":"#e17055","message":""}\n' +
-      '  ]},\n' +
-      '  "plan":{"title":"","months":[\n' +
-      '    {"month":1,"title":"","actions":["","",""]},{"month":2,"title":"","actions":["","",""]},\n' +
-      '    {"month":3,"title":"","actions":["","",""]},{"month":4,"title":"","actions":["","",""]},\n' +
-      '    {"month":5,"title":"","actions":["","",""]},{"month":6,"title":"","actions":["",""]},\n' +
-      '    {"month":7,"title":"","actions":["","",""]},{"month":8,"title":"","actions":["","",""]},\n' +
-      '    {"month":9,"title":"","actions":["",""]},{"month":10,"title":"","actions":["","",""]},\n' +
-      '    {"month":11,"title":"","actions":["",""]},{"month":12,"title":"","actions":["",""]}\n' +
-      '  ]},\n' +
-      '  "glosario":{"title":"","terms":[\n' +
-      '    {"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},\n' +
-      '    {"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},\n' +
-      '    {"term":"","def":""},{"term":"","def":""}\n' +
-      '  ],"faq":[\n' +
-      '    {"q":"","a":""},{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}\n' +
-      '  ]},\n' +
-      '  "logros":{"title":"","badges":[\n' +
-      '    {"id":"b1","icon":"🚀","title":"","desc":""},\n' +
-      '    {"id":"b2","icon":"✅","title":"","desc":""},\n' +
-      '    {"id":"b3","icon":"⭐","title":"","desc":""},\n' +
-      '    {"id":"b4","icon":"💪","title":"","desc":""},\n' +
-      '    {"id":"b5","icon":"🏆","title":"","desc":""},\n' +
-      '    {"id":"b6","icon":"🔥","title":"","desc":""}\n' +
-      '  ]}\n' +
-      '}';
+    // Compact single-line schema minimizes prompt tokens
+    var schema = '{"appTitle":"","appTagline":"","accentColor":"#6c5ce7","lang":"'+langCode+'","modules":["dashboard","checklist","plan","glosario","logros"],' +
+      '"onboarding":{"fields":[{"id":"name","label":"","type":"text","placeholder":""},{"id":"q1","label":"","type":"select","options":["","","",""]},{"id":"q2","label":"","type":"select","options":["","","",""]},{"id":"q3","label":"","type":"select","options":["","",""]}]},' +
+      '"dashboard":{"title":"","greeting":"¡Hola, [name]! 👋","nextActionLabel":"","nextActions":["","",""],"steps":["","","",""]},' +
+      '"checklist":{"title":"","subtitle":"","phases":[{"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},{"title":"","tasks":[{"text":""},{"text":""},{"text":""}]},{"title":"","tasks":[{"text":""},{"text":""},{"text":""}]}]},' +
+      '"simulator":{"title":"","metricName":"","sliders":[{"label":"","weight":35,"defaultValue":50},{"label":"","weight":30,"defaultValue":50},{"label":"","weight":20,"defaultValue":50},{"label":"","weight":15,"defaultValue":50}],"zones":[{"min":0,"max":40,"label":"","color":"#e17055"},{"min":41,"max":69,"label":"","color":"#fdcb6e"},{"min":70,"max":89,"label":"","color":"#74b9ff"},{"min":90,"max":100,"label":"","color":"#00b894"}]},' +
+      '"comparador":{"title":"","sliderLabel":"","headers":["","","",""],"items":[{"name":"","level":"","minLevel":0,"values":["","","",""]},{"name":"","level":"","minLevel":3,"values":["","","",""]},{"name":"","level":"","minLevel":6,"values":["","","",""]}]},' +
+      '"quiz":{"title":"","subtitle":"","questions":[{"text":"","riskIfNo":true},{"text":"","riskIfNo":true},{"text":"","riskIfYes":true},{"text":"","riskIfNo":true},{"text":"","riskIfNo":true},{"text":"","riskIfYes":true}],"riskLevels":[{"min":0,"max":1,"label":"","color":"#00b894","message":""},{"min":2,"max":4,"label":"","color":"#fdcb6e","message":""},{"min":5,"max":6,"label":"","color":"#e17055","message":""}]},' +
+      '"plan":{"title":"","months":[{"month":1,"title":"","actions":["",""]},{"month":2,"title":"","actions":["",""]},{"month":3,"title":"","actions":["",""]},{"month":4,"title":"","actions":["",""]},{"month":5,"title":"","actions":["",""]},{"month":6,"title":"","actions":["",""]},{"month":7,"title":"","actions":["",""]},{"month":8,"title":"","actions":["",""]},{"month":9,"title":"","actions":["",""]},{"month":10,"title":"","actions":["",""]},{"month":11,"title":"","actions":["",""]},{"month":12,"title":"","actions":["",""]}]},' +
+      '"glosario":{"title":"","terms":[{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""}],"faq":[{"q":"","a":""},{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}]},' +
+      '"logros":{"title":"","badges":[{"id":"b1","icon":"🚀","title":"","desc":""},{"id":"b2","icon":"✅","title":"","desc":""},{"id":"b3","icon":"⭐","title":"","desc":""},{"id":"b4","icon":"💪","title":"","desc":""},{"id":"b5","icon":"🏆","title":"","desc":""}]}}';
+
+    var sys = 'You are an expert product designer. Return ONLY a valid JSON object — no markdown, no explanation.\n' +
+      'Language: ' + lang + '. Market: ' + countryName + '.\n' +
+      (context ? 'Author requirements: ' + context + '\n' : '') +
+      'Choose 4-5 modules that best fit the ebook topic. Always include "dashboard" and "logros" in "modules".\n' +
+      'Accent color guide: finance/money=#f9ca24  health/fitness=#00b894  career/work=#6c5ce7  marketing=#e17055  other=#00cec9\n' +
+      'Fill every empty string "" with real, specific, expert content. Use this JSON structure:\n' + schema;
 
     var userMsg = (ebookContext && !topic)
-      ? 'Create the premium app for this ebook. Select best modules for this topic. Fill EVERY field with expert, specific, 100% relevant content.\n\nEbook:\n' + ebookContext
-      : 'Create the premium app for: "' + topic + '"' + (ebookContext ? '\n\nEbook:\n' + ebookContext : '');
+      ? 'Create the premium companion app for this ebook. Choose the 2-3 best additional modules for this specific topic. Fill ALL fields with specific, expert content tailored to this ebook.\n\nEbook data:\n' + ebookContext
+      : 'Create the premium companion app for the topic: "' + (topic||'general') + '"' + (ebookContext ? '\n\nEbook:\n' + ebookContext : '');
 
-    var result = await claudeCall(sys, userMsg, 8000, true, 'claude-sonnet-4-6');
-    var raw = (result.text||'').trim().replace(/^```[\w]*\s*/i,'').replace(/\s*```$/i,'').trim();
-    // Remove any text before the opening brace
+    var result = await claudeCall(sys, userMsg, 6000, true, 'claude-haiku-4-5-20251001');
+    var raw = (result.text||'').trim();
+    // Strip markdown fences
+    raw = raw.replace(/^```[\w]*\s*/i,'').replace(/\s*```$/i,'').trim();
+    // Find first {
     var braceStart = raw.indexOf('{');
     if(braceStart > 0) raw = raw.slice(braceStart);
-    // Find the balanced closing brace (handles Claude adding trailing text)
+    else if(braceStart < 0) {
+      console.error('[premium-app] No JSON found. Raw:', raw.slice(0,300));
+      return res.json({ success: false, error: 'Claude no devolvió JSON. Intenta de nuevo.' });
+    }
+    // Balanced brace extraction — handles trailing text after JSON
     var depth = 0, endIdx = -1;
     for(var ci = 0; ci < raw.length; ci++) {
       if(raw[ci]==='{') depth++;
       else if(raw[ci]==='}') { depth--; if(depth===0){ endIdx=ci; break; } }
     }
-    if(endIdx > 0) raw = raw.slice(0, endIdx+1);
+    if(endIdx >= 0) raw = raw.slice(0, endIdx+1);
 
     var data;
-    try { data = JSON.parse(raw); } catch(e) {
-      console.error('[premium-app] JSON parse error:', e.message, '\nRaw (first 500):', raw.slice(0,500));
-      return res.json({ success: false, error: 'Error al generar la app (JSON inválido). Intenta de nuevo.' });
+    try {
+      data = JSON.parse(raw);
+    } catch(e) {
+      console.error('[premium-app] parse fail:', e.message, 'raw[:400]:', raw.slice(0,400));
+      return res.json({ success: false, error: 'JSON inválido ('+e.message.slice(0,60)+'). Intenta de nuevo.' });
     }
 
     var html = buildPremiumApp(data, year);
