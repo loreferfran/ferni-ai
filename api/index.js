@@ -2467,44 +2467,44 @@ app.post('/api/generate-app', async function(req, res) {
     var regs = REGS[countryName] || REGS['Spain'] || {};
     var currency = regs.currency || 'EUR';
 
-    var sys = 'You are an expert UX copywriter. Return ONLY a valid JSON object — no markdown, no explanation, no extra text.\n\n' +
-      'CRITICAL: Every single string value in the JSON must be written in ' + lang + '. Zero words in any other language.\n' +
-      'Market: ' + countryName + '. Currency: ' + currency + '.\n\n' +
-      (context ? 'MANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override any default:\n' + context + '\n\n' : '') +
-      'JSON schema (ALL string values must be in ' + lang + '):\n' +
+    var sys = 'You are an expert UX copywriter. Return ONLY a valid JSON object — no markdown, no explanation, no extra text.\n' +
+      'ALL string values must be in ' + lang + '. Market: ' + countryName + '. Currency: ' + currency + '.\n\n' +
+      (context
+        ? '=== AUTHOR SPECIFICATIONS — use these as the ACTUAL content, not as examples ===\n' + context + '\n=== END SPECIFICATIONS ===\n\n' +
+          'Fill every JSON field using the author specifications above. Do not invent alternatives or ignore any specification.\n\n'
+        : '') +
+      'JSON schema — fill all empty strings with real content in ' + lang + ':\n' +
       '{\n' +
-      '  "appTitle": "app name",\n' +
-      '  "subtitle": "one-line description",\n' +
-      '  "accentColor": "hex — pick by topic: career=#6c5ce7, finance=#f9ca24, health=#00b894, marketing=#e17055, cooking=#e67e22",\n' +
-      '  "scoreLabel": "score label e.g. AI Resilience Score, Financial Score...",\n' +
+      '  "appTitle": "",\n' +
+      '  "subtitle": "",\n' +
+      '  "accentColor": "(hex: career=#6c5ce7 finance=#f9ca24 health=#00b894 marketing=#e17055 cooking=#e67e22)",\n' +
+      '  "scoreLabel": "",\n' +
       '  "scoreMax": 100,\n' +
       '  "fields": {\n' +
-      '    "name": "label for name input field",\n' +
-      '    "namePlaceholder": "name placeholder e.g. Ex: John",\n' +
-      '    "a": { "label": "field label", "options": ["opt1","opt2","opt3","opt4","opt5"] },\n' +
-      '    "b": { "label": "field label", "options": ["opt1","opt2","opt3","opt4"] },\n' +
-      '    "goal": "textarea label",\n' +
-      '    "goalPlaceholder": "textarea placeholder text"\n' +
+      '    "name": "",\n' +
+      '    "namePlaceholder": "",\n' +
+      '    "a": { "label": "", "options": ["","","","",""] },\n' +
+      '    "b": { "label": "", "options": ["","","",""] },\n' +
+      '    "goal": "",\n' +
+      '    "goalPlaceholder": ""\n' +
       '  },\n' +
-      '  "ctaText": "CTA button text",\n' +
-      '  "heroPrefix": "text before user name e.g. Your Finance Plan,",\n' +
-      '  "heroSub": "supporting text — may use {name} {a} {b} as placeholders",\n' +
-      '  "nameFallback": "fallback name when user leaves field empty",\n' +
-      '  "goalFallback": "fallback goal text",\n' +
-      '  "heroSubFallback": "fallback hero subtitle",\n' +
-      '  "completedText": "N/M completed — word for completed",\n' +
+      '  "ctaText": "",\n' +
+      '  "heroPrefix": "",\n' +
+      '  "heroSub": "(may use {name} {a} {b} {goal} as placeholders)",\n' +
+      '  "nameFallback": "",\n' +
+      '  "goalFallback": "",\n' +
+      '  "heroSubFallback": "",\n' +
+      '  "completedText": "",\n' +
       '  "cards": [\n' +
-      '    { "title": "card 1 title", "bullets": ["bullet using {a} {b} {name} {goal}", "3-4 bullets total"] },\n' +
-      '    { "title": "card 2 title", "bullets": ["..."] },\n' +
-      '    { "title": "card 3 title", "bullets": ["..."] }\n' +
+      '    { "title": "", "bullets": ["use {name} {a} {b} {goal} to personalize — 3 bullets", "", ""] },\n' +
+      '    { "title": "", "bullets": ["", "", ""] },\n' +
+      '    { "title": "", "bullets": ["", "", ""] }\n' +
       '  ],\n' +
-      '  "checklistTitle": "checklist section title",\n' +
-      '  "checklistItems": ["item 1","item 2","item 3","item 4","item 5"],\n' +
-      '  "printText": "Print button label",\n' +
-      '  "backText": "← Back button label"\n' +
-      '}\n\n' +
-      'Card bullets MUST use {name}, {a}, {b}, {goal} placeholders to personalize results.\n' +
-      'Be 100% specific to the topic — nothing generic.';
+      '  "checklistTitle": "",\n' +
+      '  "checklistItems": ["","","","",""],\n' +
+      '  "printText": "",\n' +
+      '  "backText": ""\n' +
+      '}';
 
     var userMsg;
     if(ebookContext && !topic) {
@@ -2590,6 +2590,16 @@ app.post('/api/generate-skill', async function(req, res) {
     if(!html || html.length < 200) {
       return res.json({ success: false, error: 'El Skill Pack generado quedó vacío. Intenta de nuevo.' });
     }
+    // Fallback toggle: garantiza que TODAS las tarjetas abran aunque Claude haya generado JS roto en alguna
+    var toggleFallback = '<script>document.addEventListener("DOMContentLoaded",function(){' +
+      'document.querySelectorAll(".card").forEach(function(c){' +
+      'c.addEventListener("click",function(e){' +
+      'if(e.target.tagName==="BUTTON"||e.target.closest("button"))return;' +
+      'this.classList.toggle("open");' +
+      'var b=this.querySelector(".card-body");' +
+      'if(b)b.style.display=b.style.display==="block"?"none":"block";' +
+      '});});});<\/script>';
+    html = html.replace(/<\/body>/i, toggleFallback + '</body>');
     var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     var productName = titleMatch ? titleMatch[1].trim() : '';
     res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' });
