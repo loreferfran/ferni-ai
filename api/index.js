@@ -2468,8 +2468,9 @@ app.post('/api/generate-app', async function(req, res) {
     var currency = regs.currency || 'EUR';
 
     var sys = 'You are an expert UX copywriter. Return ONLY a valid JSON object — no markdown, no explanation, no extra text.\n\n' +
-      '⚠ CRITICAL: Every single string value in the JSON must be written in ' + lang + '. Zero words in any other language.\n' +
+      'CRITICAL: Every single string value in the JSON must be written in ' + lang + '. Zero words in any other language.\n' +
       'Market: ' + countryName + '. Currency: ' + currency + '.\n\n' +
+      (context ? 'MANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override any default:\n' + context + '\n\n' : '') +
       'JSON schema (ALL string values must be in ' + lang + '):\n' +
       '{\n' +
       '  "appTitle": "app name",\n' +
@@ -2503,19 +2504,14 @@ app.post('/api/generate-app', async function(req, res) {
       '  "backText": "← Back button label"\n' +
       '}\n\n' +
       'Card bullets MUST use {name}, {a}, {b}, {goal} placeholders to personalize results.\n' +
-      'Be 100% specific to the ebook topic — nothing generic.';
+      'Be 100% specific to the topic — nothing generic.';
 
-    var instrBlock = context
-      ? '🚨 MANDATORY AUTHOR INSTRUCTIONS — follow these EXACTLY, they override any default choice:\n' + context + '\n\n'
-      : '';
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = instrBlock +
-        'Analiza este ebook y diseña la app complementaria perfecta para él — la herramienta que el lector usará y dirá "exactamente esto necesitaba".\n\nDatos del ebook:\n' + ebookContext;
+      userMsg = 'Design the perfect companion app for this ebook.\n\nEbook data:\n' + ebookContext;
     } else {
-      userMsg = instrBlock +
-        'Crea el JSON para una herramienta interactiva premium sobre: "' + topic + '"' +
-        (ebookContext ? '\n\nContexto del ebook relacionado:\n' + ebookContext : '');
+      userMsg = 'Create the JSON for an interactive tool about: "' + topic + '"' +
+        (ebookContext ? '\n\nRelated ebook context:\n' + ebookContext : '');
     }
 
     var result = await claudeCall(sys, userMsg, 2000, true, 'claude-sonnet-4-6');
@@ -2571,18 +2567,14 @@ app.post('/api/generate-skill', async function(req, res) {
       '   CSS: .card-body{display:none} .card.open .card-body{display:block}\n' +
       '   Copy button: event.stopPropagation(); copies text; shows "✓" for 2s.\n' +
       '7. CRITICAL — BE COMPLETE: finish every tag and every JS function. All 5 cards must be present.\n' +
-      '8. Write compact code. Do NOT mention prices.';
+      '8. Write compact code. Do NOT mention prices.' +
+      (context ? '\n\nMANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override any default:\n' + context : '');
 
-    var instrBlockSkill = context
-      ? '🚨 MANDATORY AUTHOR INSTRUCTIONS — follow these EXACTLY, they override any default choice:\n' + context + '\n\n'
-      : '';
     var userMsg;
     if(ebookContext && !topic) {
-      userMsg = instrBlockSkill +
-        'Analyze this ebook and create a premium HTML Skill Pack. Each prompt must be unique, expert-level, and 100% specific to this ebook — not generic.\n\nEbook data:\n' + ebookContext;
+      userMsg = 'Create a premium HTML Skill Pack for this ebook. Each prompt must be unique, expert-level, and 100% specific — not generic.\n\nEbook data:\n' + ebookContext;
     } else {
-      userMsg = instrBlockSkill +
-        'Create a premium HTML Skill Pack for: "' + topic + '"' +
+      userMsg = 'Create a premium HTML Skill Pack for: "' + topic + '"' +
         (ebookContext ? '\n\nComplements this ebook:\n' + ebookContext : '');
     }
 
