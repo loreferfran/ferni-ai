@@ -1053,9 +1053,45 @@ select option { background: #1e2d52; }
             </div>
 
             <!-- Action buttons -->
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
               <button onclick="downloadImpPDF()" class="btn btn-p" style="font-size:14px;padding:11px 22px;">📄 Descargar PDF</button>
-              <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Acceder a Hotmart, Meta Ads y Bonus Pack para este ebook">📊 Hotmart / Meta Ads / Bonus</button>
+              <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Ir a Hotmart, Meta Ads y Bonus Pack">📊 Hotmart / Meta / Bonus</button>
+              <button onclick="toggleImpTranslate()" id="imp-translate-btn" class="btn" style="font-size:13px;padding:11px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);">🌐 Traducir</button>
+            </div>
+
+            <!-- Translation panel -->
+            <div id="imp-translate-panel" class="hidden" style="background:rgba(108,92,231,0.07);border:1px solid rgba(108,92,231,0.25);border-radius:10px;padding:14px;margin-bottom:10px;">
+              <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Traducir a otro idioma / mercado</div>
+              <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                <div style="flex:1;min-width:160px;">
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Mercado destino</div>
+                  <select id="imp-tr-market" onchange="onImpTrMarketChange()" style="width:100%;padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                    <option value="">— Seleccionar —</option>
+                    <optgroup label="🌎 LatAm">
+                      <option value="España">🇪🇸 España</option>
+                      <option value="LatAm">🌎 LatAm</option>
+                      <option value="Mexico">🇲🇽 México</option>
+                      <option value="Colombia">🇨🇴 Colombia</option>
+                      <option value="Argentina">🇦🇷 Argentina</option>
+                      <option value="Brazil">🇧🇷 Brasil</option>
+                    </optgroup>
+                    <optgroup label="🌍 Europa / USA">
+                      <option value="USA">🇺🇸 USA</option>
+                      <option value="United Kingdom">🇬🇧 Reino Unido</option>
+                      <option value="France">🇫🇷 Francia</option>
+                      <option value="Germany">🇩🇪 Alemania</option>
+                      <option value="Italy">🇮🇹 Italia</option>
+                      <option value="Portugal">🇵🇹 Portugal</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <div style="flex:0 0 auto;">
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Idioma</div>
+                  <div id="imp-tr-lang-display" style="padding:8px 14px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);color:var(--muted);font-size:13px;min-width:90px;">—</div>
+                </div>
+                <button onclick="_translateImportedEbook()" class="btn btn-p" style="font-size:13px;padding:9px 18px;">✦ Traducir</button>
+              </div>
+              <div id="imp-tr-progress" style="display:none;font-size:12px;color:var(--muted);margin-top:8px;">Traduciendo sección 0 de 0...</div>
             </div>
 
             <!-- Imagen de portada -->
@@ -1078,14 +1114,6 @@ select option { background: #1e2d52; }
             <!-- Preview iframe — all chapters, no limit -->
             <iframe id="imp-preview" style="border-radius:10px;border:1px solid var(--border);height:660px;width:100%;display:block;margin-bottom:14px;" frameborder="0"></iframe>
 
-            <!-- Create complementary products -->
-            <div style="border-top:1px solid rgba(108,92,231,0.18);padding-top:14px;">
-              <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Crear productos complementarios</div>
-              <div style="display:flex;gap:8px;">
-                <button onclick="sendImpToCrear('app')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">📱 Generar Herramienta</button>
-                <button onclick="sendImpToCrear('skill')" class="btn btn-p" style="flex:1;font-size:13px;padding:10px 8px;">⚡ Generar Skill Pack</button>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -1634,6 +1662,7 @@ async function generateDirectEbook(){
 // ===== IMPORT & UPGRADE =====
 var _impChapters = [];
 var _impMeta = {};
+var _impRegistered = false;
 
 function handleImpFile(input){
   var file = input.files[0];
@@ -1796,7 +1825,7 @@ async function startImport(skipEdit){
   var ref = (document.getElementById('imp-ref').value||'').trim();
 
   // Limpiar datos anteriores siempre que se inicia un nuevo import
-  _impChapters = []; _impMeta = {};
+  _impChapters = []; _impMeta = {}; _impRegistered = false;
   try { localStorage.removeItem('ferni_imp_chapters'); localStorage.removeItem('ferni_imp_meta'); } catch(e){}
 
   hide('imp-empty'); show('imp-loading');
@@ -1970,6 +1999,8 @@ function _renderImpResult(){
 
   _renderImpChBtns();
   _renderImpPreview();
+  // Auto-registrar el ebook importado en todos los módulos del sistema
+  _registerImportedEbook();
 }
 
 function _renderImpChBtns(){
@@ -2263,15 +2294,11 @@ async function _downloadMergedPDF(){
   }
 }
 
-function sendToEbook(){
-  if(!_impChapters.length) return;
-
-  // Try to extract actual ebook title from first section content
-  // Look at first non-empty lines of first chunk for a real title
+function _registerImportedEbook(){
+  if(!_impChapters.length || _impRegistered) return false;
   var detectedTitle = '';
   var firstContent = (_impChapters[0] && _impChapters[0].improved) || '';
   var firstLines = firstContent.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
-  // If first line is short enough to be a title (3-12 words) and not a chapter marker, use it
   if(firstLines.length > 0){
     var candidate = firstLines[0];
     var wordCount = candidate.split(/\s+/).length;
@@ -2279,42 +2306,95 @@ function sendToEbook(){
       detectedTitle = candidate;
     }
   }
-  var fileName = _impMeta.fileName.replace(/\.[^.]+$/,'');
-  var ebookTitle = detectedTitle || fileName;
-
-  // All sections become chapters — do NOT use first section as intro (avoids duplication)
+  var fileName = (_impMeta.fileName||'ebook').replace(/\.[^.]+$/,'');
+  var ebookTitle = (_impMeta.bookTitle||detectedTitle||fileName).replace(/[_\-]+/g,' ').trim();
   var chs = _impChapters.map(function(ch, i){
     return { title: ch.title || ('Sección '+(i+1)), content: ch.improved, number: i+1, opening:'', keyPoints:[], exercise:null };
   });
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
-  // Load into global state so Hotmart/Meta/Bonus modules can access this ebook
   S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
   S.hmKit = null; S.maKit = null; S.coverUrl = null;
   S.numChapters = chs.length;
   S.chapterImages = new Array(chs.length).fill(null);
   S.finalEbook = ebookData;
   S.approvedLang = _impMeta.lang;
-  // Use the import preview HTML (handles any number of chapters)
   S.pdfHtml = buildImportPreviewHtml(_impChapters, _impMeta);
   var id = 'imp_'+Date.now();
   S.currentHistId = id;
   var info = LANGS[_impMeta.market]||{lang:'Spanish',flag:'🌍'};
   S.history.unshift({ id:id, opp:ebookTitle, country:_impMeta.market, niche:'importado', flag:info.flag, ebook:ebookData, finalEbook:ebookData, selOpp:opp, numChapters:chs.length, date:new Date().toLocaleDateString('es-CL'), source:'import' });
   saveFullDataToHist(id);
-  showTab('ebook', document.querySelectorAll('.tab')[1]);
-  setTimeout(function(){
-    hide('eb-empty'); hide('eb-loading'); hide('eb-content'); show('eb-approved');
-    document.getElementById('eb-approved-badge').textContent = '✓ ' + _impMeta.lang + ' · ' + chs.length + ' secciones';
-    var prev = document.getElementById('eb-final-preview');
-    if(prev) prev.srcdoc = S.pdfHtml;
-    rebuildRewriteBtns(Math.min(chs.length, 8));
-    addMsg('chat-ebook', '📊 Ebook disponible para generar kit Hotmart, Meta Ads y Bonus Pack. Las correcciones y la descarga PDF las tienes en el módulo 📥 Importar.', 'ferni');
-  }, 200);
+  _impRegistered = true;
+  return true;
+}
+
+function sendToEbook(){
+  _registerImportedEbook();
+  if(!S.selOpp) return;
+  var hmTab = document.querySelector('.tab[onclick*="hotmart"]');
+  showTab('hotmart', hmTab);
+}
+
+function toggleImpTranslate(){
+  var panel = document.getElementById('imp-translate-panel');
+  if(!panel) return;
+  if(panel.classList.contains('hidden')){ panel.classList.remove('hidden'); }
+  else { panel.classList.add('hidden'); }
+}
+
+var _IMP_TR_LANGS = {
+  'España':'Español','LatAm':'Español','Mexico':'Español','Colombia':'Español','Argentina':'Español',
+  'Brazil':'Português','Portugal':'Português',
+  'USA':'English','United Kingdom':'English',
+  'France':'Français','Germany':'Deutsch','Italy':'Italiano'
+};
+
+function onImpTrMarketChange(){
+  var market = document.getElementById('imp-tr-market').value;
+  var display = document.getElementById('imp-tr-lang-display');
+  if(display) display.textContent = market ? (_IMP_TR_LANGS[market]||'English') : '—';
+}
+
+async function _translateImportedEbook(){
+  if(!_impChapters.length){ alert('No hay ebook importado.'); return; }
+  var market = document.getElementById('imp-tr-market').value;
+  if(!market){ alert('Selecciona el mercado destino.'); return; }
+  var lang = _IMP_TR_LANGS[market] || 'English';
+  var prog = document.getElementById('imp-tr-progress');
+  var btn = document.querySelector('[onclick="_translateImportedEbook()"]');
+  var origText = btn ? btn.textContent : '✦ Traducir';
+  try {
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Traduciendo...'; }
+    if(prog) prog.style.display = 'block';
+    for(var i = 0; i < _impChapters.length; i++){
+      if(prog) prog.textContent = 'Traduciendo sección '+(i+1)+' de '+_impChapters.length+'...';
+      try {
+        var r = await fetch('/api/translate-chapter', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ piece: _impChapters[i].improved, language: lang, targetMarket: market, author: S.author||'Ferni Guides' })
+        });
+        var d = await r.json();
+        if(d.success && d.translated) _impChapters[i].improved = d.translated;
+      } catch(e){}
+    }
+    // Actualizar idioma/mercado y desactivar rawMode (ya no es el PDF original)
+    _impMeta.lang = lang;
+    _impMeta.market = market;
+    _impMeta.rawMode = false;
+    _impRegistered = false; // forzar re-registro con nuevos datos
+    _saveImpToStorage();
+    _registerImportedEbook();
+    _renderImpResult();
+    document.getElementById('imp-translate-panel').classList.add('hidden');
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = origText; }
+    if(prog) prog.style.display = 'none';
+  }
 }
 
 function resetImport(){
-  _impChapters = []; _impMeta = {};
+  _impChapters = []; _impMeta = {}; _impRegistered = false;
   try { localStorage.removeItem('ferni_imp_chapters'); localStorage.removeItem('ferni_imp_meta'); } catch(e){}
   hide('imp-content'); hide('imp-loading'); show('imp-empty');
   var fi = document.getElementById('imp-file'); if(fi) fi.value='';
@@ -4951,8 +5031,8 @@ function getHmEbookData(val){
     return { opp: S.selOpp, ebook: S.finalEbook||S.ebookData, lang: S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'Español' };
   }
   if(val && val.startsWith('hist_')){
-    var id = parseInt(val.replace('hist_',''));
-    var h = (S.history||[]).find(function(x){ return x.id===id; });
+    var hid = val.replace('hist_','');
+    var h = (S.history||[]).find(function(x){ return String(x.id)===hid; });
     if(!h || (!h.ebook && !h.finalEbook)) return null;
     var opp = h.selOpp || (h.opps&&h.opps[0]);
     return { opp: opp, ebook: h.finalEbook||h.ebook, lang: h.language||(opp&&(opp.idioma||opp.language))||'Español' };
@@ -5024,8 +5104,8 @@ function getMetaEbookData(val){
     return { opp: S.selOpp, ebook: S.finalEbook||S.ebookData, lang: S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'Español' };
   }
   if(val && val.startsWith('hist_')){
-    var id = parseInt(val.replace('hist_',''));
-    var h = (S.history||[]).find(function(x){ return x.id===id; });
+    var hid = val.replace('hist_','');
+    var h = (S.history||[]).find(function(x){ return String(x.id)===hid; });
     if(!h || !h.finalEbook) return null;
     var opp = h.opps && h.opps.find(function(o){ return o.tituloEbook&&h.ebook.title&&o.tituloEbook===h.ebook.title; }) || (h.opps&&h.opps[0]);
     return { opp: opp, ebook: h.ebook, lang: h.language||'Español' };
@@ -5876,6 +5956,8 @@ function populateCrearSel() {
     });
     if(currentVal) {
       for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value===currentVal){ sel.value=currentVal; break; } }
+    } else if(S.selOpp && (S.finalEbook||S.ebookData)) {
+      sel.value = 'current';
     }
   });
 }
@@ -5889,8 +5971,8 @@ function getCrearEbookData(val) {
     return { opp: S.selOpp, ebook: activeEbook, lang: S.approvedLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'Español' };
   }
   if(val.startsWith('hist_')) {
-    var id = parseInt(val.replace('hist_',''));
-    var h = (S.history||[]).find(function(x){ return x.id===id; });
+    var hid = val.replace('hist_','');
+    var h = (S.history||[]).find(function(x){ return String(x.id)===hid; });
     if(!h) return null;
     var eb = h.finalEbook || h.ebook || h.ebookData;
     if(!eb) return null;
