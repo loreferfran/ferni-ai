@@ -2693,98 +2693,105 @@ app.post('/api/generate-premium-app', async function(req, res) {
 
     var sys =
       'You are an expert product designer creating premium interactive HTML apps as ebook bonuses.\n' +
-      'Return ONLY a valid JSON object — no markdown fences, no explanation.\n' +
-      'ALL text must be in ' + lang + '. Market: ' + countryName + '.\n\n' +
+      'Return ONLY a valid JSON object — no markdown fences, no explanation, no trailing text.\n' +
+      'ALL text values must be in ' + lang + '. Market: ' + countryName + '.\n\n' +
       (context ? '=== AUTHOR REQUIREMENTS — follow exactly ===\n' + context + '\n=== END ===\n\n' : '') +
-      'Choose 4–6 modules from: dashboard, checklist, simulator, comparador, quiz, plan, glosario, logros\n' +
-      'Pick what genuinely fits the ebook topic. Always include "dashboard". Add "logros" for motivation.\n' +
-      'Examples: finance/credit → simulator+comparador+checklist; health → quiz+checklist+plan; career → simulator+quiz+plan\n\n' +
-      'JSON schema (fill every "" with real, specific, expert content — not generic placeholders):\n' +
+      'Choose 4–5 modules from: dashboard, checklist, simulator, comparador, quiz, plan, glosario, logros\n' +
+      'Always include "dashboard" and "logros". Pick remaining based on the ebook topic.\n' +
+      'finance/credit → add simulator+comparador; health/fitness → add quiz+checklist; career → add simulator+quiz; any → add plan+glosario\n\n' +
+      'Fill every empty string "" with specific, expert-level content. JSON schema:\n' +
       '{\n' +
-      '  "appTitle": "",\n' +
-      '  "appTagline": "",\n' +
-      '  "accentColor": "(ONE hex — career=#6c5ce7 finance=#f9ca24 health=#00b894 marketing=#e17055 other=#00cec9)",\n' +
-      '  "lang": "' + lang.slice(0,2).toLowerCase() + '",\n' +
-      '  "modules": ["dashboard","checklist","plan","glosario","logros"],\n' +
-      '  "onboarding": { "fields": [\n' +
-      '    { "id": "name", "label": "", "type": "text", "placeholder": "" },\n' +
-      '    { "id": "q1",   "label": "", "type": "select", "options": ["","","",""] },\n' +
-      '    { "id": "q2",   "label": "", "type": "select", "options": ["","","",""] },\n' +
-      '    { "id": "q3",   "label": "", "type": "select", "options": ["","","",""] }\n' +
-      '  ] },\n' +
-      '  "dashboard": { "title":"", "greeting":"¡Hola, [name]! 👋", "nextActionLabel":"", "nextActions":["","","",""], "steps":["","","",""] },\n' +
-      '  "checklist": { "title":"", "subtitle":"", "phases": [\n' +
-      '    { "title":"", "tasks":[{"text":""},{"text":""},{"text":""},{"text":""},{"text":""}] },\n' +
-      '    { "title":"", "tasks":[{"text":""},{"text":""},{"text":""},{"text":""}] },\n' +
-      '    { "title":"", "tasks":[{"text":""},{"text":""},{"text":""},{"text":""}] },\n' +
-      '    { "title":"", "tasks":[{"text":""},{"text":""},{"text":""}] }\n' +
-      '  ] },\n' +
-      '  "simulator": { "title":"", "metricName":"", "sliders":[\n' +
+      '  "appTitle":"", "appTagline":"",\n' +
+      '  "accentColor":"(ONE hex: career=#6c5ce7 finance=#f9ca24 health=#00b894 marketing=#e17055 other=#00cec9)",\n' +
+      '  "lang":"' + lang.slice(0,2).toLowerCase() + '",\n' +
+      '  "modules":["dashboard","checklist","plan","glosario","logros"],\n' +
+      '  "onboarding":{"fields":[\n' +
+      '    {"id":"name","label":"","type":"text","placeholder":""},\n' +
+      '    {"id":"q1","label":"","type":"select","options":["","","",""]},\n' +
+      '    {"id":"q2","label":"","type":"select","options":["","","",""]},\n' +
+      '    {"id":"q3","label":"","type":"select","options":["","","",""]}\n' +
+      '  ]},\n' +
+      '  "dashboard":{"title":"","greeting":"¡Hola, [name]! 👋","nextActionLabel":"","nextActions":["","","",""],"steps":["","","",""]},\n' +
+      '  "checklist":{"title":"","subtitle":"","phases":[\n' +
+      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
+      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
+      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},\n' +
+      '    {"title":"","tasks":[{"text":""},{"text":""},{"text":""}]}\n' +
+      '  ]},\n' +
+      '  "simulator":{"title":"","metricName":"","sliders":[\n' +
       '    {"label":"","weight":35,"defaultValue":50},\n' +
       '    {"label":"","weight":30,"defaultValue":50},\n' +
       '    {"label":"","weight":20,"defaultValue":50},\n' +
       '    {"label":"","weight":15,"defaultValue":50}\n' +
-      '  ], "zones":[\n' +
+      '  ],"zones":[\n' +
       '    {"min":0,"max":40,"label":"","color":"#e17055"},\n' +
       '    {"min":41,"max":69,"label":"","color":"#fdcb6e"},\n' +
       '    {"min":70,"max":89,"label":"","color":"#74b9ff"},\n' +
       '    {"min":90,"max":100,"label":"","color":"#00b894"}\n' +
-      '  ] },\n' +
-      '  "comparador": { "title":"", "subtitle":"", "sliderLabel":"", "criteria":["","","",""],\n' +
+      '  ]},\n' +
+      '  "comparador":{"title":"","sliderLabel":"","headers":["","","",""],\n' +
       '    "items":[\n' +
-      '      {"name":"","level":"","minLevel":0,"criteria":{"":"","":"","":"","":""}},\n' +
-      '      {"name":"","level":"","minLevel":2,"criteria":{"":"","":"","":"","":""}},\n' +
-      '      {"name":"","level":"","minLevel":5,"criteria":{"":"","":"","":"","":""}},\n' +
-      '      {"name":"","level":"","minLevel":8,"criteria":{"":"","":"","":"","":""}}\n' +
+      '      {"name":"","level":"","minLevel":0,"values":["","","",""]},\n' +
+      '      {"name":"","level":"","minLevel":3,"values":["","","",""]},\n' +
+      '      {"name":"","level":"","minLevel":6,"values":["","","",""]},\n' +
+      '      {"name":"","level":"","minLevel":9,"values":["","","",""]}\n' +
       '    ]\n' +
       '  },\n' +
-      '  "quiz": { "title":"", "subtitle":"", "questions":[\n' +
+      '  "quiz":{"title":"","subtitle":"","questions":[\n' +
       '    {"text":"","riskIfNo":true},{"text":"","riskIfNo":true},{"text":"","riskIfNo":true},\n' +
-      '    {"text":"","riskIfYes":true},{"text":"","riskIfNo":true},{"text":"","riskIfNo":true},\n' +
-      '    {"text":"","riskIfYes":true},{"text":"","riskIfNo":true}\n' +
-      '  ], "riskLevels":[\n' +
+      '    {"text":"","riskIfYes":true},{"text":"","riskIfNo":true},{"text":"","riskIfYes":true},\n' +
+      '    {"text":"","riskIfNo":true},{"text":"","riskIfNo":true}\n' +
+      '  ],"riskLevels":[\n' +
       '    {"min":0,"max":2,"label":"","color":"#00b894","message":""},\n' +
       '    {"min":3,"max":5,"label":"","color":"#fdcb6e","message":""},\n' +
       '    {"min":6,"max":8,"label":"","color":"#e17055","message":""}\n' +
-      '  ] },\n' +
-      '  "plan": { "title":"", "months":[\n' +
+      '  ]},\n' +
+      '  "plan":{"title":"","months":[\n' +
       '    {"month":1,"title":"","actions":["","",""]},{"month":2,"title":"","actions":["","",""]},\n' +
       '    {"month":3,"title":"","actions":["","",""]},{"month":4,"title":"","actions":["","",""]},\n' +
-      '    {"month":5,"title":"","actions":["","",""]},{"month":6,"title":"","actions":["","",""]},\n' +
+      '    {"month":5,"title":"","actions":["","",""]},{"month":6,"title":"","actions":["",""]},\n' +
       '    {"month":7,"title":"","actions":["","",""]},{"month":8,"title":"","actions":["","",""]},\n' +
-      '    {"month":9,"title":"","actions":["","",""]},{"month":10,"title":"","actions":["","",""]},\n' +
-      '    {"month":11,"title":"","actions":["","",""]},{"month":12,"title":"","actions":["",""]}\n' +
-      '  ] },\n' +
-      '  "glosario": { "title":"", "terms":[\n' +
+      '    {"month":9,"title":"","actions":["",""]},{"month":10,"title":"","actions":["","",""]},\n' +
+      '    {"month":11,"title":"","actions":["",""]},{"month":12,"title":"","actions":["",""]}\n' +
+      '  ]},\n' +
+      '  "glosario":{"title":"","terms":[\n' +
       '    {"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},\n' +
       '    {"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},\n' +
-      '    {"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""}\n' +
-      '  ], "faq":[\n' +
-      '    {"q":"","a":""},{"q":"","a":""},{"q":"","a":""},\n' +
-      '    {"q":"","a":""},{"q":"","a":""},{"q":"","a":""}\n' +
-      '  ] },\n' +
-      '  "logros": { "title":"", "badges":[\n' +
+      '    {"term":"","def":""},{"term":"","def":""}\n' +
+      '  ],"faq":[\n' +
+      '    {"q":"","a":""},{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}\n' +
+      '  ]},\n' +
+      '  "logros":{"title":"","badges":[\n' +
       '    {"id":"b1","icon":"🚀","title":"","desc":""},\n' +
       '    {"id":"b2","icon":"✅","title":"","desc":""},\n' +
       '    {"id":"b3","icon":"⭐","title":"","desc":""},\n' +
       '    {"id":"b4","icon":"💪","title":"","desc":""},\n' +
       '    {"id":"b5","icon":"🏆","title":"","desc":""},\n' +
       '    {"id":"b6","icon":"🔥","title":"","desc":""}\n' +
-      '  ] }\n' +
+      '  ]}\n' +
       '}';
 
     var userMsg = (ebookContext && !topic)
-      ? 'Create a premium multi-module interactive app for this ebook. Choose the best modules for the topic. Fill ALL fields with specific, expert-level, 100% relevant content — nothing generic.\n\nEbook:\n' + ebookContext
-      : 'Create a premium multi-module interactive app for: "' + topic + '"' + (ebookContext ? '\n\nEbook:\n' + ebookContext : '');
+      ? 'Create the premium app for this ebook. Select best modules for this topic. Fill EVERY field with expert, specific, 100% relevant content.\n\nEbook:\n' + ebookContext
+      : 'Create the premium app for: "' + topic + '"' + (ebookContext ? '\n\nEbook:\n' + ebookContext : '');
 
-    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 8000, true, 'claude-sonnet-4-6');
     var raw = (result.text||'').trim().replace(/^```[\w]*\s*/i,'').replace(/\s*```$/i,'').trim();
+    // Remove any text before the opening brace
+    var braceStart = raw.indexOf('{');
+    if(braceStart > 0) raw = raw.slice(braceStart);
+    // Find the balanced closing brace (handles Claude adding trailing text)
+    var depth = 0, endIdx = -1;
+    for(var ci = 0; ci < raw.length; ci++) {
+      if(raw[ci]==='{') depth++;
+      else if(raw[ci]==='}') { depth--; if(depth===0){ endIdx=ci; break; } }
+    }
+    if(endIdx > 0) raw = raw.slice(0, endIdx+1);
 
     var data;
     try { data = JSON.parse(raw); } catch(e) {
-      var m2 = raw.match(/\{[\s\S]*\}/);
-      if(m2) { try { data = JSON.parse(m2[0]); } catch(e2) {} }
-      if(!data) return res.json({ success: false, error: 'Error al procesar respuesta de IA. Intenta de nuevo.' });
+      console.error('[premium-app] JSON parse error:', e.message, '\nRaw (first 500):', raw.slice(0,500));
+      return res.json({ success: false, error: 'Error al generar la app (JSON inválido). Intenta de nuevo.' });
     }
 
     var html = buildPremiumApp(data, year);

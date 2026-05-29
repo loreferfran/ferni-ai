@@ -289,10 +289,12 @@ function buildPremiumApp(data, year) {
   var compMod = '';
   if(data.comparador) {
     var comp = data.comparador;
-    var criteria = comp.criteria || [];
+    // Support both new format (headers+values) and old (criteria array + item.criteria object)
+    var headers = comp.headers || comp.criteria || [];
     var items = (comp.items||[]).map(function(item, ii){
-      var rows = criteria.map(function(k){
-        return '<div class="crow"><span class="ck">'+escH(k)+'</span><span class="cv">'+escH((item.criteria&&item.criteria[k])||'—')+'</span></div>';
+      var vals = item.values || (headers.map(function(k){ return (item.criteria&&item.criteria[k])||''; }));
+      var rows = headers.map(function(h, hi){
+        return '<div class="crow"><span class="ck">'+escH(h)+'</span><span class="cv">'+escH(vals[hi]||'—')+'</span></div>';
       }).join('');
       return '<div class="ccard" id="cc-'+ii+'" data-min="'+(item.minLevel||0)+'">'+
         '<div class="cname">'+escH(item.name)+'</div>'+
@@ -302,7 +304,7 @@ function buildPremiumApp(data, year) {
       '</div>';
     }).join('');
     compMod = '<div class="mod" id="mod-comparador">'+
-      '<div class="mhdr"><div class="mtitle">'+escH(comp.title||'Comparador')+'</div><div class="msub">'+escH(comp.subtitle||'')+'</div></div>'+
+      '<div class="mhdr"><div class="mtitle">'+escH(comp.title||'Comparador')+'</div></div>'+
       '<div class="mbody">'+
         '<div class="sli"><div class="slhdr"><span class="slname">'+escH(comp.sliderLabel||'Nivel')+'</span><span class="slval" id="cpv">0</span></div>'+
         '<input type="range" class="slinput" min="0" max="10" value="0" oninput="filComp(this.value)"></div>'+
@@ -552,7 +554,7 @@ function buildPremiumApp(data, year) {
     '  var ql=q.toLowerCase();\n' +
     '  document.querySelectorAll(".gterm").forEach(function(e){\n' +
     '    var w=(e.querySelector(".gtword")||{}).textContent||"";\n' +
-    '    e.style.display=(!ql||w.toLowerCase().indexOf(ql)>-1)?"":"-";\n' +
+    '    e.style.display=(!ql||w.toLowerCase().indexOf(ql)>-1)?"":"none";\n' +
     '  });\n' +
     '}\n' +
     // LOGROS
