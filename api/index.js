@@ -2534,75 +2534,146 @@ app.post('/api/generate-app', async function(req, res) {
 
 app.post('/api/generate-skill', async function(req, res) {
   try {
-    var topic   = req.body.topic   || '';
-    var country = req.body.country || 'España';
-    var lang    = req.body.lang    || 'Español';
-
-    var countryName = getCountryName(country);
-
+    var topic       = req.body.topic       || '';
+    var country     = req.body.country     || 'España';
+    var lang        = req.body.lang        || 'Español';
     var ebookContext = req.body.ebookContext || '';
-    var context = req.body.context || '';
+    var context      = req.body.context     || '';
+    var countryName  = getCountryName(country);
 
-    var sys = 'You are a senior UX/UI designer and AI prompt engineer. You create premium, self-contained single-file HTML Skill Packs — editorial documents that look and feel like a paid digital product worth $47+.\n\n' +
-      'ABSOLUTE RULES:\n' +
-      '1. Output ONLY raw HTML starting with <!DOCTYPE html>. No preamble, no markdown fences.\n' +
-      '2. ONE file — all CSS in <style>, all JS in <script>. You MAY use Google Fonts via <link rel="stylesheet">.\n' +
-      '3. Every word in ' + lang + '. Market: ' + countryName + '.\n' +
-      '4. VISUAL DESIGN — premium dark editorial:\n' +
-      '   - Background: #0a0a16. Cards: #12122a, border 1px solid rgba(255,255,255,0.07).\n' +
-      '   - Headings: Playfair Display (serif) — color #f0e6d3. Body: DM Sans — color #c8c4bc.\n' +
-      '   - Accent: ONE color by topic (career=#6c5ce7, health=#00b894, finance=#f9ca24, marketing=#e17055).\n' +
-      '   - [FIELD] placeholders: <span class="field">[FIELD]</span> with accent bg at 15% opacity.\n' +
-      '5. REQUIRED STRUCTURE:\n' +
-      '   a) Header: title (Playfair, large), subtitle, topic badge.\n' +
-      '   b) SYSTEM PROMPT card: crown icon, full system prompt text, copy button.\n' +
-      '   c) Exactly 5 ACTION PROMPT CARDS — collapsed by default, click header to expand/collapse.\n' +
-      '      Each card shows: number + title + one-line tip (collapsed). Expanded: full prompt + copy button + Pro Tip.\n' +
-      '   d) Footer: one-line usage note.\n' +
-      '6. JAVASCRIPT — use this exact toggle pattern for every card:\n' +
-      '   <div class="card" onclick="this.classList.toggle(\'open\')">\n' +
-      '     <div class="card-header">...</div>\n' +
-      '     <div class="card-body">...</div>\n' +
-      '   </div>\n' +
-      '   CSS: .card-body{display:none} .card.open .card-body{display:block}\n' +
-      '   Copy button: event.stopPropagation(); copies text; shows "✓" for 2s.\n' +
-      '7. CRITICAL — BE COMPLETE: finish every tag and every JS function. All 5 cards must be present.\n' +
-      '8. Write compact code. Do NOT mention prices.' +
-      (context ? '\n\nMANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override any default:\n' + context : '');
+    // Claude returns JSON only — server builds the HTML from a fixed template
+    var sys = 'You are an expert AI prompt engineer. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.\n' +
+      'ALL text values must be in ' + lang + '. Market: ' + countryName + '.\n\n' +
+      (context ? '=== MANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override everything else ===\n' + context + '\n=== END ===\n\n' : '') +
+      'JSON schema — fill every empty string with real, expert-level, specific content:\n' +
+      '{\n' +
+      '  "title": "",\n' +
+      '  "subtitle": "",\n' +
+      '  "accentColor": "(choose ONE hex: career/employment=#6c5ce7  finance/money=#f9ca24  health/wellness=#00b894  marketing/sales=#e17055  other=#00cec9)",\n' +
+      '  "systemPrompt": { "title": "", "text": "" },\n' +
+      '  "cards": [\n' +
+      '    { "number": 1, "title": "", "tip": "", "prompt": "", "proTip": "" },\n' +
+      '    { "number": 2, "title": "", "tip": "", "prompt": "", "proTip": "" },\n' +
+      '    { "number": 3, "title": "", "tip": "", "prompt": "", "proTip": "" },\n' +
+      '    { "number": 4, "title": "", "tip": "", "prompt": "", "proTip": "" },\n' +
+      '    { "number": 5, "title": "", "tip": "", "prompt": "", "proTip": "" }\n' +
+      '  ]\n' +
+      '}';
 
-    var userMsg;
-    if(ebookContext && !topic) {
-      userMsg = 'Create a premium HTML Skill Pack for this ebook. Each prompt must be unique, expert-level, and 100% specific — not generic.\n\nEbook data:\n' + ebookContext;
-    } else {
-      userMsg = 'Create a premium HTML Skill Pack for: "' + topic + '"' +
-        (ebookContext ? '\n\nComplements this ebook:\n' + ebookContext : '');
+    var userMsg = ebookContext && !topic
+      ? 'Create a premium Skill Pack for this ebook. Each of the 5 prompts must be expert-level, unique, and 100% specific to the ebook content — not generic.\n\nEbook data:\n' + ebookContext
+      : 'Create a premium Skill Pack for: "' + topic + '"' + (ebookContext ? '\n\nComplements this ebook:\n' + ebookContext : '');
+
+    var result = await claudeCall(sys, userMsg, 4000, true, 'claude-sonnet-4-6');
+    var raw = (result.text || '').trim().replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    var data;
+    try { data = JSON.parse(raw); } catch(e) {
+      var m = raw.match(/\{[\s\S]*\}/);
+      if (m) { try { data = JSON.parse(m[0]); } catch(e2) {} }
+      if (!data) return res.json({ success: false, error: 'Error al procesar la respuesta. Intenta de nuevo.' });
     }
 
-    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
-    var html = (result.text || result || '').trim();
-    html = html.replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
-    var htmlLow = html.toLowerCase();
-    if(!htmlLow.startsWith('<!doctype') && !htmlLow.startsWith('<html')) {
-      var idx = htmlLow.indexOf('<!doctype');
-      if(idx === -1) idx = htmlLow.indexOf('<html');
-      if(idx > 0) html = html.slice(idx);
-    }
-    if(!html || html.length < 200) {
-      return res.json({ success: false, error: 'El Skill Pack generado quedó vacío. Intenta de nuevo.' });
-    }
-    // Fallback toggle: garantiza que TODAS las tarjetas abran aunque Claude haya generado JS roto en alguna
-    var toggleFallback = '<script>document.addEventListener("DOMContentLoaded",function(){' +
-      'document.querySelectorAll(".card").forEach(function(c){' +
-      'c.addEventListener("click",function(e){' +
-      'if(e.target.tagName==="BUTTON"||e.target.closest("button"))return;' +
-      'this.classList.toggle("open");' +
-      'var b=this.querySelector(".card-body");' +
-      'if(b)b.style.display=b.style.display==="block"?"none":"block";' +
-      '});});});<\/script>';
-    html = html.replace(/<\/body>/i, toggleFallback + '</body>');
-    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    var productName = titleMatch ? titleMatch[1].trim() : '';
-    res.json({ success: true, html: html, productName: productName, truncated: result.stopReason === 'max_tokens' });
+    // Build HTML from fixed template — card 5 is ALWAYS complete
+    var accent = (data.accentColor || '#6c5ce7').replace(/[^#0-9a-fA-F]/g, '').slice(0,7) || '#6c5ce7';
+    var year = new Date().getFullYear();
+
+    function escH(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    var cardsHtml = (data.cards||[]).map(function(card, i){
+      var n = i + 1;
+      return '<div class="card" id="sk-card'+n+'">' +
+        '<div class="card-header" onclick="skToggle('+n+')">' +
+          '<div class="card-num">'+n+'</div>' +
+          '<div class="card-meta">' +
+            '<div class="card-title">'+escH(card.title)+'</div>' +
+            '<div class="card-tip">'+escH(card.tip)+'</div>' +
+          '</div>' +
+          '<div class="card-arrow" id="sk-arr'+n+'">›</div>' +
+        '</div>' +
+        '<div class="card-body" id="sk-body'+n+'" style="display:none">' +
+          '<div class="prompt-box">' +
+            '<pre class="prompt-text" id="sk-pt'+n+'">'+escH(card.prompt)+'</pre>' +
+            '<button class="copy-btn" onclick="skCopy('+n+',this)">⊕ Copiar Prompt</button>' +
+          '</div>' +
+          (card.proTip ? '<div class="pro-tip"><span>💡</span> <strong>Pro Tip:</strong> '+escH(card.proTip)+'</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var html = '<!DOCTYPE html>\n<html lang="'+lang.toLowerCase().slice(0,2)+'">\n<head>\n' +
+      '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">\n' +
+      '<title>'+escH(data.title||'Skill Pack')+'</title>\n' +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
+      '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">\n' +
+      '<style>\n' +
+      '*{box-sizing:border-box;margin:0;padding:0}\n' +
+      ':root{--a:'+accent+';--bg:#0a0a16;--card:#12122a;--bdr:rgba(255,255,255,0.07);--t:#f0e6d3;--t2:#c8c4bc;--mu:#8a8499}\n' +
+      'body{background:var(--bg);font-family:"DM Sans",sans-serif;color:var(--t2);min-height:100vh;padding-bottom:48px}\n' +
+      '.hdr{background:linear-gradient(135deg,#0f0f28,#1a0a2e);border-bottom:1px solid var(--bdr);padding:48px 40px 36px;text-align:center;position:relative;overflow:hidden}\n' +
+      '.hdr::before{content:"";position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,var(--a) 0%,transparent 70%);opacity:.07;pointer-events:none}\n' +
+      '.badge{display:inline-block;background:rgba(255,255,255,0.05);border:1px solid var(--a);color:var(--a);font-size:11px;font-weight:600;letter-spacing:2px;padding:4px 14px;border-radius:20px;text-transform:uppercase;margin-bottom:18px}\n' +
+      'h1{font-family:"Playfair Display",serif;font-size:clamp(22px,4vw,38px);color:var(--t);line-height:1.2;margin-bottom:12px}\n' +
+      '.subtitle{font-size:15px;color:var(--mu);max-width:540px;margin:0 auto;line-height:1.6}\n' +
+      '.wrap{max-width:720px;margin:0 auto;padding:0 20px}\n' +
+      '.slbl{font-size:10px;letter-spacing:3px;color:var(--mu);text-transform:uppercase;font-weight:600;margin:32px 0 12px}\n' +
+      '.sys-card{background:var(--card);border:1px solid var(--bdr);border-top:3px solid var(--a);border-radius:12px;padding:28px;margin-bottom:8px}\n' +
+      '.sys-title{display:flex;align-items:center;gap:10px;font-family:"Playfair Display",serif;font-size:18px;color:var(--t);margin-bottom:16px}\n' +
+      '.sys-text{font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.85;color:var(--t2);white-space:pre-wrap;background:rgba(255,255,255,0.03);border:1px solid var(--bdr);border-radius:8px;padding:16px;margin-bottom:16px}\n' +
+      '.copy-btn{display:inline-flex;align-items:center;gap:6px;background:var(--a);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;padding:10px 20px;cursor:pointer;font-family:"DM Sans",sans-serif;transition:opacity .2s,transform .2s;letter-spacing:.5px}\n' +
+      '.copy-btn:hover{opacity:.85;transform:translateY(-1px)}\n' +
+      '.card{background:var(--card);border:1px solid var(--bdr);border-radius:12px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}\n' +
+      '.card:hover{border-color:rgba(255,255,255,0.14)}\n' +
+      '.card.open{border-color:var(--a)}\n' +
+      '.card-header{display:flex;align-items:center;gap:16px;padding:20px 24px;cursor:pointer;user-select:none}\n' +
+      '.card-num{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.05);border:1.5px solid var(--a);color:var(--a);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}\n' +
+      '.card-meta{flex:1;min-width:0}\n' +
+      '.card-title{font-family:"Playfair Display",serif;font-size:16px;color:var(--t);margin-bottom:3px}\n' +
+      '.card-tip{font-size:12px;color:var(--mu)}\n' +
+      '.card-arrow{font-size:22px;color:var(--mu);transition:transform .25s;flex-shrink:0}\n' +
+      '.card.open .card-arrow{transform:rotate(90deg);color:var(--a)}\n' +
+      '.card-body{padding:0 24px 24px}\n' +
+      '.prompt-box{background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:10px;padding:20px;margin-bottom:12px}\n' +
+      '.prompt-text{font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.85;color:var(--t2);white-space:pre-wrap;margin-bottom:16px}\n' +
+      '.field{background:rgba(255,255,255,.07);color:var(--a);padding:1px 6px;border-radius:4px;font-weight:500}\n' +
+      '.pro-tip{background:rgba(255,255,255,.04);border-left:3px solid var(--a);border-radius:0 8px 8px 0;padding:12px 16px;font-size:13px;line-height:1.7}\n' +
+      '.foot{text-align:center;padding:32px 20px 0;font-size:11px;color:var(--mu);letter-spacing:1px}\n' +
+      '</style>\n</head>\n<body>\n' +
+      '<div class="hdr">\n' +
+        '<div class="badge">✦ Skill Pack — Ferni Guides</div>\n' +
+        '<h1>'+escH(data.title||'')+'</h1>\n' +
+        '<p class="subtitle">'+escH(data.subtitle||'')+'</p>\n' +
+      '</div>\n' +
+      '<div class="wrap">\n' +
+        '<div class="slbl">▲ System Prompt — activa esto primero</div>\n' +
+        '<div class="sys-card">\n' +
+          '<div class="sys-title"><span>♛</span> '+escH((data.systemPrompt&&data.systemPrompt.title)||'')+'</div>\n' +
+          '<div class="sys-text" id="sk-sys">'+escH((data.systemPrompt&&data.systemPrompt.text)||'')+'</div>\n' +
+          '<button class="copy-btn" onclick="skCopySys(this)">⊕ Copiar System Prompt</button>\n' +
+        '</div>\n' +
+        '<div class="slbl">▲ Los 5 Prompts de Acción</div>\n' +
+        cardsHtml + '\n' +
+        '<div class="foot">Skill Pack · FERNI AI · Ferni Guides © '+year+'</div>\n' +
+      '</div>\n' +
+      '<script>\n' +
+      'function skToggle(n){\n' +
+      '  var card=document.getElementById("sk-card"+n);\n' +
+      '  var body=document.getElementById("sk-body"+n);\n' +
+      '  var arr=document.getElementById("sk-arr"+n);\n' +
+      '  var open=card.classList.toggle("open");\n' +
+      '  body.style.display=open?"block":"none";\n' +
+      '}\n' +
+      'function skCopySys(btn){\n' +
+      '  navigator.clipboard.writeText(document.getElementById("sk-sys").innerText)\n' +
+      '    .then(function(){var o=btn.innerHTML;btn.innerHTML="✓ Copiado";setTimeout(function(){btn.innerHTML=o;},2000);});\n' +
+      '}\n' +
+      'function skCopy(n,btn){\n' +
+      '  navigator.clipboard.writeText(document.getElementById("sk-pt"+n).innerText)\n' +
+      '    .then(function(){var o=btn.innerHTML;btn.innerHTML="✓ Copiado";setTimeout(function(){btn.innerHTML=o;},2000);});\n' +
+      '}\n' +
+      '<\/script>\n</body>\n</html>';
+
+    res.json({ success: true, html: html, productName: data.title||'Skill Pack', truncated: false });
   } catch(err) {
     res.json({ success: false, error: err.message });
   }
