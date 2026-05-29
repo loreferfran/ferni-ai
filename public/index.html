@@ -2193,11 +2193,15 @@ function _renderImpPreview(){
 function downloadImpPDF(){
   if(!_impChapters.length) return;
   if(_impMeta.rawMode && window._impBlobUrl){
-    // rawMode: siempre descarga el PDF original sin tocar nada
-    var a = document.createElement('a');
-    a.href = window._impBlobUrl;
-    a.download = _impMeta.fileName || 'ebook.pdf';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    if(_impMeta.coverDataUrl){
+      // Fusionar portada + PDF original usando pdf-lib
+      _downloadMergedPDF();
+    } else {
+      var a = document.createElement('a');
+      a.href = window._impBlobUrl;
+      a.download = _impMeta.fileName || 'ebook.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
     return;
   }
   var html = buildImportPreviewHtml(_impChapters, _impMeta);
@@ -2206,6 +2210,57 @@ function downloadImpPDF(){
   w.document.open(); w.document.write(html); w.document.close();
   w.onload = function(){ setTimeout(function(){ try{ w.print(); }catch(e){} }, 500); };
   setTimeout(function(){ try{ w.print(); }catch(e){} }, 1800);
+}
+
+async function _downloadMergedPDF(){
+  var btn = document.querySelector('[onclick="downloadImpPDF()"]');
+  var origText = btn ? btn.textContent : '';
+  try {
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Fusionando...'; }
+    if(!window.PDFLib){
+      await new Promise(function(resolve, reject){
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+        s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    var PDFDocument = window.PDFLib.PDFDocument;
+    var pdfResp = await fetch(window._impBlobUrl);
+    var pdfBytes = await pdfResp.arrayBuffer();
+    var srcDoc = await PDFDocument.load(pdfBytes);
+    var outDoc = await PDFDocument.create();
+    // Página 1: portada en A4 (595 x 842 pts)
+    var coverPage = outDoc.addPage([595, 842]);
+    var coverDataUrl = _impMeta.coverDataUrl;
+    var base64 = coverDataUrl.split(',')[1];
+    var coverBytes = Uint8Array.from(atob(base64), function(c){ return c.charCodeAt(0); });
+    var coverImg = coverDataUrl.indexOf('image/png') !== -1
+      ? await outDoc.embedPng(coverBytes)
+      : await outDoc.embedJpg(coverBytes);
+    coverPage.drawImage(coverImg, { x:0, y:0, width:595, height:842 });
+    // Copiar todas las páginas del original
+    var indices = srcDoc.getPageIndices();
+    var copied = await outDoc.copyPages(srcDoc, indices);
+    copied.forEach(function(p){ outDoc.addPage(p); });
+    var outBytes = await outDoc.save();
+    var blob = new Blob([outBytes], { type:'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (_impMeta.fileName || 'ebook').replace(/\.[^/.]+$/, '') + '.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 8000);
+  } catch(e){
+    console.error('pdf-lib merge error:', e);
+    // Fallback: descargar original
+    var a = document.createElement('a');
+    a.href = window._impBlobUrl;
+    a.download = _impMeta.fileName || 'ebook.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = origText; }
+  }
 }
 
 function sendToEbook(){
