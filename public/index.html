@@ -530,9 +530,9 @@ select option { background: #1e2d52; }
               <div id="meta-ebook-preview" style="display:none;background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text2);"></div>
               <div style="margin-bottom:14px;">
                 <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">💰 Precio de venta del ebook</div>
-                <div style="display:flex;gap:8px;">
-                  <input id="ma-price-inp" type="number" min="1" placeholder="Ej: 17" style="flex:1;padding:9px 12px;border-radius:8px;border:2px solid var(--accent);background:rgba(108,92,231,0.08);color:var(--text);font-size:15px;font-weight:600;font-family:inherit;">
-                  <select id="ma-currency-sel" style="padding:9px 12px;border-radius:8px;border:2px solid var(--accent);background:rgba(108,92,231,0.08);color:var(--text);font-size:14px;font-family:inherit;font-weight:600;min-width:80px;">
+                <div style="display:grid;grid-template-columns:1fr auto;gap:8px;">
+                  <input id="ma-price-inp" type="text" inputmode="numeric" placeholder="Escribe el precio — ej: 17" style="width:100%;padding:10px 14px;border-radius:8px;border:2px solid var(--accent);background:var(--bg2);color:var(--text);font-size:14px;font-family:inherit;outline:none;">
+                  <select id="ma-currency-sel" style="padding:10px 12px;border-radius:8px;border:2px solid var(--accent);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;">
                     <option>USD</option><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option><option>MXN</option><option>COP</option><option>ARS</option><option>CLP</option><option>BRL</option>
                   </select>
                 </div>
@@ -5231,7 +5231,7 @@ function genMetaFromSel(){
   if(!val){ alert('Selecciona primero un ebook de la lista.'); return; }
   var data = getMetaEbookData(val);
   if(!data || !data.opp){ alert('No se encontraron datos del ebook seleccionado.'); return; }
-  var priceVal = (document.getElementById('ma-price-inp')||{}).value || '';
+  var priceVal = ((document.getElementById('ma-price-inp')||{}).value || '').replace(/[^\d.,]/g,'').trim();
   var currency = (document.getElementById('ma-currency-sel')||{}).value || 'USD';
   var price = priceVal ? (priceVal + ' ' + currency) : '';
   genMeta(data.opp, data.lang, data.ebook, price);
