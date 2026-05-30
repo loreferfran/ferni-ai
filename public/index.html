@@ -481,7 +481,11 @@ select option { background: #1e2d52; }
               <div id="hm-ebook-preview" style="display:none;background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--text2);"></div>
               <div style="font-size:11px;color:var(--muted);margin-bottom:4px;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Mercado objetivo</div>
               <input id="hm-market-inp" type="text" placeholder="ej: Canada, UK, Australia, USA, France..." style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;margin-bottom:4px;" />
-              <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">Inglés para Canada ≠ UK ≠ USA — Claude adapta tono y modismos al mercado exacto</div>
+              <div style="font-size:10px;color:var(--muted);margin-bottom:12px;">Inglés para Canada ≠ UK ≠ Australia — Claude adapta tono y modismos al mercado exacto</div>
+              <div id="hm-extras-section" style="display:none;margin-bottom:12px;background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.25);border-radius:8px;padding:10px 12px;">
+                <div style="font-size:11px;color:#00b894;font-weight:700;margin-bottom:5px;">🎁 Extras detectados — se incluirán en el kit</div>
+                <div id="hm-extras-list" style="font-size:11px;color:var(--text2);line-height:1.7;"></div>
+              </div>
               <button class="btn btn-p" style="width:100%;font-size:14px;padding:11px;" onclick="genHotmartFromSel()">✦ Generar Kit Marketing</button>
             </div>
           </div>
@@ -538,8 +542,8 @@ select option { background: #1e2d52; }
                 </div>
               </div>
               <div id="ma-bonus-section" style="display:none;margin-bottom:14px;background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.25);border-radius:8px;padding:10px 12px;">
-                <div style="font-size:11px;color:#00b894;font-weight:700;margin-bottom:6px;">🎁 Bonus Pack detectado — se incluirá en los anuncios</div>
-                <div id="ma-bonus-list" style="font-size:11px;color:var(--text2);"></div>
+                <div style="font-size:11px;color:#00b894;font-weight:700;margin-bottom:5px;">🎁 Extras detectados — se incluirán en los anuncios</div>
+                <div id="ma-bonus-list" style="font-size:11px;color:var(--text2);line-height:1.7;"></div>
               </div>
               <button class="btn btn-p" style="width:100%;font-size:14px;padding:11px;" onclick="genMetaFromSel()">✦ Generar Kit Meta Ads</button>
             </div>
@@ -1326,7 +1330,7 @@ function showTab(id,el){
   }
   if(id==='hotmart'){
     if(S.hmKit && S.selOpp){ hide('hm-empty'); hide('hm-loading'); show('hm-content'); renderHotmart(S.selOpp, S.hmKit, S.selOpp.pais||S.selOpp.country||''); }
-    else populateHmSel();
+    else { populateHmSel(); showHmExtrasInfo(); }
   }
   if(id==='meta'){
     if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
@@ -4753,7 +4757,10 @@ async function genHotmart(o, langOverride, ebookOverride){
   show('hm-loading'); hide('hm-empty');
   document.getElementById('hm-load-txt').textContent = 'Analizando ebook y generando kit para ' + targetMarket + ' en ' + lang + '...';
   try{
-    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket,ebook:ebook})});
+    var hmBonuses = (S.extrasData||[]).map(function(ex){ return {title:ex.title, type:ex.type}; });
+    if(S_crApp && window._crAppTopic) hmBonuses.push({title:window._crAppTopic, type:'app-premium'});
+    if(S_crSkill && window._crSkillTopic) hmBonuses.push({title:window._crSkillTopic, type:'skill-pack'});
+    const resp=await fetch('/api/generate-hotmart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({opportunity:o,author:S.author,language:lang,targetMarket:targetMarket,ebook:ebook,bonuses:hmBonuses})});
     const d=await resp.json();
     if(d.success){ S.hmKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('hm-loading'); hide('hm-empty'); show('hm-content'); renderHotmart(o,d.kit,targetMarket); addMsg('chat-hotmart','✦ Kit Marketing listo — '+lang+' · Mercado: '+targetMarket+'. Revisa cada sección y dime si cambio algo.','ferni'); }
     else{ hide('hm-loading'); show('hm-empty'); alert('Error generando kit: '+d.error); }
@@ -5255,18 +5262,33 @@ function applyMetaFix(){
   } catch(e){ alert('Error al aplicar corrección: ' + e.message); }
 }
 
+function _buildExtrasInfo(){
+  var items = [];
+  if(S.extrasData && S.extrasData.length)
+    items.push('🎁 Bonus Pack: ' + S.extrasData.map(function(e){ return e.title; }).join(', '));
+  if(S_crApp && window._crAppTopic)
+    items.push('📱 App Premium: ' + window._crAppTopic);
+  if(S_crSkill && window._crSkillTopic)
+    items.push('⚡ Skill Pack: ' + window._crSkillTopic);
+  return items;
+}
+
 function showMaBonusInfo(){
   var sec = document.getElementById('ma-bonus-section');
   var list = document.getElementById('ma-bonus-list');
   if(!sec || !list) return;
-  if(S.extrasData && S.extrasData.length){
-    list.innerHTML = S.extrasData.map(function(ex){
-      return '· ' + ex.title;
-    }).join('<br>');
-    sec.style.display = 'block';
-  } else {
-    sec.style.display = 'none';
-  }
+  var items = _buildExtrasInfo();
+  if(items.length){ list.innerHTML = items.join('<br>'); sec.style.display='block'; }
+  else sec.style.display='none';
+}
+
+function showHmExtrasInfo(){
+  var sec = document.getElementById('hm-extras-section');
+  var list = document.getElementById('hm-extras-list');
+  if(!sec || !list) return;
+  var items = _buildExtrasInfo();
+  if(items.length){ list.innerHTML = items.join('<br>'); sec.style.display='block'; }
+  else sec.style.display='none';
 }
 
 function resetMeta(){
@@ -5282,8 +5304,10 @@ async function genMeta(o, langOverride, ebookOverride, priceOverride){
   const eb = ebookOverride || S.finalEbook || S.ebookData || {};
   const price = priceOverride || S.maPrice || '';
   if(price) S.maPrice = price;
-  // Bonus info
-  var bonuses = (S.extrasData||[]).map(function(ex){ return {title:ex.title, type:ex.type, precio:ex.precio}; });
+  var extrasInfo = _buildExtrasInfo();
+  var bonuses = (S.extrasData||[]).map(function(ex){ return {title:ex.title, type:ex.type}; });
+  if(S_crApp && window._crAppTopic) bonuses.push({title:window._crAppTopic, type:'app-premium'});
+  if(S_crSkill && window._crSkillTopic) bonuses.push({title:window._crSkillTopic, type:'skill-pack'});
   show('ma-loading');
   try{
     const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -5877,10 +5901,12 @@ async function genBonusMarketing(){
   hide('ex-mkt-empty'); hide('ex-mkt-content'); show('ex-mkt-loading');
   try {
     var eb=S.finalEbook||S.ebookData||{};
+    // Idioma del ebook — no usar S.extrasLang que puede ser de un ebook anterior
+    var lang = eb.lang || S.extrasLang || S.approvedLang || S.lang || 'Español';
     // Textos e imagen en paralelo
     var [textsResp, imgDataUrl] = await Promise.all([
       fetch('/api/bonus-marketing-texts',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({extras:S.extrasData, ebook:{title:eb.title||'',subtitle:eb.subtitle||''}, opportunity:S.selOpp||{}, language:S.extrasLang||'Español'})}).then(r=>r.json()),
+        body:JSON.stringify({extras:S.extrasData, ebook:{title:eb.title||'',subtitle:eb.subtitle||''}, opportunity:S.selOpp||{}, language:lang})}).then(r=>r.json()),
       _genBundleImgDalle()
     ]);
     if(!textsResp.success) throw new Error(textsResp.error||'Error en textos');

@@ -1749,25 +1749,27 @@ app.post('/api/generate-hotmart', async function(req, res) {
       'texts.description_long — página de ventas 300-400 palabras: gancho emocional → problema → agitación → solución → beneficios → prueba social → CTA\n' +
       'texts.bullets — array de 6 bullets: "Verbo + resultado concreto + sin [objeción]"\n' +
       'texts.faq — array de 5 objetos {q, a}\n' +
-      'texts.guarantee_text — texto de garantía 14 días\n' +
+      'texts.guarantee_text — texto de garantía 7 días (SIEMPRE 7 días, no 14)\n' +
       'texts.cta_button — texto del botón de compra (máximo 5 palabras)\n\n' +
       '## SECCIÓN 2: IMÁGENES (visual_prompt + text_overlay)\n' +
+      'PALETA VISUAL UNIFICADA (OBLIGATORIO): Las 5 imágenes deben parecer de la misma campaña. Elige UNA paleta de 2-3 colores coherente con el tema del ebook (ej: azul oscuro + dorado, verde esmeralda + blanco, morado + plateado). Úsala en TODAS las imágenes.\n\n' +
       'Para cada imagen define DOS campos:\n' +
-      '  visual_prompt: descripción en inglés del fondo visual para DALL-E. CERO texto en la imagen — solo escenas, personas, objetos, colores, iluminación. DALL-E no puede renderizar texto legible.\n' +
-      '  text_overlay: texto exacto que la app pondrá encima de la imagen con Canvas API. Máximo 2 líneas separadas por \\n. Usa el idioma del ebook.\n\n' +
-      'images.image_1 — Gancho: visual=escena del problema/frustración del público. text_overlay=frase de impacto que activa el miedo o la urgencia (1-2 líneas).\n' +
-      'images.image_2 — Mockup: visual=ebook premium flotando sobre fondo oscuro, iluminación cinematográfica, reflexión suave. text_overlay=título del ebook en línea 1 + subtítulo en línea 2 (para que parezca la portada impresa del producto).\n' +
-      'images.image_3 — Credibilidad: visual=profesional de éxito en entorno moderno, atmósfera de autoridad. text_overlay=estadística o dato de fuente real del ebook (ej: "94% of UK Employers\\nRequire AI Skills — LinkedIn 2024").\n' +
-      'images.image_4 — Beneficios: visual=composición con 4 símbolos o iconos abstractos que representen los beneficios. text_overlay=los 4 beneficios clave (1 por línea, máximo 2 líneas condensadas).\n' +
-      'images.image_5 — Cierre: visual=escena aspiracional de éxito y libertad. text_overlay=CTA poderoso (ej: "Start Today\\nJoin 50,000+ UK Professionals").\n\n' +
-      'REGLA CRÍTICA visual_prompt: NUNCA describas texto, letras, números, estadísticas ni contenido escrito. Describe SOLO escenas visuales, personas, objetos, colores, iluminación.\n' +
-      'Cada visual_prompt empieza con: "High quality digital marketing image. NO TEXT NO WORDS NO LETTERS anywhere."\n' +
-      'Cada visual_prompt termina con: "No text. No signs. Premium dark background. Cinematic lighting. Ultra high quality."\n\n' +
-      'REGULACIONES MERCADO: ' + regs.legal + '. Garantía legal: ' + regs.guarantee + '.\n\n' +
-      'Responde ÚNICAMENTE en JSON válido. Sin markdown. Sin explicaciones. Solo el JSON.\n' +
-      'Estructura exacta: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "images": { "image_1":{"visual_prompt":"","text_overlay":""},"image_2":{"visual_prompt":"","text_overlay":""},"image_3":{"visual_prompt":"","text_overlay":""},"image_4":{"visual_prompt":"","text_overlay":""},"image_5":{"visual_prompt":"","text_overlay":""} } }';
+      '  visual_prompt: descripción en inglés del fondo visual para DALL-E. CERO texto en la imagen. La paleta elegida debe aplicarse en TODAS las imágenes.\n' +
+      '  text_overlay: texto exacto que la app pondrá encima. Máximo 2 líneas separadas por \\n. Idioma del ebook.\n\n' +
+      'images.image_1 — Gancho: escena del problema/frustración del público.\n' +
+      'images.image_2 — Mockup: ebook premium flotando, iluminación cinematográfica, reflexión.\n' +
+      'images.image_3 — Credibilidad: profesional de éxito, atmósfera de autoridad.\n' +
+      'images.image_4 — Beneficios: composición con 4 símbolos abstractos de los beneficios.\n' +
+      'images.image_5 — Cierre: escena aspiracional de éxito y libertad.\n\n' +
+      'REGLA visual_prompt: empieza con "High quality digital marketing image. NO TEXT NO WORDS anywhere." y termina con "No text. No signs. Cinematic lighting. Ultra high quality. Consistent color palette: [tu paleta elegida]."\n\n' +
+      'REGULACIONES MERCADO: ' + regs.legal + '. Garantía: 7 días.\n\n' +
+      'Responde ÚNICAMENTE en JSON válido. Sin markdown. Sin explicaciones.\n' +
+      'Estructura: { "texts": { "title":"","subtitle":"","headline":"","description_short":"","description_long":"","bullets":[],"faq":[],"guarantee_text":"","cta_button":"" }, "images": { "image_1":{"visual_prompt":"","text_overlay":""},"image_2":{"visual_prompt":"","text_overlay":""},"image_3":{"visual_prompt":"","text_overlay":""},"image_4":{"visual_prompt":"","text_overlay":""},"image_5":{"visual_prompt":"","text_overlay":""} } }';
 
-    var userMsg = 'IDIOMA DEL EBOOK: ' + language + '\nMERCADO: ' + countryName + '\nAUTOR: ' + author + '\n\nEBOOK:\n' + JSON.stringify(ebookCtx, null, 2);
+    var bonuses = req.body.bonuses || [];
+    var extrasCtx = bonuses.length ? '\n\nEXTRAS INCLUIDOS CON EL EBOOK (mencionarlos en description_long como valor añadido):\n' +
+      bonuses.map(function(b, i){ return (i+1) + '. ' + b.title + (b.type==='app-premium'?' (App interactiva premium)':b.type==='skill-pack'?' (Pack de prompts IA)':' (bonus)'); }).join('\n') : '';
+    var userMsg = 'IDIOMA DEL EBOOK: ' + language + '\nMERCADO: ' + countryName + '\nAUTOR: ' + author + extrasCtx + '\n\nEBOOK:\n' + JSON.stringify(ebookCtx, null, 2);
 
     var result = safeParseKit(await claudeCall(sys, userMsg, 7000));
     var texts = result.texts || {};
