@@ -596,11 +596,10 @@ select option { background: #1e2d52; }
             <div class="row-hd">
               <div class="sec-lbl">🎁 Bonus Pack — 4 mini infoproductos</div>
               <div style="display:flex;gap:7px;align-items:center;">
-                <span class="badge bteal" id="ex-lang"></span>
                 <select id="extras-ebook-sel-top" onchange="syncExtrasSel(this.value)" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(108,92,231,0.4);background:var(--bg2);color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;max-width:200px;">
                   <option value="">— Ebook —</option>
                 </select>
-                <button class="btn btn-s" style="font-size:12px;" onclick="genExtras()">↺ Regenerar</button>
+                <button class="btn btn-p" style="font-size:12px;padding:6px 14px;" onclick="genExtras()">✦ Generar Pack</button>
                 <div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0;">📥 Descarga cada bonus con el botón <strong>🖨 Guardar PDF</strong> de su card</div>
               </div>
             </div>
@@ -4276,7 +4275,9 @@ async function genExtras(){
   var o = (entry && entry.selOpp) || S.selOpp;
   var eb = (entry && (entry.finalEbook || entry.ebook)) || S.finalEbook || S.ebookData;
   if(!eb || !o){ alert('Selecciona un ebook para generar el Bonus Pack.'); return; }
-  var lang = S.approvedLang || o.idioma || o.language || 'Español';
+  // Idioma: del ebook seleccionado, no del ebook activo anterior (S.approvedLang puede ser del UK ebook)
+  var country = o.pais||o.country||'España';
+  var lang = (entry && entry.ebook && entry.ebook.lang) || (entry && entry.extrasLang) || DIR_LANG_MAP[country] || o.idioma || o.language || 'Español';
   show('ex-loading'); hide('ex-empty'); hide('ex-content');
   try{
     var resp = await fetch('/api/generate-extras',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -4297,14 +4298,22 @@ async function genExtras(){
 var EXTRA_COLORS = { checklist:'#00b894,#00cec9', poster:'#6c5ce7,#a29bfe', tarjetas:'#6c5ce7,#a29bfe', plan30:'#fdcb6e,#e67e22', plantilla:'#e17055,#d63031', recetas:'#e84393,#fd79a8', calendario:'#0984e3,#74b9ff', tracker:'#00cec9,#55efc4', materiales:'#6c5ce7,#fd79a8', guiarapida:'#2d3436,#636e72', rutina:'#a29bfe,#fd79a8', presupuesto:'#00b894,#55efc4' };
 var EXTRA_ICONS = { checklist:'✅', poster:'🖼️', tarjetas:'🃏', plan30:'🗓️', plantilla:'📋', recetas:'🍳', calendario:'📆', tracker:'📈', materiales:'🛠️', guiarapida:'⚡', rutina:'⏰', presupuesto:'💰' };
 var EXTRA_NAMES = { checklist:'Checklist Imprimible', poster:'Poster Motivacional', tarjetas:'Tarjetas de Referencia', plan30:'Plan 30 Días', plantilla:'Plantilla Semanal', recetas:'Tarjetas de Recetas', calendario:'Calendario Mensual', tracker:'Tracker de Progreso', materiales:'Lista de Materiales', guiarapida:'Guía Rápida', rutina:'Hoja de Rutina', presupuesto:'Hoja de Presupuesto' };
+var COUNTRY_CURRENCY = {
+  'LatAm':'USD','Mexico':'MXN','Colombia':'COP','Argentina':'ARS','Chile':'CLP','Peru':'PEN','Uruguay':'UYU','Ecuador':'USD','Brazil':'BRL',
+  'España':'EUR','France':'EUR','Germany':'EUR','Italy':'EUR','Portugal':'EUR','Netherlands':'EUR','Belgium':'EUR','Austria':'EUR',
+  'Switzerland':'CHF','Sweden':'SEK','Poland':'PLN',
+  'United Kingdom':'GBP','United States':'USD','Canada':'CAD','Australia':'AUD','New Zealand':'NZD',
+  'Japan':'JPY','South Korea':'KRW','India':'INR','UAE':'AED','South Africa':'ZAR','Nigeria':'NGN'
+};
 
 function renderExtras(o, extras, lang){
-  document.getElementById('ex-lang').textContent = lang + ' · ' + (o.pais||o.country);
+  var country = o.pais||o.country||'España';
+  var currency = COUNTRY_CURRENCY[country] || 'USD';
   var precio = parseFloat(o.precioHotmart||'0')||19;
   var totalBonus = extras.reduce(function(a,e){ return a+(parseFloat(e.precio)||5); },0);
-  document.getElementById('ex-precio-base').textContent = precio + ' EUR';
-  document.getElementById('ex-precio-bundle').textContent = Math.round((precio + totalBonus*0.6)*10)/10 + ' EUR';
-  document.getElementById('ex-precio-solo').textContent = Math.round(totalBonus*10)/10 + ' EUR';
+  document.getElementById('ex-precio-base').textContent = precio + ' ' + currency;
+  document.getElementById('ex-precio-bundle').textContent = Math.round((precio + totalBonus*0.6)*10)/10 + ' ' + currency;
+  document.getElementById('ex-precio-solo').textContent = Math.round(totalBonus*10)/10 + ' ' + currency;
   var grid = document.getElementById('ex-grid');
   grid.innerHTML = extras.map(function(ex, i){
     var grad = EXTRA_COLORS[ex.type] || '6c5ce7,a29bfe';
@@ -4318,7 +4327,7 @@ function renderExtras(o, extras, lang){
       '</div>' +
       '<div style="padding:12px 14px;">' +
         '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">'+ex.subtitle+'</div>' +
-        '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px;">Precio sugerido: '+ex.precio+' EUR</div>' +
+        '<div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px;">Precio sugerido: '+ex.precio+' '+currency+'</div>' +
         '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
           '<button class="btn btn-s" style="flex:1;" onclick="previewExtra('+i+')">👁 Preview</button>' +
           '<button class="btn btn-teal" style="flex:1;" onclick="dlExtra('+i+')">🖨 Guardar PDF</button>' +
