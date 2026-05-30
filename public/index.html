@@ -4387,7 +4387,11 @@ function _t(key, lang){ var c=_getLangCode(lang); var r=_TX[key]||{}; return r[c
 function buildExtraHtml(ex, lang, ebookTitle){
   var year = new Date().getFullYear();
   var footer = '<div style="margin-top:20px;border-top:2px solid #eee;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#aaa;"><span>'+ebookTitle+' · Ferni Guides</span><span>© '+year+' · ferniguides</span></div>';
-  var wrap = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#1a1a2e;background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;}@media print{body{margin:0;}}</style></head><body>';
+  var wrap = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
+    '*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}' +
+    'body{font-family:"Helvetica Neue",Arial,sans-serif;color:#1a1a2e;background:white;}' +
+    '@media print{body{margin:0;}html,body,div,table,td,th,tr,span,p,h1,h2,h3{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}' +
+    '</style></head><body>';
 
   function header(icon,label,g1,g2){
     return '<div style="background:linear-gradient(135deg,'+g1+','+g2+');padding:18px 24px;border-radius:12px;margin-bottom:22px;display:flex;align-items:center;gap:14px;">' +
