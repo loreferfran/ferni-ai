@@ -5075,6 +5075,10 @@ async function genHotmartImg(idx){
     var prompt = imgData.visual_prompt || (S.hmKit && S.hmKit.dalle_prompts && S.hmKit.dalle_prompts['image_'+(idx+1)]) || '';
     var textOverlay = imgData.text_overlay || '';
     if(!prompt){ el.innerHTML='<div>❌</div><div style="font-size:9px;">Sin prompt — regenera el kit</div>'; return; }
+    // Paleta unificada para coherencia visual entre todas las imágenes del ebook
+    var palette = S.colorPalette || _ebookImagePalette(o);
+    if(!S.colorPalette) S.colorPalette = palette;
+    prompt += ' Consistent color palette for this ebook campaign: ' + palette + '.';
     const imageType = idx===4 ? 'cover' : 'chapter';
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,imageType,niche:o?(o.nicho||o.niche||o.problema||''):''})});
     const d=await resp.json();
@@ -5310,8 +5314,10 @@ async function genMeta(o, langOverride, ebookOverride, priceOverride){
   if(S_crSkill && window._crSkillTopic) bonuses.push({title:window._crSkillTopic, type:'skill-pack'});
   show('ma-loading');
   try{
+    var maPalette = S.colorPalette || _ebookImagePalette(o);
+    if(!S.colorPalette) S.colorPalette = maPalette;
     const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({opportunity:o, language:lang, ebook:eb, price:price, bonuses:bonuses})});
+      body:JSON.stringify({opportunity:o, language:lang, ebook:eb, price:price, bonuses:bonuses, colorPalette:maPalette})});
     const d=await resp.json();
     if(d.success){ S.maKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
     else{ hide('ma-loading'); show('ma-empty'); alert('Error generando kit Meta Ads: '+d.error); }
@@ -5371,7 +5377,11 @@ async function genAdImg(idx,encodedPrompt){
   const el=document.getElementById('adimg'+idx);
   el.innerHTML='<div style="font-size:18px;">⏳</div><div>Generando con DALL-E...</div>';
   try{
-    const prompt=decodeURIComponent(encodedPrompt)||`professional advertisement wellness concept ${S.country} no text no faces`;
+    var basePrompt=decodeURIComponent(encodedPrompt)||`professional advertisement concept ${S.country} no text no faces`;
+    // Misma paleta que las imágenes Hotmart — coherencia visual total
+    var palette = S.colorPalette || _ebookImagePalette(S.selOpp);
+    if(!S.colorPalette) S.colorPalette = palette;
+    var prompt = basePrompt + ' Consistent color palette for this ebook campaign: ' + palette + '. NO TEXT NO WORDS. Cinematic lighting. Ultra high quality.';
     const resp=await fetch('/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
     const d=await resp.json();
     if(d.success){ el.innerHTML=`<img src="${d.url}" />`; }
@@ -6058,6 +6068,21 @@ function sendImpToCrear(type) {
 // ===== CREAR MODULE (panel-crear) =====
 var S_crApp = null;
 var S_crSkill = null;
+
+// Paleta de color visual unificada para todas las imágenes del ebook activo
+function _ebookImagePalette(o){
+  o = o || S.selOpp || {};
+  var niche = ((o.nicho||o.niche||o.problema||'')+' '+(o.tituloEbook||o.ebookTitle||'')+(S.finalEbook?S.finalEbook.title||'':'')).toLowerCase();
+  if(/finanza|dinero|cr[eé]dito|ahorro|invers|banco|money|finance|wealth|fiscal/.test(niche)) return 'deep navy blue and warm gold color palette, premium finance aesthetic, cinematic dark backgrounds with gold accents';
+  if(/salud|fitness|ejercicio|nutri|dieta|health|yoga|gym|bienestar/.test(niche)) return 'emerald green and clean white palette, fresh health aesthetic, nature-inspired luminous tones';
+  if(/market|venta|negocio|brand|sales|emprendim/.test(niche)) return 'bold deep orange and dark charcoal palette, high-energy business aesthetic, strong contrast';
+  if(/cocina|receta|food|cook|gastro|aliment/.test(niche)) return 'warm terracotta and cream palette, gourmet food aesthetic, rich warm tones';
+  if(/tecnolog|\bia\b|inteligencia|digital|software|programac/.test(niche)) return 'electric blue and deep dark backgrounds palette, modern tech aesthetic, glowing cyan highlights';
+  if(/trabajo|empleo|carrera|career|job|cv|curriculum/.test(niche)) return 'professional deep blue and silver palette, corporate career aesthetic, aspirational and trustworthy';
+  if(/ansiedad|estr[eé]s|mindful|mental|meditac/.test(niche)) return 'soft lavender and warm ivory palette, calm wellness aesthetic, serene and peaceful';
+  if(/relaci|pareja|amor|familia|crianza|love/.test(niche)) return 'rose gold and soft champagne palette, warm lifestyle aesthetic, romantic and inviting';
+  return 'deep purple and midnight blue palette, premium digital product aesthetic, sophisticated and modern';
+}
 
 function showCrearTab(type, el) {
   ['app','skill'].forEach(function(t){
