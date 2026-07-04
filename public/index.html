@@ -302,7 +302,53 @@ select option { background: #1e2d52; }
                   <button class="btn btn-teal" style="margin-top:6px;" onclick="applyNicheAdjust()">Aplicar ajuste</button>
                 </div>
               </div>
-              <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — el botón "Generar PDF" está desbloqueado. El ebook se alineará a este ángulo de venta.</div>
+              <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — configura abajo tu producto completo, o usa "Generar PDF" para solo el ebook.</div>
+            </div>
+
+            <!-- LÍNEA DE PRODUCCIÓN — un clic → producto completo → hub de resultado -->
+            <div id="pipe-box" style="display:none;margin:16px 0 4px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">🏭 Línea de producción — un clic, producto completo</div>
+              <div id="pipe-config" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">
+                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px;">¿Qué incluye tu producto?</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-bottom:14px;">
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:default;"><input type="checkbox" checked disabled style="accent-color:var(--accent);"> 📕 Ebook PDF <span style="font-size:10px;color:var(--muted);">(base — siempre)</span></label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-bonus" checked style="accent-color:var(--accent);cursor:pointer;"> 🎁 Bonus Pack (4 minis)</label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-app" checked style="accent-color:var(--accent);cursor:pointer;"> 📱 App Premium</label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-skill" checked style="accent-color:var(--accent);cursor:pointer;"> ⚡ Skill Pack</label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-meta" checked style="accent-color:var(--accent);cursor:pointer;"> 📣 Kit Meta Ads</label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--muted);opacity:0.55;cursor:default;"><input type="checkbox" disabled> 📖 EPUB Amazon KDP <span style="font-size:10px;">(próxima fase)</span></label>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                  <select id="pipe-lang" style="flex:1;min-width:170px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                    <option value="Español">🇪🇸 Español (sin traducir)</option>
+                    <option value="English">🇬🇧 Inglés</option>
+                    <option value="French">🇫🇷 Francés</option>
+                    <option value="Italian">🇮🇹 Italiano</option>
+                    <option value="German">🇩🇪 Alemán</option>
+                    <option value="Portuguese">🇧🇷 Portugués</option>
+                    <option value="Dutch">🇳🇱 Holandés</option>
+                    <option value="Polish">🇵🇱 Polaco</option>
+                    <option value="Swedish">🇸🇪 Sueco</option>
+                    <option value="Norwegian">🇳🇴 Noruego</option>
+                    <option value="Danish">🇩🇰 Danés</option>
+                    <option value="Finnish">🇫🇮 Finlandés</option>
+                    <option value="Greek">🇬🇷 Griego</option>
+                    <option value="Romanian">🇷🇴 Rumano</option>
+                    <option value="Turkish">🇹🇷 Turco</option>
+                    <option value="Russian">🇷🇺 Ruso</option>
+                    <option value="Arabic">🇸🇦 Árabe</option>
+                    <option value="Chinese Simplified">🇨🇳 Chino</option>
+                    <option value="Japanese">🇯🇵 Japonés</option>
+                    <option value="Korean">🇰🇷 Coreano</option>
+                  </select>
+                  <input id="pipe-market" type="text" placeholder="Mercado: México, USA, France..." style="flex:1;min-width:150px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <input id="pipe-price" type="text" inputmode="numeric" placeholder="Precio venta (opcional) ej: 17 USD" style="flex:1;min-width:150px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                </div>
+                <button class="btn btn-p" id="pipe-start-btn" style="width:100%;font-size:15px;padding:13px;" onclick="startPipeline()">✦ GENERAR PRODUCTO COMPLETO</button>
+                <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Todo se genera en cadena automáticamente (~5-10 min según selección). Si una pieza falla, las demás continúan.</div>
+              </div>
+              <div id="pipe-progress" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:10px;"></div>
+              <div id="pipe-hub" style="display:none;margin-top:10px;"></div>
             </div>
 
             <div id="eb-user-instructions-box" style="margin:16px 0 4px;display:none;">
@@ -1419,7 +1465,7 @@ function pickChip(n,el){
   inp.focus();
 }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
-function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; S.nicheReport=null; S.nicheReportApproved=false; S._nicheReportOppIdx=null; _resetNrUI(); document.getElementById('btn-draft').disabled=true; document.getElementById('btn-report').disabled=true; }
+function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; S.nicheReport=null; S.nicheReportApproved=false; S._nicheReportOppIdx=null; _resetNrUI(); _pipeReset(); document.getElementById('btn-draft').disabled=true; document.getElementById('btn-report').disabled=true; }
 function openFullPreview(){
   var html = S.pdfHtml;
   if(!html){ alert('Genera el borrador primero'); return; }
@@ -1574,7 +1620,7 @@ function selOpp(i){
   document.getElementById('oc'+i).classList.add('sel');
   S.selOpp=S.results[i];
   // Checkpoint: al cambiar de oportunidad se invalida el informe anterior
-  if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; _resetNrUI(); }
+  if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; _resetNrUI(); _pipeReset(); }
   S._nicheReportOppIdx = i;
   document.getElementById('btn-report').disabled=false;
   document.getElementById('btn-draft').disabled = !S.nicheReportApproved;
@@ -1689,7 +1735,9 @@ function approveNicheReport(){
   if(S.currentHistId) saveFullDataToHist(S.currentHistId);
   document.getElementById('nr-approved-badge').style.display='block';
   document.getElementById('btn-draft').disabled=false;
-  addMsg('chat-search','✅ Informe aprobado. El ebook se generará alineado a este ángulo de venta e ICP. Ya puedes pulsar "Generar PDF".','ferni');
+  _pipeShowConfig();
+  addMsg('chat-search','✅ Informe aprobado. Configura tu producto completo en la Línea de Producción (un clic genera todo: ebook + bonus + app + skill + Meta Ads) — o usa "Generar PDF" para solo el ebook.','ferni');
+  document.getElementById('pipe-box').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function toggleNicheAdjust(){
@@ -1739,6 +1787,364 @@ function _nicheReportSummary(){
   if(r.icp) parts.push('ICP: '+(r.icp.demografia||'')+' | Resultado deseado: '+(r.icp.resultadoDeseado||'')+' | Objeciones: '+((r.icp.objeciones||[]).join('; ')));
   if(r.productoRecomendado&&r.productoRecomendado.promesa) parts.push('PROMESA: '+r.productoRecomendado.promesa);
   return parts.join('\n');
+}
+
+// ===== LÍNEA DE PRODUCCIÓN — orquestador: un clic → producto completo =====
+var PIPE = { running:false, cfg:null, results:{}, states:{} };
+
+var PIPE_LABELS = {
+  ebook:     '📕 Ebook (capítulos completos)',
+  verify:    '🔍 Verificación de datos (3 capas)',
+  translate: '🌍 Traducción y PDF final',
+  bonus:     '🎁 Bonus Pack (4 mini infoproductos)',
+  app:       '📱 App Premium',
+  skill:     '⚡ Skill Pack',
+  meta:      '📣 Kit Meta Ads'
+};
+
+function _pipeShowConfig(){
+  var box=document.getElementById('pipe-box'); if(!box) return;
+  box.style.display='block';
+  document.getElementById('pipe-config').style.display='block';
+  // Prellenar mercado con el país de la oportunidad
+  var mk=document.getElementById('pipe-market');
+  if(mk && !mk.value && S.selOpp) mk.value = S.selOpp.pais||S.selOpp.country||'';
+  // Restaurar preferencias de checkboxes
+  try{
+    var saved=JSON.parse(localStorage.getItem('ferni_pipe_cfg')||'null');
+    if(saved){
+      ['bonus','app','skill','meta'].forEach(function(k){
+        var ck=document.getElementById('pipe-ck-'+k); if(ck && typeof saved[k]==='boolean') ck.checked=saved[k];
+      });
+      if(saved.lang){ var ls=document.getElementById('pipe-lang'); if(ls) ls.value=saved.lang; }
+    }
+  }catch(e){}
+}
+
+function _pipeReset(){
+  PIPE={ running:false, cfg:null, results:{}, states:{} };
+  var box=document.getElementById('pipe-box'); if(!box) return;
+  box.style.display='none';
+  document.getElementById('pipe-progress').style.display='none';
+  document.getElementById('pipe-progress').innerHTML='';
+  document.getElementById('pipe-hub').style.display='none';
+  document.getElementById('pipe-hub').innerHTML='';
+}
+
+function _pipeSetStep(id, state, note){
+  PIPE.states[id]=state;
+  var el=document.getElementById('pipe-st-'+id); if(!el) return;
+  var icons={pending:'⚪',run:'⏳',done:'✅',fail:'⚠️',skip:'◽'};
+  var colors={pending:'var(--muted)',run:'var(--accent)',done:'#00b894',fail:'#e17055',skip:'var(--muted)'};
+  el.innerHTML='<span style="width:22px;display:inline-block;">'+(icons[state]||'⚪')+'</span>'+
+    '<span style="flex:1;">'+PIPE_LABELS[id]+(note?' <span style="font-size:11px;color:var(--muted);">— '+note+'</span>':'')+'</span>'+
+    (state==='fail'?'<button class="btn btn-s" style="font-size:11px;padding:4px 12px;" onclick="retryPipeStep(\''+id+'\')">🔄 Reintentar</button>':'');
+  el.style.color=colors[state]||'var(--text2)';
+}
+
+function _pipeRenderProgress(steps){
+  var pg=document.getElementById('pipe-progress');
+  pg.innerHTML='<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px;">Generando tu producto completo...</div>'+
+    steps.map(function(id){
+      return '<div id="pipe-st-'+id+'" style="display:flex;align-items:center;gap:8px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--border);"></div>';
+    }).join('')+
+    '<div id="pipe-progress-note" style="font-size:11px;color:var(--muted);margin-top:10px;">Puedes quedarte en esta pantalla — todo avanza solo. Si una pieza falla, las demás continúan.</div>';
+  pg.style.display='block';
+  steps.forEach(function(id){ _pipeSetStep(id,'pending'); });
+}
+
+async function startPipeline(){
+  if(PIPE.running){ alert('El pipeline ya está corriendo.'); return; }
+  var o=S.selOpp;
+  if(!o){ alert('Selecciona una oportunidad primero.'); return; }
+  if(!S.nicheReportApproved){ alert('Aprueba primero el informe de nicho.'); return; }
+  var cfg={
+    bonus: !!(document.getElementById('pipe-ck-bonus')||{}).checked,
+    app:   !!(document.getElementById('pipe-ck-app')||{}).checked,
+    skill: !!(document.getElementById('pipe-ck-skill')||{}).checked,
+    meta:  !!(document.getElementById('pipe-ck-meta')||{}).checked,
+    lang:  (document.getElementById('pipe-lang')||{}).value||'Español',
+    market:((document.getElementById('pipe-market')||{}).value||'').trim()||o.pais||o.country||'',
+    price: ((document.getElementById('pipe-price')||{}).value||'').trim()
+  };
+  try{ localStorage.setItem('ferni_pipe_cfg', JSON.stringify(cfg)); }catch(e){}
+  PIPE.running=true; PIPE.cfg=cfg; PIPE.results={};
+  document.getElementById('pipe-start-btn').disabled=true;
+
+  var steps=['ebook','verify','translate'];
+  if(cfg.bonus) steps.push('bonus');
+  if(cfg.app) steps.push('app');
+  if(cfg.skill) steps.push('skill');
+  if(cfg.meta) steps.push('meta');
+  _pipeRenderProgress(steps);
+  document.getElementById('pipe-progress').scrollIntoView({behavior:'smooth',block:'start'});
+
+  // ── CADENA PRINCIPAL: ebook → verificación → traducción ──
+  var chainOk = await _pipeRunStep('ebook', _pipeEbook);
+  if(chainOk) await _pipeRunStep('verify', _pipeVerify); // no bloquea la cadena si falla
+  if(chainOk) chainOk = await _pipeRunStep('translate', _pipeTranslate);
+
+  // ── PIEZAS DERIVADAS: bonus+app en paralelo, luego skill, luego meta (para que mencione todos los extras) ──
+  if(chainOk){
+    var par=[];
+    if(cfg.bonus) par.push(_pipeRunStep('bonus', _pipeBonus));
+    if(cfg.app) par.push(_pipeRunStep('app', _pipeApp));
+    await Promise.all(par);
+    if(cfg.skill) await _pipeRunStep('skill', _pipeSkill);
+    if(cfg.meta) await _pipeRunStep('meta', _pipeMeta);
+  } else {
+    ['bonus','app','skill','meta'].forEach(function(id){ if(PIPE.states[id]==='pending') _pipeSetStep(id,'skip','requiere el ebook'); });
+  }
+
+  PIPE.running=false;
+  document.getElementById('pipe-start-btn').disabled=false;
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  _pipeRenderHub();
+}
+
+// Ejecuta un runner con manejo de estado; devuelve true si terminó bien
+async function _pipeRunStep(id, runner){
+  _pipeSetStep(id,'run');
+  try{
+    var note = await runner();
+    _pipeSetStep(id,'done', note||'');
+    return true;
+  }catch(e){
+    console.error('pipeline ['+id+']:', e);
+    _pipeSetStep(id,'fail', (e&&e.message||'error').slice(0,80));
+    return false;
+  }
+}
+
+async function retryPipeStep(id){
+  var runners={ebook:_pipeEbook,verify:_pipeVerify,translate:_pipeTranslate,bonus:_pipeBonus,app:_pipeApp,skill:_pipeSkill,meta:_pipeMeta};
+  if(!runners[id]) return;
+  var ok = await _pipeRunStep(id, runners[id]);
+  if(ok){ if(S.currentHistId) saveFullDataToHist(S.currentHistId); _pipeRenderHub(); }
+}
+
+// ── RUNNERS ──────────────────────────────────────────────────────────────
+async function _pipeEbook(){
+  if(S.ebookData && (S.ebookData.chapters||[]).length){ return 'ya existía — reutilizado'; }
+  S.ebookIsModule1 = true;
+  // runEbookSteps actualiza la UI del tab Ebook (oculto) y setea S.ebookData al terminar
+  await runEbookSteps(S.ebookRetryFrom || 'header');
+  if(!S.ebookData || !(S.ebookData.chapters||[]).length){
+    throw new Error('La generación del ebook no terminó. Reintenta — continúa desde el capítulo que falló.');
+  }
+  S.ebookRetryFrom=null;
+  return (S.ebookData.chapters||[]).length+' capítulos';
+}
+
+async function _pipeVerify(){
+  if(!S.ebookData) throw new Error('Sin ebook para verificar');
+  var content = buildVerificationContent(S.ebookData);
+  var resp = await fetch('/api/verify-content',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({content:content, isModule1:true})});
+  var d = await resp.json();
+  if(d.verifyFailed) throw new Error('No se pudo verificar (error técnico)');
+  var problems = d.approved ? 0 : (d.result||'').split(/\n\s*\n/).filter(function(b){return b.trim();}).length;
+  PIPE.results.verify={approved:d.approved, problems:problems, result:d.result||''};
+  return d.approved ? 'sin problemas' : problems+' problema(s) — revisar en tab Ebook';
+}
+
+async function _pipeTranslate(){
+  var cfg=PIPE.cfg, o=S.selOpp;
+  if(cfg.lang==='Español'){
+    // Sin traducción: el borrador español ES el ebook final
+    S.finalEbook=S.ebookData;
+    S.approvedLang='Español';
+    var countryName=getCountryNameFront(o.pais||o.country||'España');
+    S.pdfHtml=buildFinalPdfHtml(S.finalEbook,o,'Español',countryName,S.coverUrl,S.chapterImages);
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    try{ rebuildRewriteBtns((S.finalEbook.chapters||[]).length); }catch(e){}
+    return 'español (sin traducir)';
+  }
+  if(S.finalEbook && S.approvedLang===cfg.lang){ return 'ya existía en '+cfg.lang; }
+  // Reusar el flujo real de aprobación/traducción (reanudable por capítulo)
+  var ls=document.getElementById('eb-lang-sel'); if(ls) ls.value=cfg.lang;
+  var mi=document.getElementById('eb-market-inp'); if(mi) mi.value=cfg.market;
+  await approveEbook();
+  if(!S.finalEbook || S.approvedLang!==cfg.lang){
+    throw new Error('La traducción no terminó — reintenta (continúa desde el capítulo que falló)');
+  }
+  return cfg.lang;
+}
+
+async function _pipeBonus(){
+  var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
+  if(S.extrasData && S.extrasData.length && S.extrasLang===cfg.lang){ return 'ya existía — reutilizado'; }
+  var resp=await fetch('/api/generate-extras',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ebook:eb, opportunity:o, language:cfg.lang})});
+  var d=await resp.json();
+  if(!d.success) throw new Error(d.error||'Error en Bonus Pack');
+  S.extrasData=d.extras; S.extrasLang=cfg.lang; S.extrasMarketing=null;
+  try{ _saveExtras(); }catch(e){}
+  try{ renderExtras(o, d.extras, cfg.lang); hide('ex-empty'); hide('ex-loading'); show('ex-content'); }catch(e){}
+  return d.extras.length+' bonus';
+}
+
+async function _pipeApp(){
+  var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
+  if(S_crApp){ return 'ya existía — reutilizada'; }
+  var ebookContext=_buildEbookContext({opp:o, ebook:eb, lang:cfg.lang});
+  var resp=await fetch('/api/generate-premium-app',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({topic:'', country:cfg.market||o.pais||o.country||'España', lang:cfg.lang, context:'', ebookContext:ebookContext})});
+  var d=await resp.json();
+  if(!d.success) throw new Error(d.error||'Error en App Premium');
+  S_crApp=d.html; window._crAppTopic=d.productName||'App Premium';
+  var prev=document.getElementById('cr-app-preview'); if(prev) prev.srcdoc=d.html;
+  try{ hide('cr-app-form'); hide('cr-app-loading'); show('cr-app-content'); }catch(e){}
+  return d.productName||'';
+}
+
+async function _pipeSkill(){
+  var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
+  if(S_crSkill){ return 'ya existía — reutilizado'; }
+  var ebookContext=_buildEbookContext({opp:o, ebook:eb, lang:cfg.lang});
+  var resp=await fetch('/api/generate-skill',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({topic:'', country:cfg.market||o.pais||o.country||'España', lang:cfg.lang, context:'', ebookContext:ebookContext})});
+  var d=await resp.json();
+  if(!d.success) throw new Error(d.error||'Error en Skill Pack');
+  S_crSkill=d.html; window._crSkillTopic=d.productName||'Skill Pack';
+  var prev=document.getElementById('cr-skill-preview'); if(prev) prev.srcdoc=d.html;
+  try{ hide('cr-skill-form'); hide('cr-skill-loading'); show('cr-skill-content'); }catch(e){}
+  return d.productName||'';
+}
+
+async function _pipeMeta(){
+  var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
+  if(S.maKit){ return 'ya existía — reutilizado'; }
+  var bonuses=(S.extrasData||[]).map(function(ex){ return {title:ex.title, type:ex.type}; });
+  if(S_crApp && window._crAppTopic) bonuses.push({title:window._crAppTopic, type:'app-premium'});
+  if(S_crSkill && window._crSkillTopic) bonuses.push({title:window._crSkillTopic, type:'skill-pack'});
+  var maPalette=S.colorPalette||_ebookImagePalette(o);
+  if(!S.colorPalette) S.colorPalette=maPalette;
+  if(cfg.price) S.maPrice=cfg.price;
+  var resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({opportunity:o, language:cfg.lang, ebook:eb, price:cfg.price, bonuses:bonuses, colorPalette:maPalette})});
+  var d=await resp.json();
+  if(!d.success) throw new Error(d.error||'Error en kit Meta');
+  S.maKit=d.kit;
+  try{ renderMeta(o,d.kit); hide('ma-empty'); hide('ma-loading'); show('ma-content'); }catch(e){}
+  return (d.kit.ads||[]).length+' anuncios';
+}
+
+// ── HUB DE RESULTADO ─────────────────────────────────────────────────────
+function _pipeRenderHub(){
+  var hub=document.getElementById('pipe-hub'); if(!hub) return;
+  var eb=S.finalEbook||S.ebookData||{};
+  var cfg=PIPE.cfg||{};
+  function card(icon,title,sub,actions){
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'+
+      '<div style="font-size:24px;">'+icon+'</div>'+
+      '<div style="flex:1;min-width:150px;"><div style="font-size:13px;font-weight:700;color:var(--text);">'+title+'</div>'+
+      (sub?'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+sub+'</div>':'')+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+actions+'</div></div>';
+  }
+  function abtn(label,fn){ return '<button class="btn btn-s" style="font-size:11px;padding:6px 12px;" onclick="'+fn+'">'+label+'</button>'; }
+  var cards=[];
+  var st=PIPE.states;
+
+  if(st.translate==='done'||S.pdfHtml){
+    cards.push(card('📕','Ebook — '+_escHtml(eb.title||''),(S.approvedLang||'Español')+' · '+((eb.chapters||[]).length)+' capítulos',
+      abtn('👁 Vista previa','openFullPreview()')+
+      abtn('✏️ Editar / imágenes / descargar',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+  }
+  if(PIPE.results.verify){
+    var v=PIPE.results.verify;
+    cards.push(card('🔍','Verificación de datos', v.approved?'✅ Sin problemas detectados':'⚠️ '+v.problems+' problema(s) encontrados',
+      v.approved?'':abtn('Ver detalle en tab Ebook',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+  }
+  if(st.bonus==='done'&&S.extrasData&&S.extrasData.length){
+    var bBtns=S.extrasData.map(function(ex,i){ return abtn('👁 '+(i+1),'previewExtra('+i+')')+abtn('🖨 PDF','dlExtra('+i+')'); }).join('');
+    cards.push(card('🎁','Bonus Pack — '+S.extrasData.length+' mini infoproductos',S.extrasData.map(function(e){return e.title;}).join(' · ').slice(0,90),
+      bBtns+abtn('Ver todo',"showTab('extras',document.querySelectorAll('.tab')[4])")));
+  }
+  if(st.app==='done'&&S_crApp){
+    cards.push(card('📱','App Premium — '+_escHtml(window._crAppTopic||''),'Multi-módulo interactiva, lista para entregar',
+      abtn('👁 Probar','_pipeOpenHtml(S_crApp)')+abtn('⬇ ZIP','dlApp()')));
+  }
+  if(st.skill==='done'&&S_crSkill){
+    cards.push(card('⚡','Skill Pack — '+_escHtml(window._crSkillTopic||''),'System prompt + 5 prompts de acción',
+      abtn('👁 Ver','_pipeOpenHtml(S_crSkill)')+abtn('⬇ ZIP','dlSkill()')));
+  }
+  if(st.meta==='done'&&S.maKit){
+    cards.push(card('📣','Kit Meta Ads — '+((S.maKit.ads||[]).length)+' anuncios','Segmentación + anuncios + redes sociales'+(cfg.price?' · Precio: '+cfg.price:''),
+      abtn('Ver kit completo',"showTab('meta',document.querySelectorAll('.tab')[3])")));
+  }
+
+  var failed=Object.keys(st).filter(function(k){return st[k]==='fail';});
+  hub.innerHTML=
+    '<div style="background:linear-gradient(135deg,rgba(0,184,148,0.12),rgba(108,92,231,0.10));border:1.5px solid #00b894;border-radius:14px;padding:18px;margin-bottom:10px;">'+
+      '<div style="font-size:17px;font-weight:800;color:var(--text);">🎉 Tu producto está listo</div>'+
+      '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'+_escHtml(eb.title||'')+
+      (failed.length?' — <span style="color:#e17055;">'+failed.length+' pieza(s) fallaron, reintenta arriba</span>':' — todas las piezas generadas')+'</div>'+
+    '</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px;">'+cards.join('')+'</div>'+
+    '<button class="btn btn-p" style="width:100%;margin-top:12px;font-size:14px;padding:12px;" onclick="pipeZipAll()">⬇ DESCARGAR TODO (ZIP)</button>';
+  hub.style.display='block';
+  hub.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function _pipeOpenHtml(html){
+  if(!html) return;
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(function(){ URL.revokeObjectURL(url); },10000);
+}
+
+async function pipeZipAll(){
+  try{
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+    var zip=new JSZip();
+    var eb=S.finalEbook||S.ebookData||{};
+    var slug=(eb.title||'producto').replace(/[^\w\sáéíóúñ-]/gi,'').trim().substring(0,40).replace(/\s+/g,'-');
+    var readme='PRODUCTO COMPLETO — '+(eb.title||'')+'\nGenerado con FERNI AI · Ferni Guides\n\nCONTENIDO:\n';
+
+    if(S.pdfHtml){
+      zip.file('ebook/ebook.html', S.pdfHtml);
+      readme+='- ebook/ebook.html → ábrelo en el navegador y usa Ctrl+P → "Guardar como PDF"\n';
+    }
+    if(S.coverUrl && S.coverUrl.startsWith('data:')){
+      try{ zip.file('ebook/portada.jpg', S.coverUrl.split(',')[1], {base64:true}); readme+='- ebook/portada.jpg\n'; }catch(e){}
+    }
+    if(S.extrasData && S.extrasData.length){
+      S.extrasData.forEach(function(ex,i){
+        try{
+          var bh=buildExtraHtml(ex, S.extrasLang||'Español', eb.title||'', _getExtraColors());
+          zip.file('bonus/bonus-'+(i+1)+'-'+(ex.type||'extra')+'.html', bh);
+        }catch(e){}
+      });
+      readme+='- bonus/ → '+S.extrasData.length+' mini infoproductos (abrir + Ctrl+P para PDF)\n';
+    }
+    if(S_crApp){ zip.file('app/app-premium.html', S_crApp); readme+='- app/app-premium.html → la app interactiva (funciona offline)\n'; }
+    if(S_crSkill){ zip.file('skill-pack/skill-pack.html', S_crSkill); readme+='- skill-pack/skill-pack.html\n'; }
+    if(S.maKit){
+      zip.file('meta-ads/kit-meta-ads.json', JSON.stringify(S.maKit,null,2));
+      var k=S.maKit, txt='KIT META ADS — '+(eb.title||'')+'\n\n';
+      if(k.segmentation) txt+='=== SEGMENTACIÓN ===\n'+JSON.stringify(k.segmentation,null,2)+'\n\n';
+      (k.ads||[]).forEach(function(ad,i){
+        txt+='=== ANUNCIO '+(i+1)+' ('+(ad.angle||'')+') ===\nHEADLINE: '+(ad.headline||'')+'\nTEXTO: '+(ad.primaryText||'')+'\nCTA: '+(ad.cta||'')+'\n\n';
+      });
+      if(k.facebook) txt+='=== FACEBOOK ===\n'+JSON.stringify(k.facebook,null,2)+'\n\n';
+      if(k.instagram) txt+='=== INSTAGRAM ===\n'+JSON.stringify(k.instagram,null,2)+'\n';
+      zip.file('meta-ads/kit-meta-ads.txt', txt);
+      readme+='- meta-ads/ → anuncios + segmentación + contenido redes\n';
+    }
+    if(S.nicheReport){
+      zip.file('informe/informe-de-nicho.json', JSON.stringify(S.nicheReport,null,2));
+      readme+='- informe/ → el informe de nicho aprobado (hoja de venta incluida)\n';
+    }
+    zip.file('LEEME.txt', readme);
+    var blob=await zip.generateAsync({type:'blob'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='FERNI_'+slug+'.zip';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+  }catch(e){ alert('Error creando el ZIP: '+e.message); }
 }
 
 function dlSingleExcel(i){
@@ -5921,6 +6327,7 @@ function loadHistData(e){
     S.selOpp=opp;
     document.getElementById('btn-report').disabled=false;
     document.getElementById('btn-draft').disabled = !S.nicheReportApproved;
+    if(S.nicheReportApproved) _pipeShowConfig(); // reabrir la línea de producción (los runners reutilizan piezas ya generadas)
   }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
