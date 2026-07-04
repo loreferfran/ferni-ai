@@ -281,13 +281,38 @@ select option { background: #1e2d52; }
             </div>
             <div class="stats" id="sr-stats"></div>
             <div id="sr-list"></div>
+
+            <!-- INFORME DE NICHO — checkpoint de aprobación antes de generar el ebook -->
+            <div id="nr-box" style="display:none;margin:16px 0 4px;">
+              <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">📋 Informe de nicho — evidencia de disposición a pagar</div>
+              <div id="nr-loading" style="display:none;text-align:center;padding:28px;background:var(--card);border:1px solid var(--border);border-radius:12px;">
+                <div class="spinner"></div>
+                <div style="font-size:13px;color:var(--text);margin-top:12px;font-weight:600;">Investigando evidencia de pago y redactando informe...</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:4px;">Hotmart · Amazon · Udemy · Gumroad · volúmenes reales de búsqueda — ~40 segundos</div>
+              </div>
+              <div id="nr-content" style="display:none;"></div>
+              <div id="nr-actions" style="display:none;margin-top:12px;">
+                <div class="btn-row">
+                  <button class="btn btn-p" onclick="approveNicheReport()">✅ Aprobar informe</button>
+                  <button class="btn btn-s" onclick="toggleNicheAdjust()">✏️ Ajustar</button>
+                  <button class="btn btn-s" onclick="genNicheReport()">↺ Regenerar</button>
+                </div>
+                <div id="nr-adjust-row" style="display:none;margin-top:10px;">
+                  <textarea id="nr-adjust-inp" rows="2" placeholder="Ej: enfoca el ángulo en madres primerizas, baja el precio sugerido, profundiza más el micro-problema..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
+                  <button class="btn btn-teal" style="margin-top:6px;" onclick="applyNicheAdjust()">Aplicar ajuste</button>
+                </div>
+              </div>
+              <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — el botón "Generar PDF" está desbloqueado. El ebook se alineará a este ángulo de venta.</div>
+            </div>
+
             <div id="eb-user-instructions-box" style="margin:16px 0 4px;display:none;">
               <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">💬 Instrucciones adicionales para Claude <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;">(opcional)</span></div>
               <textarea id="eb-user-instructions" rows="3" placeholder="Ej: incluye animalitos en los ejemplos, enfócate en gráficos visuales, el tono debe ser muy cercano y divertido, agrega más ejercicios prácticos, el lector es principiante absoluto..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
               <div style="font-size:11px;color:var(--muted);margin-top:4px;">Claude usará estas instrucciones como guía adicional — se suman a todo lo que ya genera por defecto.</div>
             </div>
             <div class="btn-row">
-              <button class="btn btn-p" id="btn-draft" onclick="goEbook()" disabled>📄 Generar PDF</button>
+              <button class="btn btn-teal" id="btn-report" onclick="genNicheReport()" disabled>📋 Generar informe de nicho</button>
+              <button class="btn btn-p" id="btn-draft" onclick="goEbook()" disabled title="Se desbloquea al aprobar el informe de nicho">📄 Generar PDF</button>
               <button class="btn btn-s" onclick="resetSearch()">↺ Nueva búsqueda</button>
             </div>
           </div>
@@ -1394,7 +1419,7 @@ function pickChip(n,el){
   inp.focus();
 }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
-function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; document.getElementById('btn-draft').disabled=true; }
+function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; S.nicheReport=null; S.nicheReportApproved=false; S._nicheReportOppIdx=null; _resetNrUI(); document.getElementById('btn-draft').disabled=true; document.getElementById('btn-report').disabled=true; }
 function openFullPreview(){
   var html = S.pdfHtml;
   if(!html){ alert('Genera el borrador primero'); return; }
@@ -1548,10 +1573,14 @@ function selOpp(i){
   document.querySelectorAll('.opp-card').forEach(c=>c.classList.remove('sel'));
   document.getElementById('oc'+i).classList.add('sel');
   S.selOpp=S.results[i];
-  document.getElementById('btn-draft').disabled=false;
+  // Checkpoint: al cambiar de oportunidad se invalida el informe anterior
+  if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; _resetNrUI(); }
+  S._nicheReportOppIdx = i;
+  document.getElementById('btn-report').disabled=false;
+  document.getElementById('btn-draft').disabled = !S.nicheReportApproved;
   document.getElementById('eb-user-instructions-box').style.display='block';
   // Guardar oportunidad seleccionada en historial inmediatamente
-  if(S.currentHistId){ 
+  if(S.currentHistId){
     var idx=S.history.findIndex(function(h){return h.id===S.currentHistId;});
     if(idx>=0){ S.history[idx].selOpp=S.selOpp; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(e){} }
   }
@@ -1559,7 +1588,157 @@ function selOpp(i){
   const det=document.getElementById('detail-'+i);
   if(det){det.style.display=det.style.display==='none'?'block':'none';}
   const o=S.selOpp;
-  addMsg('chat-search','Seleccionaste: "'+((o.problema||o.problem)||'')+'" — Score '+((o.scoreMonetizacion||o.monetizationScore)||0)+'/100. En '+((o.idioma||o.language)||'')+': "'+((o.problemaEnIdioma||o.busquedaExacta)||'')+'" — Ebook: "'+((o.tituloEbook||o.ebookTitle)||'')+'" — Precio: '+((o.precioHotmart||o.hotmartPrice)||'')+'. Haz clic en el panel de detalle para ver el análisis completo. ¿Generamos el borrador?','ferni');
+  addMsg('chat-search','Seleccionaste: "'+((o.problema||o.problem)||'')+'" — Score '+((o.scoreMonetizacion||o.monetizationScore)||0)+'/100. En '+((o.idioma||o.language)||'')+': "'+((o.problemaEnIdioma||o.busquedaExacta)||'')+'" — Ebook: "'+((o.tituloEbook||o.ebookTitle)||'')+'" — Precio: '+((o.precioHotmart||o.hotmartPrice)||'')+'. Siguiente paso: genera el informe de nicho para validar que la gente PAGA por resolver esto antes de crear el ebook.','ferni');
+}
+
+// ===== INFORME DE NICHO — checkpoint de aprobación =====
+function _resetNrUI(){
+  var box=document.getElementById('nr-box'); if(!box) return;
+  box.style.display='none';
+  document.getElementById('nr-loading').style.display='none';
+  document.getElementById('nr-content').style.display='none';
+  document.getElementById('nr-content').innerHTML='';
+  document.getElementById('nr-actions').style.display='none';
+  document.getElementById('nr-adjust-row').style.display='none';
+  document.getElementById('nr-approved-badge').style.display='none';
+}
+
+async function genNicheReport(){
+  var o=S.selOpp; if(!o){ alert('Selecciona primero una oportunidad.'); return; }
+  S.nicheReportApproved=false;
+  document.getElementById('btn-draft').disabled=true;
+  var box=document.getElementById('nr-box'); box.style.display='block';
+  document.getElementById('nr-content').style.display='none';
+  document.getElementById('nr-actions').style.display='none';
+  document.getElementById('nr-approved-badge').style.display='none';
+  document.getElementById('nr-loading').style.display='block';
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+  try{
+    var r=await fetch('/api/niche-report',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({opportunity:o, country:o.pais||o.country||S.country, language:o.idioma||o.language||S.lang})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'Error generando el informe');
+    S.nicheReport=d.report;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    document.getElementById('nr-loading').style.display='none';
+    renderNicheReport(d.report);
+    addMsg('chat-search','📋 Informe listo. Veredicto: '+(d.report.veredicto||'—')+'. Revísalo y apruébalo para desbloquear la generación del PDF, o pide ajustes.','ferni');
+  }catch(e){
+    document.getElementById('nr-loading').style.display='none';
+    alert('Error generando el informe: '+e.message);
+  }
+}
+
+function renderNicheReport(r){
+  var vColors={CREAR:'#00b894',VALIDAR:'#fdcb6e',DESCARTAR:'#e17055'};
+  var v=(r.veredicto||'').toUpperCase().trim();
+  var vc=vColors[v]||'#6c5ce7';
+  function esc(s){ return _escHtml(String(s||'')); }
+  function list(arr){ return (arr||[]).map(function(x){ return '<li style="margin-bottom:4px;">'+esc(x)+'</li>'; }).join(''); }
+  function sec(title,body){ return '<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">'+title+'</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+body+'</div></div>'; }
+  var icp=r.icp||{}, evd=r.evidenciaDemanda||{}, mp=r.microProblema||{}, pr=r.productoRecomendado||{}, hv=r.hojaVenta||{};
+  var prodRows=(evd.productosExistentes||[]).map(function(p){
+    return '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.nombre)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.plataforma)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">'+esc(p.precio)+'</td></tr>';
+  }).join('');
+  document.getElementById('nr-content').innerHTML=
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'+
+        '<div style="font-size:16px;font-weight:800;color:var(--text);">'+esc(r.titulo||'Informe de nicho')+'</div>'+
+        '<span style="background:'+vc+'22;border:1.5px solid '+vc+';color:'+vc+';font-size:12px;font-weight:800;padding:5px 14px;border-radius:20px;letter-spacing:1px;">'+esc(v||'—')+'</span>'+
+      '</div>'+
+      sec('Veredicto — por qué', esc(r.veredictoJustificacion))+
+      sec('Dolor central', esc(r.dolor))+
+      sec('Causa raíz', esc(r.causaRaiz))+
+      sec('Solución', esc(r.solucion))+
+      sec('Ángulo de venta', esc(r.anguloVenta))+
+      sec('🎯 Micro-problema específico', esc(mp.descripcion)+
+        (mp.busquedasReales&&mp.busquedasReales.length?'<ul style="margin:6px 0 0;padding-left:18px;">'+list(mp.busquedasReales)+'</ul>':'')+
+        (mp.porQueGana?'<div style="font-size:12px;color:var(--text2);margin-top:6px;font-style:italic;">'+esc(mp.porQueGana)+'</div>':''))+
+      sec('👤 Cliente ideal (ICP)',
+        '<b>Demografía:</b> '+esc(icp.demografia)+'<br><b>Problema central:</b> '+esc(icp.problemaCentral)+
+        '<br><b>Resultado deseado:</b> '+esc(icp.resultadoDeseado)+
+        '<br><b>Nivel de conciencia:</b> '+esc(icp.nivelConciencia)+
+        (icp.objeciones&&icp.objeciones.length?'<br><b>Objeciones:</b><ul style="margin:4px 0 0;padding-left:18px;">'+list(icp.objeciones)+'</ul>':''))+
+      sec('💰 Evidencia de demanda pagable',
+        (prodRows?'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;"><tr><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;letter-spacing:1px;">PRODUCTO</th><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;">PLATAFORMA</th><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;">PRECIO</th></tr>'+prodRows+'</table>':'')+
+        '<b>Rango de precios del mercado:</b> '+esc(evd.rangoPrecios)+
+        '<br><b>Volumen de búsqueda:</b> '+esc(evd.volumenBusqueda)+
+        '<br><b>Población relevante:</b> '+esc(evd.poblacionRelevante)+
+        '<br><b>Proporción demanda/población:</b> '+esc(evd.proporcionDemanda)+
+        '<br><b>Urgencia:</b> '+esc(evd.urgencia)+
+        (evd.senalesPago&&evd.senalesPago.length?'<br><b>Señales de pago:</b><ul style="margin:4px 0 0;padding-left:18px;">'+list(evd.senalesPago)+'</ul>':'')+
+        (evd.advertencias&&evd.advertencias.length?'<div style="background:rgba(253,203,110,0.1);border:1px solid rgba(253,203,110,0.4);border-radius:8px;padding:8px 12px;margin-top:8px;"><b style="color:#b8860b;">⚠ Advertencias:</b><ul style="margin:4px 0 0;padding-left:18px;">'+list(evd.advertencias)+'</ul></div>':''))+
+      sec('🕵️ Validación manual en Meta Ads', esc(r.validacionManualMeta))+
+      sec('📦 Producto recomendado',
+        '<b>'+esc(pr.titulo)+'</b> ('+esc(pr.tipo)+')<br>'+esc(pr.promesa)+
+        '<br><b>Precio sugerido:</b> '+esc(pr.precioSugerido)+
+        (pr.extras&&pr.extras.length?'<br><b>Extras recomendados:</b> '+esc((pr.extras||[]).join(' · ')):''))+
+      sec('📝 Hoja de venta',
+        '<div style="font-size:15px;font-weight:800;color:var(--text);">'+esc(hv.headline)+'</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin:4px 0 8px;">'+esc(hv.subheadline)+'</div>'+
+        (hv.bullets&&hv.bullets.length?'<ul style="margin:0 0 8px;padding-left:18px;">'+list(hv.bullets)+'</ul>':'')+
+        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">'+esc(hv.descripcionVenta)+'</div>')+
+    '</div>';
+  document.getElementById('nr-content').style.display='block';
+  document.getElementById('nr-actions').style.display='block';
+}
+
+function approveNicheReport(){
+  if(!S.nicheReport){ alert('Genera primero el informe.'); return; }
+  S.nicheReportApproved=true;
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  document.getElementById('nr-approved-badge').style.display='block';
+  document.getElementById('btn-draft').disabled=false;
+  addMsg('chat-search','✅ Informe aprobado. El ebook se generará alineado a este ángulo de venta e ICP. Ya puedes pulsar "Generar PDF".','ferni');
+}
+
+function toggleNicheAdjust(){
+  var row=document.getElementById('nr-adjust-row');
+  row.style.display = row.style.display==='none' ? 'block' : 'none';
+  if(row.style.display==='block') document.getElementById('nr-adjust-inp').focus();
+}
+
+async function applyNicheAdjust(){
+  var inp=document.getElementById('nr-adjust-inp');
+  var instruction=(inp.value||'').trim();
+  if(!instruction){ alert('Escribe qué quieres ajustar del informe.'); return; }
+  if(!S.nicheReport){ alert('Genera primero el informe.'); return; }
+  S.nicheReportApproved=false;
+  document.getElementById('btn-draft').disabled=true;
+  document.getElementById('nr-approved-badge').style.display='none';
+  document.getElementById('nr-content').style.display='none';
+  document.getElementById('nr-actions').style.display='none';
+  document.getElementById('nr-loading').style.display='block';
+  try{
+    var r=await fetch('/api/niche-report',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({opportunity:S.selOpp, revision:instruction, previousReport:S.nicheReport,
+        country:(S.selOpp&&(S.selOpp.pais||S.selOpp.country))||S.country, language:(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||S.lang})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'Error ajustando el informe');
+    S.nicheReport=d.report;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    inp.value='';
+    document.getElementById('nr-loading').style.display='none';
+    document.getElementById('nr-adjust-row').style.display='none';
+    renderNicheReport(d.report);
+  }catch(e){
+    document.getElementById('nr-loading').style.display='none';
+    document.getElementById('nr-content').style.display='block';
+    document.getElementById('nr-actions').style.display='block';
+    alert('Error: '+e.message);
+  }
+}
+
+// Resumen compacto del informe para inyectarlo en la generación del ebook
+function _nicheReportSummary(){
+  var r=S.nicheReport; if(!r) return '';
+  var parts=[];
+  if(r.dolor) parts.push('DOLOR: '+r.dolor);
+  if(r.anguloVenta) parts.push('ÁNGULO DE VENTA: '+r.anguloVenta);
+  if(r.microProblema&&r.microProblema.descripcion) parts.push('MICRO-PROBLEMA: '+r.microProblema.descripcion);
+  if(r.icp) parts.push('ICP: '+(r.icp.demografia||'')+' | Resultado deseado: '+(r.icp.resultadoDeseado||'')+' | Objeciones: '+((r.icp.objeciones||[]).join('; ')));
+  if(r.productoRecomendado&&r.productoRecomendado.promesa) parts.push('PROMESA: '+r.productoRecomendado.promesa);
+  return parts.join('\n');
 }
 
 function dlSingleExcel(i){
@@ -2562,7 +2741,7 @@ async function runEbookSteps(startFrom){
   S.ebookUserInstructions = userInstructions;
   var nc = S.numChapters || parseNumChapters(userInstructions) || 4;
   S.numChapters = nc;
-  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc, topicInstructions: S.directTopicInstructions || '' };
+  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc, topicInstructions: S.directTopicInstructions || '', nicheReport: _nicheReportSummary() };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;
@@ -3048,6 +3227,8 @@ function saveFullDataToHist(histId){
     if(S.extrasLang) S.history[idx].extrasLang=S.extrasLang;
     if(S.extrasMarketing) S.history[idx].extrasMarketing=S.extrasMarketing;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
+    if(S.nicheReport) S.history[idx].nicheReport=S.nicheReport;
+    if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -5732,7 +5913,15 @@ function loadHistData(e){
   S.results=e.opps; S.country=e.country; S.niche=e.niche;
   S.currentHistId=e.id;
   var opp = e.selOpp || (e.opps && e.opps[0]) || null;
-  if(opp){ S.selOpp=opp; document.getElementById('btn-draft').disabled=false; }
+  // Restaurar informe de nicho; entradas antiguas (con ebook ya generado, sin informe) quedan desbloqueadas
+  S.nicheReport = e.nicheReport || null;
+  S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
+  S._nicheReportOppIdx = null;
+  if(opp){
+    S.selOpp=opp;
+    document.getElementById('btn-report').disabled=false;
+    document.getElementById('btn-draft').disabled = !S.nicheReportApproved;
+  }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }

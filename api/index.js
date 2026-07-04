@@ -846,6 +846,116 @@ app.post('/api/chat', async function(req, res) {
   }
 });
 
+// ── INFORME DE NICHO — evidencia de disposición a pagar + checkpoint de aprobación ──
+// Segunda pasada de investigación SOLO sobre la oportunidad elegida:
+// productos ya vendiéndose (Hotmart/Amazon/Udemy/Gumroad) + volúmenes reales + informe narrativo tipo hoja de venta.
+app.post('/api/niche-report', async function(req, res) {
+  var o = req.body.opportunity || {};
+  var countryName = getCountryName(req.body.country || o.pais || o.country || 'España');
+  var language = req.body.language || o.idioma || o.language || 'Spanish';
+  var revision = (req.body.revision || '').trim();
+  var previousReport = req.body.previousReport || null;
+  var regs = getRegs(countryName);
+  var pop = POPULATION[countryName] || 'sin dato de población';
+  var keyword = o.busquedaExacta || o.keyword || o.problema || o.problem || '';
+
+  var reportSchema = JSON.stringify({
+    titulo: 'nombre corto del informe',
+    veredicto: 'CREAR | VALIDAR | DESCARTAR',
+    veredictoJustificacion: 'por qué, citando la evidencia concreta de los datos recibidos',
+    dolor: 'el dolor central que la gente PAGA por resolver — específico, no genérico',
+    causaRaiz: 'por qué existe ese dolor y por qué la gente no lo resuelve sola',
+    solucion: 'la solución que ofrece el producto, en 2-3 frases',
+    anguloVenta: 'cómo se posiciona frente a lo que ya existe en el mercado',
+    microProblema: { descripcion: 'micro-problema específico y buscado activamente (bajar del nicho amplio al problema concreto)', busquedasReales: ['3-5 búsquedas concretas detectadas en los datos'], porQueGana: 'por qué este micro-enfoque convierte mejor que el nicho genérico' },
+    icp: { demografia: '', problemaCentral: '', doloresSecundarios: ['', ''], resultadoDeseado: '', deseosSecundarios: ['', ''], nivelConciencia: 'nivel 1-5 (Schwartz) + qué implica para el copy', objeciones: ['', '', ''] },
+    evidenciaDemanda: {
+      productosExistentes: [{ nombre: '', plataforma: '', precio: '' }],
+      rangoPrecios: 'rango de precios que soporta este mercado según los datos',
+      volumenBusqueda: 'búsquedas/mes reales del cluster (DataForSEO) si están en los datos',
+      poblacionRelevante: 'segmento relevante de la población de ' + countryName,
+      proporcionDemanda: 'relación volumen de búsqueda vs población y qué significa para la probabilidad de venta',
+      urgencia: 'urgente-emocional (paga rápido) o solo curiosidad (no paga) — con evidencia',
+      senalesPago: ['señales concretas de disposición a pagar detectadas en los datos'],
+      advertencias: ['riesgos o señales débiles a vigilar — sé honesto']
+    },
+    validacionManualMeta: 'instrucción concreta: qué keyword buscar en facebook.com/ads/library para ' + countryName + ' y cómo leer el resultado con la rúbrica 0-15 débil / 16-30 precaución / 31-90 oferta validada / 91+ escalada',
+    productoRecomendado: { tipo: 'ebook | ebook+extras | app standalone', titulo: '', promesa: '', precioSugerido: 'en ' + regs.currency, extras: ['qué bonus/app/skill acompañan mejor este producto'] },
+    hojaVenta: { headline: 'promesa PTE: Problema + Temporal + Específica', subheadline: '', bullets: ['3-5 bullets de beneficio concreto'], descripcionVenta: 'texto de venta de 150-200 palabras listo para usar en cualquier plataforma' }
+  });
+
+  var sys = 'Eres un analista senior de mercado de infoproductos y marketing de respuesta directa. Generas INFORMES DE NICHO tipo "hoja de venta" que deciden si un producto se crea o no.' +
+    '\nPAIS OBJETIVO: ' + countryName + ' (población: ' + pop + '). IDIOMA DEL MERCADO: ' + language + '.' +
+    '\nEl informe se escribe SIEMPRE en ESPAÑOL (documento interno de decisión). Las búsquedas y nombres de productos citados se mantienen en su idioma original.' +
+    '\n\nREGLAS ANTI-ALUCINACION (críticas, sin excepciones):' +
+    '\n- SOLO cita productos, precios y datos que aparezcan en los DATOS DE EVIDENCIA recibidos. Si no se detectaron productos, dilo honestamente en advertencias — NO inventes competidores.' +
+    '\n- Si extrapolas algo, márcalo con [Estimación].' +
+    '\n- PROHIBIDO inventar porcentajes de probabilidad de venta. La probabilidad se argumenta con la proporción búsquedas/población + señales de pago, nunca con un número inventado.' +
+    '\n- El veredicto debe ser honesto: si la evidencia es débil di VALIDAR o DESCARTAR. Un informe que siempre dice CREAR no sirve para decidir.' +
+    '\n\nPROFUNDIDAD OBLIGATORIA: baja del nicho amplio al micro-problema específico más prometedor según los datos (ejemplo del estándar esperado: no "autos en Francia" sino "cómo reparar la guantera del Hyundai Sedán 2023").' +
+    '\n\nResponde SOLO con el objeto JSON. Sin markdown, sin texto fuera del JSON. Estructura exacta:\n' + reportSchema;
+
+  try {
+    // Modo revisión: ajustar el informe existente sin repetir la investigación
+    if (revision && previousReport) {
+      var revMsg = 'INFORME ACTUAL:\n' + JSON.stringify(previousReport) +
+        '\n\nAJUSTE PEDIDO POR LA USUARIA (aplícalo manteniendo estructura, rigor y reglas anti-alucinación):\n' + revision +
+        '\n\nDevuelve el informe completo ajustado. Solo JSON.';
+      var revTxt = await claudeCall(sys, revMsg, 4000);
+      return res.json({ success: true, report: extractJSON(revTxt) });
+    }
+
+    // Investigación de evidencia de pago — todas las fuentes en paralelo
+    var hl = serperHl(language);
+    var clusterKws = (o.clusterKeywords && o.clusterKeywords.length ? o.clusterKeywords : buildSeedKeywords(keyword, language)).slice(0, 15);
+    var ev = await Promise.all([
+      serperSearch(keyword + ' site:hotmart.com', hl),
+      serperSearch(keyword + ' curso ebook site:udemy.com OR site:gumroad.com', hl),
+      serperSearch(keyword + ' ebook curso guia precio comprar ' + countryName, hl),
+      serperSearch('"' + keyword + '"', hl),
+      serperAmazon(keyword, countryName, regs.currency),
+      getDataForSEOVolumes(clusterKws, countryName, language)
+    ]);
+
+    function fmtEv(arr) {
+      return (arr || []).slice(0, 8).map(function(r) {
+        return '- ' + (r.title || '') + ' :: ' + (r.snippet || '');
+      }).join('\n') || '(sin resultados detectados)';
+    }
+    var dfsTxt = (ev[5] || []).map(function(k) {
+      return '- "' + k.keyword + '": ' + k.searchVolume.toLocaleString() + ' búsquedas/mes' + (k.cpc > 0 ? ' | CPC $' + k.cpc.toFixed(2) : '');
+    }).join('\n') || '(sin datos de volumen)';
+
+    var evidence =
+      '=== HOTMART (productos vendiéndose) ===\n' + fmtEv(ev[0]) +
+      '\n\n=== UDEMY / GUMROAD (cursos y productos) ===\n' + fmtEv(ev[1]) +
+      '\n\n=== BÚSQUEDA COMERCIAL EN ' + countryName.toUpperCase() + ' ===\n' + fmtEv(ev[2]) +
+      '\n\n=== BÚSQUEDA EXACTA DEL PROBLEMA ===\n' + fmtEv(ev[3]) +
+      '\n\n=== AMAZON (bestsellers con precio/reviews) ===\n' + fmtEv(ev[4]) +
+      '\n\n=== VOLUMEN REAL DE BÚSQUEDAS (DataForSEO) ===\n' + dfsTxt;
+
+    var oppSummary = {
+      problema: o.problema || o.problem || '', necesidad: o.necesidad || '',
+      busquedaExacta: keyword, tituloEbook: o.tituloEbook || o.ebookTitle || '',
+      promesaEbook: o.promesaEbook || o.ebookPromise || '', dolorODeseo: o.dolorODeseo || '',
+      emocion: o.emocion || o.emotion || '', rangoEdad: o.rangoEdad || o.ageRange || '',
+      genero: o.genero || o.gender || '', precioHotmart: o.precioHotmart || o.hotmartPrice || '',
+      tipoCiclo: o.tipoCiclo || '', clusterKeywords: o.clusterKeywords || [],
+      porQueEstaOportunidad: o.porQueEstaOportunidad || ''
+    };
+
+    var userMsg = 'OPORTUNIDAD SELECCIONADA:\n' + JSON.stringify(oppSummary) +
+      '\n\nDATOS DE EVIDENCIA (única fuente válida para citar productos, precios y volúmenes):\n' + evidence +
+      '\n\nGenera el informe de nicho completo.';
+
+    var txt = await claudeCall(sys, userMsg, 4000);
+    res.json({ success: true, report: extractJSON(txt) });
+  } catch (e) {
+    console.error('niche-report error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 function buildEbookSystem(countryName, regs) {
   return 'You are a Premium Ebook Creative Director, Market Psychologist, Editorial Designer, and Digital Product Architect.' +
     ' Your job is to create a sellable premium PDF ebook adapted to the niche, audience, emotional context, and commercial objective.' +
@@ -1075,6 +1185,11 @@ app.post('/api/generate-chapter', async function(req, res) {
   var ctx = buildEbookContext(o, author, countryName, regs);
   if (serperContext) {
     ctx += '\n\nDATOS WEB DE REFERENCIA (usar cifras reales citando la fuente):\n' + serperContext;
+  }
+  // Informe de nicho aprobado — el ebook debe alinearse a su ángulo de venta e ICP
+  var nicheReport = (req.body.nicheReport || '').trim();
+  if (nicheReport) {
+    ctx += '\n\nINFORME DE NICHO APROBADO (alinea el enfoque, ejemplos y promesa del ebook a este documento):\n' + nicheReport.slice(0, 1500);
   }
   // topicInstructions: solo para capítulos (ch1-chN), no para header/outline/ending
   var isChapterSection = /^ch\d+$/.test(section || '');
