@@ -1978,6 +1978,7 @@ app.post('/api/generate-meta', async function(req, res) {
       ? '\nExtras incluidos con el ebook: ' + bonuses.map(function(b){ return b.title + (b.type==='app-premium'?' (App interactiva)':b.type==='skill-pack'?' (Pack de prompts IA)':''); }).join(', ')
       : '';
     var ebookLine = ebook.title ? ' | Subtitle: ' + (ebook.subtitle||'') + ' | Hook: ' + (ebook.tagline||'') : '';
+    var nicheReportCtx = (req.body.nicheReport || '').trim();
     var userMsg = 'Product: ' + (o.tituloEbook || o.ebookTitle || ebook.title) +
       ' | Topic: ' + (o.problema || o.problem) +
       ' | Audience: ' + (o.rangoEdad || o.ageRange) + ' ' + (o.genero || o.gender) +
@@ -1986,12 +1987,24 @@ app.post('/api/generate-meta', async function(req, res) {
       ' | Pain or desire: ' + (o.dolorODeseo || o.dolorEmocional || o.emotionalPain) +
       ' | Price: ' + price +
       ' | Promise: ' + (o.promesaEbook || o.ebookPromise) +
-      bonusLine + ebookLine;
+      bonusLine + ebookLine +
+      (nicheReportCtx ? '\n\nAPPROVED NICHE REPORT (align every ad to this angle and ICP):\n' + nicheReportCtx.slice(0, 1200) : '');
 
     var paletteRule = colorPalette
       ? ' For dallePrompt in each ad: use this exact color palette — ' + colorPalette + '. All 5 ad images must share this palette for visual brand consistency.'
       : ' For dallePrompt in each ad: choose ONE consistent color palette based on the product niche and use it across all 5 ads.';
-    var metaSection = 'META ADS SYSTEM — Generate JSON with: segmentation (object: age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget). ads (array 5, each: angle, platform, format, headline, primaryText, shortCopy, longCopy, emotionalHook, cta, targetEmotion, dallePrompt). Angles: problem, urgency, aspiration, curiosity, authority.' + paletteRule + ' dallePrompt must start with "High quality Meta ad visual. NO TEXT NO WORDS anywhere." and describe only the visual scene, people, objects, lighting — no text descriptions.';
+    var metaSection = 'META ADS SYSTEM — You are a SENIOR direct-response media buyer with 15+ years running profitable Meta campaigns for infoproducts.' +
+      '\n\nNON-NEGOTIABLE QUALITY STANDARD — THE 2-LINE RULE:' +
+      '\nThe FIRST TWO LINES of every primaryText must be able to sell alone: they name the specific pain/desire AND the promise. No warm-up, no filler, no "¿Sabías que...?" openers. If someone reads only 2 lines, they must already want the product.' +
+      '\n\nHEADLINE FORMULA — PTE (mandatory for all 5 headlines):' +
+      '\nP = names the Problem/pain/desire of the ICP. T = Temporal specificity (en 7 días, hoy, esta semana). E = Específica (quantifiable/tangible result, never vague like "mejora tu vida").' +
+      '\n\nSELF-SCORING (internal, mandatory): before returning, score each ad 0-100 on: hook strength (40), PTE compliance (30), CTA clarity (15), native-market sound (15). REWRITE any ad scoring under 80 before returning. Do not include scores in the output.' +
+      '\n\nGenerate JSON with:' +
+      '\nsegmentation (object: age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget).' +
+      '\nads (array 5, each: angle, platform, format, headline (PTE formula, max 40 chars), primaryText (2-line rule, 60-125 words), description (max 30 chars, reinforces the promise), shortCopy, longCopy, emotionalHook, cta, targetEmotion, dallePrompt).' +
+      '\nAngles: problem, urgency, aspiration, curiosity, authority — one each.' +
+      paletteRule +
+      ' dallePrompt must start with "High quality Meta ad visual. NO TEXT NO WORDS anywhere." and describe a specific visual scene (subject, lighting, composition, mood) — no generic tag soup like "beautiful, stunning, 8k".';
     var socialSection = 'FACEBOOK + INSTAGRAM KIT — Generate JSON with: facebook (object: post string, storytellingPost string, authorityPost string, viralHook string, engagementPost string, commentCTA string). instagram (object: caption string, carouselIdeas array 3 strings, reelHooks array 3 strings, storyHooks array 3 strings, hashtags array 15 strings, shortHooks array 3 strings). emailSequence (array 3, each: subject, body). retargeting (object: headline, copy, cta, offer).';
 
     var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, metaSection), userMsg, 6000));

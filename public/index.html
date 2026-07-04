@@ -7,11 +7,12 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #0f1729; --bg2: #162040; --card: #1e2d52;
-  --border: rgba(100,140,255,0.15); --accent: #6c5ce7;
-  --accent2: #5b8ef0; --teal: #00cec9; --gold: #fdcb6e;
-  --red: #e17055; --green: #00b894; --text: #eef2ff;
-  --text2: #c8d4f0; --muted: #7a90c0;
+  /* Tema Marfil editorial — premium claro (Ferni Guides) */
+  --bg: #f6f4ef; --bg2: #efece4; --card: #ffffff;
+  --border: #e3ded2; --accent: #6c5ce7;
+  --accent2: #5b8ef0; --teal: #0d9488; --gold: #b8963e;
+  --red: #d1603f; --green: #0a9b7d; --text: #1f2333;
+  --text2: #4a4e63; --muted: #8a8799;
 }
 body { background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); font-size: 13px; min-height: 100vh; }
 .app { display: flex; flex-direction: column; height: 100vh; max-width: 1200px; margin: 0 auto; border: 1px solid var(--border); background: linear-gradient(160deg,#162040,#0f1729); box-shadow: 0 0 60px rgba(108,92,231,0.15); }
@@ -169,6 +170,39 @@ select option { background: #1e2d52; }
 .action-plan-item { font-size: 12px; color: var(--text2); padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
 .resource-item { font-size: 12px; color: var(--teal); padding: 4px 0; }
 </style>
+<style id="theme-marfil">
+/* ===== MARFIL EDITORIAL — overrides de los colores oscuros hardcodeados ===== */
+.app { background: linear-gradient(160deg,#fbfaf7,#f6f4ef); box-shadow: 0 0 40px rgba(31,35,51,0.08); }
+.hdr { background: linear-gradient(90deg,rgba(108,92,231,0.07),rgba(184,150,62,0.06)); }
+.tabs { background: rgba(31,35,51,0.05); }
+.tab:hover:not(.active) { background: rgba(31,35,51,0.06); }
+.sb { background: rgba(255,255,255,0.55); }
+.sb-foot { background: #efece4; }
+select, input, textarea { background: #ffffff; border: 1px solid #ddd8ca; color: var(--text); }
+select:focus, input:focus, textarea:focus { background: #ffffff; border-color: var(--accent); }
+select option { background: #ffffff; color: #1f2333; }
+.mbtn { background: #ffffff; border: 2px solid #ddd8ca; }
+.chip { background: #ffffff; border: 1px solid #ddd8ca; }
+.chip:hover,.chip.active { background: rgba(108,92,231,0.08); color: var(--accent); }
+.chat-area { background: #f1eee6; }
+.msg.ferni { background: rgba(108,92,231,0.08); border: 1px solid rgba(108,92,231,0.22); }
+.msg.user { background: rgba(91,142,240,0.09); border: 1px solid rgba(91,142,240,0.25); }
+.opp-card { background: #ffffff; border: 1px solid #e3ded2; box-shadow: 0 2px 10px rgba(31,35,51,0.05); }
+.opp-card.sel { background: rgba(108,92,231,0.06); }
+.fc { background: #ffffff; border: 1px solid #e6e2d6; }
+.btn-s { background: #ffffff; border: 1px solid #ddd8ca; color: var(--text2); }
+.btn-gold { background: rgba(184,150,62,0.10); color: var(--gold); border: 1px solid rgba(184,150,62,0.35); }
+.chat-inp { background:#ffffff; }
+/* Cajas translúcidas "glass" que eran para fondo oscuro */
+[style*="rgba(255,255,255,0.04)"], [style*="rgba(255,255,255,0.05)"], [style*="rgba(255,255,255,0.06)"],
+[style*="rgba(255,255,255,0.07)"], [style*="rgba(255,255,255,0.08)"] { background-color: #ffffff !important; }
+[style*="background:var(--bg2)"], [style*="background: var(--bg2)"] { border-color: #ddd8ca; }
+/* Textos que eran blancos fijos sobre paneles de color siguen bien (van sobre acento).
+   Sombras violetas fuertes → suaves */
+.logo-icon { box-shadow: 0 3px 10px rgba(108,92,231,0.25); }
+.tab.active { box-shadow: 0 2px 8px rgba(108,92,231,0.25); }
+.btn-run { box-shadow: 0 4px 14px rgba(108,92,231,0.22); }
+</style>
 </head>
 <body>
 <div class="app">
@@ -183,7 +217,7 @@ select option { background: #1e2d52; }
     <div class="tabs">
       <button class="tab active" onclick="showTab('search',this)">📊 Análisis</button>
       <button class="tab" onclick="showTab('ebook',this)">📖 Ebook</button>
-      <button class="tab" onclick="showTab('hotmart',this)">🛒 Hotmart</button>
+      <button class="tab" onclick="showTab('hotmart',this)" style="display:none;">🛒 Hotmart</button><!-- módulo dado de baja — el copy de venta vive en el Informe de Nicho (hojaVenta) -->
       <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
       <button class="tab" onclick="showTab('extras',this)">🎁 Bonus Pack</button>
       <button class="tab" onclick="showTab('directo',this)">✍️ Directo</button>
@@ -316,7 +350,7 @@ select option { background: #1e2d52; }
                   <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-app" checked style="accent-color:var(--accent);cursor:pointer;"> 📱 App Premium</label>
                   <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-skill" checked style="accent-color:var(--accent);cursor:pointer;"> ⚡ Skill Pack</label>
                   <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-meta" checked style="accent-color:var(--accent);cursor:pointer;"> 📣 Kit Meta Ads</label>
-                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--muted);opacity:0.55;cursor:default;"><input type="checkbox" disabled> 📖 EPUB Amazon KDP <span style="font-size:10px;">(próxima fase)</span></label>
+                  <label style="display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;color:var(--text);cursor:pointer;"><input type="checkbox" id="pipe-ck-epub" checked style="accent-color:var(--accent);cursor:pointer;"> 📖 EPUB Amazon KDP</label>
                 </div>
                 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
                   <select id="pipe-lang" style="flex:1;min-width:170px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
@@ -363,7 +397,7 @@ select option { background: #1e2d52; }
             </div>
           </div>
         </div>
-        <div class="chat-area">
+        <div class="chat-area" style="display:none;"><!-- chat decorativo oculto — la guía la da el informe de nicho y la línea de producción -->
           <div class="chat-hdr" style="cursor:pointer;" onclick="toggleChat('search')"><div class="chat-dot"></div><div class="chat-lbl">FERNI — Asistente de análisis</div><div id="chat-toggle-search" style="margin-left:auto;font-size:16px;color:var(--muted);">▼</div></div>
           <div class="chat-msgs" id="chat-search"><div class="msg ferni">¡Hola! Soy FERNI 👋 Selecciona un país, escribe tu nicho y ejecuta el análisis. Te ayudaré a entender los resultados y elegir la mejor oportunidad para monetizar.</div></div>
           <div class="chat-inp-row">
@@ -500,8 +534,8 @@ select option { background: #1e2d52; }
             <div style="position:sticky;top:0;z-index:50;background:var(--bg);padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
               <div class="row-hd" style="margin-bottom:8px;"><div class="sec-lbl">✅ PDF Final</div><span class="badge bg2" id="eb-approved-badge"></span></div>
               <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF para Hotmart</button>
-                <button class="btn btn-teal" onclick="showTab('hotmart',document.querySelectorAll('.tab')[2])">→ Ver kit Hotmart</button>
+                <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF</button>
+                <button class="btn btn-gold" style="font-size:13px;" onclick="dlEpub()">📖 EPUB (Amazon KDP)</button>
                 <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
                 <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
                 <button class="btn btn-s" style="font-size:13px;background:rgba(0,120,0,0.15);border-color:rgba(0,180,0,0.4);color:#00b894;" onclick="downloadCoverComposed()">🖼️ Descargar portada</button>
@@ -1203,6 +1237,7 @@ select option { background: #1e2d52; }
             <!-- Action buttons -->
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
               <button onclick="downloadImpPDF()" class="btn btn-p" style="font-size:14px;padding:11px 22px;">📄 Descargar PDF</button>
+              <button onclick="dlEpubImport()" class="btn btn-gold" style="font-size:13px;padding:11px 18px;">📖 EPUB (Amazon KDP)</button>
               <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Ir a Hotmart, Meta Ads y Bonus Pack">📊 Hotmart / Meta / Bonus</button>
               <button onclick="toggleImpTranslate()" id="imp-translate-btn" class="btn" style="font-size:13px;padding:11px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);">🌐 Traducir</button>
             </div>
@@ -1796,6 +1831,7 @@ var PIPE_LABELS = {
   ebook:     '📕 Ebook (capítulos completos)',
   verify:    '🔍 Verificación de datos (3 capas)',
   translate: '🌍 Traducción y PDF final',
+  epub:      '📖 EPUB para Amazon KDP',
   bonus:     '🎁 Bonus Pack (4 mini infoproductos)',
   app:       '📱 App Premium',
   skill:     '⚡ Skill Pack',
@@ -1863,6 +1899,7 @@ async function startPipeline(){
     app:   !!(document.getElementById('pipe-ck-app')||{}).checked,
     skill: !!(document.getElementById('pipe-ck-skill')||{}).checked,
     meta:  !!(document.getElementById('pipe-ck-meta')||{}).checked,
+    epub:  !!(document.getElementById('pipe-ck-epub')||{}).checked,
     lang:  (document.getElementById('pipe-lang')||{}).value||'Español',
     market:((document.getElementById('pipe-market')||{}).value||'').trim()||o.pais||o.country||'',
     price: ((document.getElementById('pipe-price')||{}).value||'').trim()
@@ -1872,6 +1909,7 @@ async function startPipeline(){
   document.getElementById('pipe-start-btn').disabled=true;
 
   var steps=['ebook','verify','translate'];
+  if(cfg.epub) steps.push('epub');
   if(cfg.bonus) steps.push('bonus');
   if(cfg.app) steps.push('app');
   if(cfg.skill) steps.push('skill');
@@ -1884,8 +1922,9 @@ async function startPipeline(){
   if(chainOk) await _pipeRunStep('verify', _pipeVerify); // no bloquea la cadena si falla
   if(chainOk) chainOk = await _pipeRunStep('translate', _pipeTranslate);
 
-  // ── PIEZAS DERIVADAS: bonus+app en paralelo, luego skill, luego meta (para que mencione todos los extras) ──
+  // ── PIEZAS DERIVADAS: epub instantáneo, bonus+app en paralelo, luego skill, luego meta (para que mencione todos los extras) ──
   if(chainOk){
+    if(cfg.epub) await _pipeRunStep('epub', _pipeEpub);
     var par=[];
     if(cfg.bonus) par.push(_pipeRunStep('bonus', _pipeBonus));
     if(cfg.app) par.push(_pipeRunStep('app', _pipeApp));
@@ -1917,7 +1956,7 @@ async function _pipeRunStep(id, runner){
 }
 
 async function retryPipeStep(id){
-  var runners={ebook:_pipeEbook,verify:_pipeVerify,translate:_pipeTranslate,bonus:_pipeBonus,app:_pipeApp,skill:_pipeSkill,meta:_pipeMeta};
+  var runners={ebook:_pipeEbook,verify:_pipeVerify,translate:_pipeTranslate,epub:_pipeEpub,bonus:_pipeBonus,app:_pipeApp,skill:_pipeSkill,meta:_pipeMeta};
   if(!runners[id]) return;
   var ok = await _pipeRunStep(id, runners[id]);
   if(ok){ if(S.currentHistId) saveFullDataToHist(S.currentHistId); _pipeRenderHub(); }
@@ -1971,6 +2010,15 @@ async function _pipeTranslate(){
   return cfg.lang;
 }
 
+async function _pipeEpub(){
+  var eb=S.finalEbook||S.ebookData;
+  if(!eb) throw new Error('Sin ebook para el EPUB');
+  var blob=await buildEpubBlob(eb,{lang:S.approvedLang||PIPE.cfg.lang||'Español', coverUrl:S.coverUrl});
+  if(!blob) throw new Error('No se pudo construir el EPUB');
+  PIPE.results.epub={ ready:true };
+  return 'válido, listo para KDP';
+}
+
 async function _pipeBonus(){
   var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
   if(S.extrasData && S.extrasData.length && S.extrasLang===cfg.lang){ return 'ya existía — reutilizado'; }
@@ -2022,7 +2070,7 @@ async function _pipeMeta(){
   if(!S.colorPalette) S.colorPalette=maPalette;
   if(cfg.price) S.maPrice=cfg.price;
   var resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({opportunity:o, language:cfg.lang, ebook:eb, price:cfg.price, bonuses:bonuses, colorPalette:maPalette})});
+    body:JSON.stringify({opportunity:o, language:cfg.lang, ebook:eb, price:cfg.price, bonuses:bonuses, colorPalette:maPalette, nicheReport:_nicheReportSummary()})});
   var d=await resp.json();
   if(!d.success) throw new Error(d.error||'Error en kit Meta');
   S.maKit=d.kit;
@@ -2055,6 +2103,10 @@ function _pipeRenderHub(){
     var v=PIPE.results.verify;
     cards.push(card('🔍','Verificación de datos', v.approved?'✅ Sin problemas detectados':'⚠️ '+v.problems+' problema(s) encontrados',
       v.approved?'':abtn('Ver detalle en tab Ebook',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+  }
+  if(st.epub==='done'){
+    cards.push(card('📖','EPUB para Amazon KDP','Formato válido con portada y metadata — súbelo directo a KDP',
+      abtn('⬇ Descargar .epub','dlEpub()')));
   }
   if(st.bonus==='done'&&S.extrasData&&S.extrasData.length){
     var bBtns=S.extrasData.map(function(ex,i){ return abtn('👁 '+(i+1),'previewExtra('+i+')')+abtn('🖨 PDF','dlExtra('+i+')'); }).join('');
@@ -2137,6 +2189,11 @@ async function pipeZipAll(){
       zip.file('informe/informe-de-nicho.json', JSON.stringify(S.nicheReport,null,2));
       readme+='- informe/ → el informe de nicho aprobado (hoja de venta incluida)\n';
     }
+    // EPUB dentro del ZIP maestro (si hay ebook final)
+    try{
+      var epubBlob = await buildEpubBlob(eb, { lang: S.approvedLang||'Español', coverUrl: S.coverUrl });
+      if(epubBlob){ zip.file('ebook/'+slug+'.epub', epubBlob); readme+='- ebook/'+slug+'.epub → listo para subir a Amazon KDP\n'; }
+    }catch(e){}
     zip.file('LEEME.txt', readme);
     var blob=await zip.generateAsync({type:'blob'});
     var a=document.createElement('a');
@@ -2145,6 +2202,212 @@ async function pipeZipAll(){
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
   }catch(e){ alert('Error creando el ZIP: '+e.message); }
+}
+
+// ===== EPUB 3 — generador client-side listo para Amazon KDP =====
+var EPUB_LANG_CODES = { 'Español':'es','Spanish':'es','English':'en','French':'fr','Italian':'it','German':'de','Portuguese':'pt','Dutch':'nl','Polish':'pl','Swedish':'sv','Norwegian':'no','Danish':'da','Finnish':'fi','Greek':'el','Romanian':'ro','Turkish':'tr','Russian':'ru','Arabic':'ar','Chinese Simplified':'zh','Japanese':'ja','Korean':'ko' };
+
+function _epubEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Convierte el contenido de un capítulo (markdown ligero + tags Ferni) a XHTML válido
+function _epubContentToXhtml(txt){
+  var out=[];
+  var lines=String(txt||'').split('\n');
+  var inList=false;
+  function closeList(){ if(inList){ out.push('</ul>'); inList=false; } }
+  lines.forEach(function(raw){
+    var line=raw.trim();
+    if(!line){ closeList(); return; }
+    // Tags Ferni
+    var m;
+    if((m=line.match(/^\[HIGHLIGHT BOX:\s*([\s\S]*?)\]$/i))){ closeList(); out.push('<div class="hbox"><p>'+_epubEsc(m[1])+'</p></div>'); return; }
+    if((m=line.match(/^\[CHECKLIST:\s*([\s\S]*?)\]$/i))){ closeList(); out.push('<ul class="check">'+m[1].split('|').map(function(it){ return '<li>'+_epubEsc(it.trim())+'</li>'; }).join('')+'</ul>'); return; }
+    if((m=line.match(/^\[TABLE:\s*([\s\S]*?)\]$/i))){
+      closeList();
+      var cells=m[1].split('|').map(function(c){ return c.trim(); });
+      if(cells.length>2){
+        var title=cells.shift();
+        var cols=Math.min(4, Math.max(2, Math.round(Math.sqrt(cells.length))));
+        var rows=[]; for(var r=0;r<cells.length;r+=cols) rows.push(cells.slice(r,r+cols));
+        out.push('<p><strong>'+_epubEsc(title)+'</strong></p><table>'+rows.map(function(row,ri){
+          var tag=ri===0?'th':'td';
+          return '<tr>'+row.map(function(c){ return '<'+tag+'>'+_epubEsc(c)+'</'+tag+'>'; }).join('')+'</tr>';
+        }).join('')+'</table>');
+      }
+      return;
+    }
+    if(/^\[(BAR|LINE) CHART:/i.test(line)){ closeList(); out.push('<p><em>'+_epubEsc(line.replace(/^\[|\]$/g,''))+'</em></p>'); return; }
+    if(/^\[ICON \+ TITLE:\s*/i.test(line)){ closeList(); out.push('<h3>'+_epubEsc(line.replace(/^\[ICON \+ TITLE:\s*/i,'').replace(/\]$/,''))+'</h3>'); return; }
+    // Subtítulos markdown
+    if(/^##\s+/.test(line)){ closeList(); out.push('<h3>'+_epubEsc(line.replace(/^##\s+/,''))+'</h3>'); return; }
+    if(/^\*\*[^*]+\*\*$/.test(line)){ closeList(); out.push('<h3>'+_epubEsc(line.replace(/^\*\*|\*\*$/g,''))+'</h3>'); return; }
+    // Listas
+    if(/^[-•]\s+/.test(line)){
+      if(!inList){ out.push('<ul>'); inList=true; }
+      out.push('<li>'+_epubInline(line.replace(/^[-•]\s+/,''))+'</li>');
+      return;
+    }
+    closeList();
+    out.push('<p>'+_epubInline(line)+'</p>');
+  });
+  closeList();
+  return out.join('\n');
+}
+
+// Inline: **negrita** → <strong>, escapando el resto
+function _epubInline(s){
+  var esc=_epubEsc(s);
+  return esc.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+}
+
+function _epubXhtmlDoc(title, bodyHtml, langCode){
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n'+
+    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="'+langCode+'" lang="'+langCode+'">\n'+
+    '<head><meta charset="UTF-8"/><title>'+_epubEsc(title)+'</title><link rel="stylesheet" type="text/css" href="styles.css"/></head>\n'+
+    '<body>'+bodyHtml+'</body>\n</html>';
+}
+
+// Construye el EPUB como Blob. ebook = {title,subtitle,intro,chapters[],conclusion,actionPlan,resources,legalSection}
+async function buildEpubBlob(ebook, opts){
+  if(!ebook || !ebook.title) return null;
+  opts=opts||{};
+  await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+  var langCode = EPUB_LANG_CODES[opts.lang||'Español']||'es';
+  var zip=new JSZip();
+  // mimetype: primero y SIN comprimir (requisito del formato)
+  zip.file('mimetype','application/epub+zip',{compression:'STORE'});
+  zip.file('META-INF/container.xml',
+    '<?xml version="1.0" encoding="UTF-8"?>\n<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'+
+    '<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+
+  var css='body{font-family:serif;line-height:1.6;margin:1em;}h1{font-size:1.6em;margin:1em 0 .4em;}h2{font-size:1.3em;margin:1em 0 .4em;}h3{font-size:1.1em;margin:.9em 0 .3em;}p{margin:.5em 0;text-align:justify;}ul{margin:.5em 0 .5em 1.2em;}table{border-collapse:collapse;width:100%;margin:.8em 0;font-size:.9em;}th,td{border:1px solid #999;padding:.3em .5em;text-align:left;}th{background:#eee;}.hbox{border:1px solid #999;border-left:4px solid #555;padding:.6em .8em;margin:.8em 0;background:#f6f6f6;}.opening{font-style:italic;color:#444;margin:.8em 0;}.kp{background:#f6f6f6;padding:.6em .8em;margin:.8em 0;}.cover-img{width:100%;height:auto;}';
+  zip.file('OEBPS/styles.css',css);
+
+  var manifest=[], spine=[], navLis=[], ncxPts=[], playOrder=1;
+  function addDoc(id, fname, title, bodyHtml, inToc){
+    zip.file('OEBPS/'+fname, _epubXhtmlDoc(title, bodyHtml, langCode));
+    manifest.push('<item id="'+id+'" href="'+fname+'" media-type="application/xhtml+xml"/>');
+    spine.push('<itemref idref="'+id+'"/>');
+    if(inToc!==false){
+      navLis.push('<li><a href="'+fname+'">'+_epubEsc(title)+'</a></li>');
+      ncxPts.push('<navPoint id="np'+playOrder+'" playOrder="'+playOrder+'"><navLabel><text>'+_epubEsc(title)+'</text></navLabel><content src="'+fname+'"/></navPoint>');
+      playOrder++;
+    }
+  }
+
+  // Portada (imagen si existe)
+  var coverManifest='';
+  var coverUrl=opts.coverUrl||'';
+  var coverData=null;
+  if(coverUrl){
+    try{
+      if(coverUrl.startsWith('data:')){ coverData=coverUrl.split(',')[1]; }
+      else { var cr=await fetch(coverUrl); var cb=await cr.blob(); coverData=await new Promise(function(res){ var fr=new FileReader(); fr.onload=function(){ res(fr.result.split(',')[1]); }; fr.readAsDataURL(cb); }); }
+    }catch(e){ coverData=null; }
+  }
+  if(coverData){
+    zip.file('OEBPS/images/cover.jpg', coverData, {base64:true});
+    coverManifest='<item id="cover-img" href="images/cover.jpg" media-type="image/jpeg" properties="cover-image"/>';
+    addDoc('cover','cover.xhtml','Portada','<div style="text-align:center;"><img class="cover-img" src="images/cover.jpg" alt="'+_epubEsc(ebook.title)+'"/></div>', false);
+  }
+
+  // Página de título
+  addDoc('titlepage','title.xhtml',ebook.title,
+    '<div style="text-align:center;margin-top:20%;"><h1>'+_epubEsc(ebook.title)+'</h1>'+
+    (ebook.subtitle?'<p><em>'+_epubEsc(ebook.subtitle)+'</em></p>':'')+
+    '<p>Ferni Guides</p></div>', false);
+
+  // Intro
+  if(ebook.intro) addDoc('intro','intro.xhtml','Introducción','<h1>Introducción</h1>'+_epubContentToXhtml(ebook.intro));
+
+  // Capítulos
+  (ebook.chapters||[]).forEach(function(ch,i){
+    if(!ch) return;
+    var body='<h1>'+_epubEsc(ch.title||('Capítulo '+(i+1)))+'</h1>';
+    if(ch.opening) body+='<p class="opening">'+_epubInline(ch.opening)+'</p>';
+    body+=_epubContentToXhtml(ch.content||'');
+    if(ch.keyPoints&&ch.keyPoints.length) body+='<div class="kp"><h3>Puntos clave</h3><ul>'+ch.keyPoints.map(function(k){ return '<li>'+_epubInline(k)+'</li>'; }).join('')+'</ul></div>';
+    if(ch.exercise&&ch.exercise.steps) body+='<div class="hbox"><h3>'+_epubEsc(ch.exercise.title||'Ejercicio')+'</h3>'+(ch.exercise.description?'<p>'+_epubInline(ch.exercise.description)+'</p>':'')+'<ul>'+ch.exercise.steps.map(function(s){ return '<li>'+_epubInline(s)+'</li>'; }).join('')+'</ul></div>';
+    addDoc('ch'+(i+1),'ch'+(i+1)+'.xhtml',ch.title||('Capítulo '+(i+1)),body);
+  });
+
+  // Conclusión + plan + recursos
+  if(ebook.conclusion){
+    var cBody='<h1>Conclusión</h1>'+_epubContentToXhtml(ebook.conclusion);
+    if(ebook.actionPlan&&ebook.actionPlan.length) cBody+='<h3>Plan de acción</h3><ul>'+ebook.actionPlan.map(function(a){ return '<li>'+_epubInline(a)+'</li>'; }).join('')+'</ul>';
+    if(ebook.resources&&ebook.resources.length) cBody+='<h3>Recursos</h3><ul>'+ebook.resources.map(function(r){ return '<li>'+_epubInline(r)+'</li>'; }).join('')+'</ul>';
+    addDoc('conclusion','conclusion.xhtml','Conclusión',cBody);
+  }
+
+  // Legal
+  var legal=ebook.legalSection||{};
+  var legalTxt=[legal.healthDisclaimer,legal.dataProtection,legal.guarantee,legal.copyright].filter(Boolean);
+  if(legalTxt.length) addDoc('legal','legal.xhtml','Aviso legal','<h1>Aviso legal</h1>'+legalTxt.map(function(t){ return '<p>'+_epubEsc(t)+'</p>'; }).join(''));
+
+  // Nav (EPUB3) + NCX (compatibilidad KDP)
+  var uuid='urn:uuid:ferni-'+Date.now()+'-'+Math.floor(Math.random()*100000);
+  zip.file('OEBPS/nav.xhtml', _epubXhtmlDoc('Índice',
+    '<nav epub:type="toc" id="toc"><h1>Índice</h1><ol>'+navLis.join('')+'</ol></nav>', langCode));
+  zip.file('OEBPS/toc.ncx',
+    '<?xml version="1.0" encoding="UTF-8"?>\n<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">'+
+    '<head><meta name="dtb:uid" content="'+uuid+'"/></head>'+
+    '<docTitle><text>'+_epubEsc(ebook.title)+'</text></docTitle><navMap>'+ncxPts.join('')+'</navMap></ncx>');
+
+  zip.file('OEBPS/content.opf',
+    '<?xml version="1.0" encoding="UTF-8"?>\n'+
+    '<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="'+langCode+'">\n'+
+    '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">'+
+    '<dc:identifier id="bookid">'+uuid+'</dc:identifier>'+
+    '<dc:title>'+_epubEsc(ebook.title)+'</dc:title>'+
+    '<dc:language>'+langCode+'</dc:language>'+
+    '<dc:creator>Ferni Guides</dc:creator>'+
+    '<dc:publisher>Ferni Guides</dc:publisher>'+
+    '<meta property="dcterms:modified">'+new Date().toISOString().replace(/\.\d+Z$/,'Z')+'</meta>'+
+    (coverData?'<meta name="cover" content="cover-img"/>':'')+
+    '</metadata>\n<manifest>'+
+    '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>'+
+    '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>'+
+    '<item id="css" href="styles.css" media-type="text/css"/>'+
+    coverManifest + manifest.join('')+
+    '</manifest>\n<spine toc="ncx">'+spine.join('')+'</spine>\n</package>');
+
+  return zip.generateAsync({type:'blob', mimeType:'application/epub+zip'});
+}
+
+// Descarga EPUB del ebook aprobado (o borrador)
+async function dlEpub(){
+  var eb=S.finalEbook||S.ebookData;
+  if(!eb){ alert('Genera primero el ebook.'); return; }
+  try{
+    var blob=await buildEpubBlob(eb,{lang:S.approvedLang||'Español', coverUrl:S.coverUrl});
+    if(!blob){ alert('No se pudo construir el EPUB.'); return; }
+    var slug=(eb.title||'ebook').replace(/[^\w\sáéíóúñ-]/gi,'').trim().substring(0,50).replace(/\s+/g,'-');
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=slug+'.epub';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+  }catch(e){ alert('Error creando EPUB: '+e.message); }
+}
+
+// Descarga EPUB del ebook IMPORTADO (usa las secciones mejoradas)
+async function dlEpubImport(){
+  if(!_impChapters || !_impChapters.length){ alert('Importa primero un ebook.'); return; }
+  var eb={
+    title:_impMeta.bookTitle||(_impMeta.fileName||'Ebook').replace(/\.[^/.]+$/,''),
+    subtitle:'',
+    intro:'',
+    chapters:_impChapters.map(function(ch){ return { title:ch.title, content:(ch.improved||ch.original||'') }; }),
+    conclusion:'', actionPlan:[], resources:[], legalSection:{}
+  };
+  try{
+    var blob=await buildEpubBlob(eb,{lang:_impMeta.lang||'Español', coverUrl:_impMeta.coverDataUrl||''});
+    if(!blob){ alert('No se pudo construir el EPUB.'); return; }
+    var slug=eb.title.replace(/[^\w\sáéíóúñ-]/gi,'').trim().substring(0,50).replace(/\s+/g,'-');
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=slug+'.epub';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+  }catch(e){ alert('Error creando EPUB: '+e.message); }
 }
 
 function dlSingleExcel(i){
@@ -5956,7 +6219,7 @@ async function genMeta(o, langOverride, ebookOverride, priceOverride){
     var maPalette = S.colorPalette || _ebookImagePalette(o);
     if(!S.colorPalette) S.colorPalette = maPalette;
     const resp=await fetch('/api/generate-meta',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({opportunity:o, language:lang, ebook:eb, price:price, bonuses:bonuses, colorPalette:maPalette})});
+      body:JSON.stringify({opportunity:o, language:lang, ebook:eb, price:price, bonuses:bonuses, colorPalette:maPalette, nicheReport:_nicheReportSummary()})});
     const d=await resp.json();
     if(d.success){ S.maKit=d.kit; if(S.currentHistId) saveFullDataToHist(S.currentHistId); hide('ma-loading'); hide('ma-empty'); show('ma-content'); renderMeta(o,d.kit); addMsg('chat-meta',`📣 5 anuncios listos en ${lang}. Haz clic en cada imagen para generarla con DALL-E. ¿Quieres cambiar algo?`,'ferni'); }
     else{ hide('ma-loading'); show('ma-empty'); alert('Error generando kit Meta Ads: '+d.error); }
