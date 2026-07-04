@@ -2469,6 +2469,28 @@ function _splitChapters(text){
   return chunks;
 }
 
+// Divide un texto largo en bloques de máx N chars cortando por párrafos (nunca pierde contenido)
+function _impSplitBlocks(text, max){
+  max = max || 5000;
+  text = (text||'').trim();
+  if(text.length <= max) return [text];
+  var paras = text.split(/\n\n+/);
+  var blocks = [], cur = '';
+  paras.forEach(function(p){
+    if(cur && (cur.length + p.length + 2) > max){ blocks.push(cur); cur = p; }
+    else cur = cur ? cur + '\n\n' + p : p;
+    // Párrafo individual más largo que el máximo → cortar por final de oración
+    while(cur.length > max){
+      var cut = cur.lastIndexOf('. ', max);
+      if(cut < max*0.5) cut = max;
+      blocks.push(cur.slice(0, cut+1).trim());
+      cur = cur.slice(cut+1).trim();
+    }
+  });
+  if(cur.trim()) blocks.push(cur.trim());
+  return blocks;
+}
+
 function _setImpProgress(pct, txt, sub){
   var fill = document.getElementById('imp-load-fill');
   var txtEl = document.getElementById('imp-load-txt');
@@ -2535,28 +2557,41 @@ async function startImport(skipEdit){
         if(frData.success && frData.text) refText = '[Contenido de referencia extraído de ' + ref + ']:\n' + frData.text;
       } catch(e){}
     }
+    // Índice del manuscrito completo — contexto para que Claude sepa qué libro está editando
+    var bookIndex = chapters.map(function(c,ix){ return (ix+1)+'. '+(c.title||'Sección '+(ix+1)); }).join('\n');
+    var totalWords = rawText.trim().split(/\s+/).length;
     for(var i=0;i<chapters.length;i++){
       var pct = 15 + Math.round(((i+1)/chapters.length)*80);
-      _setImpProgress(pct, 'Mejorando sección '+(i+1)+' de '+chapters.length+'...', chapters[i].title||'');
-      try {
-        var resp = await fetch('/api/import-chapter', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
-            chapterTitle: chapters[i].title,
-            chapterText: chapters[i].content.substring(0, 6000),
-            chapterNum: i+1, totalChapters: chapters.length,
-            market:market, lang:lang, context:context, reference:refText
-          })
-        });
-        var d = await resp.json();
-        if(d.success){
-          _impChapters.push({title:d.title||chapters[i].title, original:chapters[i].content, improved:d.improved});
-        } else {
-          _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
-        }
-      } catch(e){
-        _impChapters.push({title:chapters[i].title, original:chapters[i].content, improved:chapters[i].content});
+      // SIN PÉRDIDA: capítulos largos se dividen en bloques (~5000 chars) por párrafo y se mejoran TODOS
+      var blocks = _impSplitBlocks(chapters[i].content, 5000);
+      var improvedParts = [];
+      var failed = false;
+      for(var b=0;b<blocks.length;b++){
+        var partLbl = blocks.length>1 ? ' (parte '+(b+1)+' de '+blocks.length+')' : '';
+        _setImpProgress(pct, 'Mejorando sección '+(i+1)+' de '+chapters.length+partLbl+'...', (chapters[i].title||'')+' · '+totalWords.toLocaleString()+' palabras totales del manuscrito');
+        try {
+          var resp = await fetch('/api/import-chapter', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              chapterTitle: chapters[i].title,
+              chapterText: blocks[b],
+              chapterNum: i+1, totalChapters: chapters.length,
+              partInfo: blocks.length>1 ? 'bloque '+(b+1)+' de '+blocks.length+' de esta sección — continúa donde terminó el anterior' : '',
+              market:market, lang:lang, context:context, reference: b===0 ? refText : '',
+              bookIndex: bookIndex
+            })
+          });
+          var d = await resp.json();
+          if(d.success && d.improved){ improvedParts.push(d.improved); }
+          else { improvedParts.push(blocks[b]); failed = true; }
+        } catch(e){ improvedParts.push(blocks[b]); failed = true; }
       }
+      _impChapters.push({
+        title: chapters[i].title,
+        original: chapters[i].content,
+        improved: improvedParts.join('\n\n'),
+        partial: failed // alguna parte quedó sin mejorar (se conservó el original — nunca se pierde texto)
+      });
     }
     _setImpProgress(100, 'Listo.', '');
   }
@@ -2703,12 +2738,21 @@ async function applyImpCorrection(){
   var btn = document.getElementById('imp-corr-btn');
   if(btn) btn.disabled = true;
   try {
+    // Índice completo del manuscrito — Claude entiende QUÉ libro edita y puede seguir instrucciones de estructura
+    var bookIdx = _impChapters.map(function(c,ix){ return (ix+1)+'. '+(c.title||'Sección '+(ix+1)); }).join('\n');
     var r = await fetch('/api/import-chapter',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({chapterTitle:ch.title, chapterText:ch.improved||ch.original,
         chapterNum:_impSelectedCh+1, totalChapters:_impChapters.length,
-        market:_impMeta.market, lang:_impMeta.lang, context:instruction, reference:''})});
+        market:_impMeta.market, lang:_impMeta.lang, instruction:instruction, bookIndex:bookIdx, reference:''})});
     var d = await r.json();
     if(d.success){
+      // Aviso si el resultado encogió mucho sin que la instrucción pida acortar
+      var orig=(ch.improved||ch.original||'').length, nuevo=(d.improved||'').length;
+      if(nuevo < orig*0.5 && !/acorta|resume|reduce|elimina|borra|quita|shorten|summari/i.test(instruction)){
+        if(!confirm('⚠️ El resultado es bastante más corto que el original ('+Math.round(nuevo/orig*100)+'%).\n¿Aplicar igualmente? (Cancelar conserva el texto actual)')){
+          hide('imp-ch-spinner'); if(btn) btn.disabled=false; return;
+        }
+      }
       _impChapters[_impSelectedCh].improved = d.improved;
       _saveImpToStorage();
       _renderImpPreview();

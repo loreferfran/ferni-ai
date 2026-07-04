@@ -2512,7 +2512,10 @@ app.post('/api/fetch-url', async function(req, res) {
   }
 });
 
-// IMPORT & UPGRADE — Chapter improvement
+// IMPORT & UPGRADE — Chapter improvement / correction
+// Dos modos SIN reglas contradictorias:
+//  - polish (default): pulir tipos/gramática SIN tocar estructura ni contenido
+//  - instruction: aplicar la instrucción de la usuaria (puede reescribir/reestructurar/ampliar)
 app.post('/api/import-chapter', async function(req, res) {
   try {
     var chapterTitle = req.body.chapterTitle || '';
@@ -2521,31 +2524,52 @@ app.post('/api/import-chapter', async function(req, res) {
     var totalChapters = req.body.totalChapters || 1;
     var market    = req.body.market    || 'España';
     var lang      = req.body.lang      || 'Español';
-    var context   = req.body.context   || '';
+    var context   = req.body.context   || '';   // instrucciones globales del autor (import inicial)
+    var instruction = (req.body.instruction || '').trim(); // instrucción de corrección (chat)
+    var bookIndex = (req.body.bookIndex || '').slice(0, 1500); // índice del manuscrito completo
     var reference = req.body.reference || '';
+    var partInfo  = req.body.partInfo || ''; // "parte 2 de 3 de esta sección" cuando hay sub-bloques
 
-    // If author explicitly says not to change text, skip improvement entirely
-    var noChange = /no cambi[ae]\b|no modifiq|conserva tal cual|sin cambio|solo format|no toques|preserve the text|do not change|keep.{0,10}exact/i.test(context);
-    if(noChange) {
-      return res.json({ success: true, title: chapterTitle, improved: chapterText.trim() });
+    var sys;
+    if (instruction) {
+      // MODO INSTRUCCIÓN — la usuaria pide un cambio concreto: se le obedece, sin reglas que lo anulen
+      sys = 'You are an expert ebook editor working on ONE section of a full manuscript. The user gives you an instruction — apply it exactly and completely. You MAY rewrite, restructure, expand, shorten, or reformat as the instruction requires.\n\n' +
+        'RULES:\n' +
+        '- Apply the user instruction as the TOP priority.\n' +
+        '- Everything the instruction does not cover stays unchanged (content, voice, personal stories, facts).\n' +
+        '- Never invent facts or statistics that were not in the text.\n' +
+        '- Write in: ' + lang + '. Target market: ' + market + '.\n' +
+        (bookIndex ? '\nFULL MANUSCRIPT INDEX (for context — you are editing one section of this book):\n' + bookIndex + '\n' : '') +
+        (reference ? '\nReference material: ' + reference + '\n' : '') +
+        '\nReturn ONLY the resulting section text. No JSON, no explanations, no added meta-comments.';
+    } else {
+      // MODO POLISH — el import inicial: pulir sin tocar estructura
+      // Si el autor pide explícitamente no cambiar nada, devolver tal cual
+      var noChange = /no cambi[ae]\b|no modifiq|conserva tal cual|sin cambio|solo format|no toques|preserve the text|do not change|keep.{0,10}exact/i.test(context);
+      if (noChange) {
+        return res.json({ success: true, title: chapterTitle, improved: chapterText.trim() });
+      }
+      sys = 'You are a careful ebook editor. Your job is to gently polish the section below — fix obvious typos and grammar errors ONLY. Do NOT rewrite, restructure, change order, add new content, remove paragraphs, or change the section title.\n\n' +
+        'RULES — no exceptions:\n' +
+        '- Preserve the EXACT order and structure of the original text\n' +
+        '- Keep ALL paragraphs in their original sequence\n' +
+        '- Do NOT add sections, summaries, or headings that were not in the original\n' +
+        '- Do NOT remove any paragraph, sentence, or fact\n' +
+        '- Do NOT summarize or shorten — the output must keep the full length of the original\n' +
+        '- Preserve the author\'s voice, tone, and personal stories unchanged\n' +
+        '- Write in: ' + lang + '\n' +
+        '- Target market: ' + market + '\n' +
+        (context ? '- Author style instructions (apply them WITHOUT removing content): ' + context + '\n' : '') +
+        (bookIndex ? '- This section belongs to a manuscript with this index (context only):\n' + bookIndex + '\n' : '') +
+        (reference ? '- Reference material: ' + reference + '\n' : '') +
+        '\nReturn ONLY the polished section text. No JSON, no metadata, no added headings.';
     }
 
-    var sys = 'You are a careful ebook editor. Your job is to gently polish the chapter below — fix obvious typos and grammar errors ONLY. Do NOT rewrite, restructure, change order, add new content, remove paragraphs, or change the chapter title.\n\n' +
-      'RULES — no exceptions:\n' +
-      '- Preserve the EXACT order and structure of the original text\n' +
-      '- Keep ALL paragraphs in their original sequence\n' +
-      '- Do NOT add sections, summaries, or headings that were not in the original\n' +
-      '- Do NOT remove any paragraph, sentence, or fact\n' +
-      '- Preserve the author\'s voice, tone, and personal stories unchanged\n' +
-      '- Write in: ' + lang + '\n' +
-      '- Target market: ' + market + '\n' +
-      (context ? '- Author instructions (follow exactly, highest priority): ' + context + '\n' : '') +
-      (reference ? '- Reference material: ' + reference + '\n' : '') +
-      '\nReturn ONLY the polished chapter text. No JSON, no metadata, no added headings.';
+    var userMsg = 'Section ' + chapterNum + ' of ' + totalChapters + (partInfo ? ' (' + partInfo + ')' : '') + ': "' + chapterTitle + '"\n\n' +
+      (instruction ? 'USER INSTRUCTION:\n' + instruction + '\n\nSECTION TEXT:\n' : '') + chapterText;
 
-    var userMsg = 'Section ' + chapterNum + ' of ' + totalChapters + ': "' + chapterTitle + '"\n\n' + chapterText;
-
-    var improved = await claudeCall(sys, userMsg, 3000, false, 'claude-haiku-4-5-20251001');
+    // 4000 tokens de salida ≈ 12.000+ chars — suficiente para bloques de 5.000 chars sin recortar
+    var improved = await claudeCall(sys, userMsg, 4000, false, 'claude-haiku-4-5-20251001');
     res.json({ success: true, title: chapterTitle, improved: improved.trim() });
   } catch(err) {
     res.json({ success: false, error: err.message });
