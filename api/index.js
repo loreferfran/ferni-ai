@@ -449,13 +449,21 @@ async function claudeCall(system, userContent, maxTokens, returnFull, model) {
   return text;
 }
 
+// Idioma de interfaz de Google según el idioma de búsqueda (antes estaba fijo en 'fr')
+function serperHl(language) {
+  if (!language) return 'en';
+  if (DFS_LANG_CODES[language]) return DFS_LANG_CODES[language];
+  var esNames = { 'Español':'es', 'Inglés':'en', 'Francés':'fr', 'Alemán':'de', 'Italiano':'it', 'Portugués':'pt', 'Português':'pt', 'Holandés':'nl', 'Sueco':'sv', 'Polaco':'pl' };
+  return esNames[language] || 'en';
+}
+
 // Busqueda Google organica + People Also Ask
-async function serperSearch(query) {
+async function serperSearch(query, hl) {
   try {
     const r = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: query, num: 10, hl: 'fr' })
+      body: JSON.stringify({ q: query, num: 10, hl: hl || 'en' })
     });
     if (r.ok) {
       const d = await r.json();
@@ -572,7 +580,15 @@ async function serperYoutube(topic, country) {
 
 // Busqueda Amazon bestsellers via Serper
 async function serperAmazon(topic, country, currency) {
-  const amazonDomain = { France: 'amazon.fr', Germany: 'amazon.de', Italy: 'amazon.it', Spain: 'amazon.es', 'United Kingdom': 'amazon.co.uk', USA: 'amazon.com', Canada: 'amazon.ca' }[country] || 'amazon.fr';
+  const amazonDomain = {
+    France: 'amazon.fr', Germany: 'amazon.de', Italy: 'amazon.it', Spain: 'amazon.es',
+    'United Kingdom': 'amazon.co.uk', USA: 'amazon.com', Canada: 'amazon.ca',
+    Netherlands: 'amazon.nl', Belgium: 'amazon.com.be', Sweden: 'amazon.se', Poland: 'amazon.pl',
+    Mexico: 'amazon.com.mx', Brazil: 'amazon.com.br',
+    Japan: 'amazon.co.jp', India: 'amazon.in', Singapore: 'amazon.sg', UAE: 'amazon.ae',
+    Australia: 'amazon.com.au'
+    // Países sin Amazon local (Colombia, Argentina, Chile, Perú, etc.) → amazon.com (envía a LatAm)
+  }[country] || 'amazon.com';
   try {
     const r = await fetch('https://google.serper.dev/shopping', {
       method: 'POST',
@@ -596,9 +612,10 @@ async function searchWithSerper(country, niche, language) {
   const currency = (REGS[country] && REGS[country].currency) || 'EUR';
   const allResults = [];
 
-  // 1. Busquedas Google organicas (queries principales)
+  // 1. Busquedas Google organicas (queries principales) — con interfaz en el idioma del país
+  var hl = serperHl(language);
   for (var i = 0; i < Math.min(queries.length, 8); i++) {
-    var r = await serperSearch(queries[i]);
+    var r = await serperSearch(queries[i], hl);
     r.forEach(function(x) { allResults.push(x); });
   }
 
@@ -1023,17 +1040,15 @@ app.post('/api/verify-content', async function(req, res) {
     'CONTENIDO A VERIFICAR:\n' + content.slice(0, 14000);
 
   try {
-    var resp = await claudeClient.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: verifierPrompt }]
-    });
-    var result = (resp.content[0].text || '').trim();
+    var result = (await claudeCall(
+      'Eres un editor de verificacion de hechos. Sigue exactamente las instrucciones del usuario y responde solo en el formato pedido.',
+      verifierPrompt, 2000
+    )).trim();
     var approved = result === 'VERIFICACION APROBADA' || result === 'VERIFICACIÓN APROBADA';
     res.json({ ok: true, approved: approved, result: result });
   } catch (e) {
     console.error('verify-content error:', e.message);
-    res.json({ ok: false, approved: true, result: 'Error en verificacion: ' + e.message });
+    res.json({ ok: false, approved: false, verifyFailed: true, result: 'Error en verificacion: ' + e.message });
   }
 });
 
@@ -1570,9 +1585,10 @@ app.post('/api/quick-brief', async function(req, res) {
   // Buscar datos reales con Serper para enriquecer el PDF con fuentes verificables
   var serperContext = '';
   try {
-    var sq1 = await serperSearch(topic + ' ' + country);
-    var sq2 = await serperSearch(topic + ' estadísticas datos ' + country);
-    var sq3 = await serperSearch(topic + ' guía consejos expertos');
+    var qbHl = serperHl(lang);
+    var sq1 = await serperSearch(topic + ' ' + country, qbHl);
+    var sq2 = await serperSearch(topic + ' estadísticas datos ' + country, qbHl);
+    var sq3 = await serperSearch(topic + ' guía consejos expertos', qbHl);
     var allSnippets = [...sq1, ...sq2, ...sq3].filter(function(r){ return r.snippet && r.snippet.length > 40; });
     // Eliminar duplicados por URL
     var seen = {}; allSnippets = allSnippets.filter(function(r){ if(seen[r.link]) return false; seen[r.link]=true; return true; });
@@ -1920,25 +1936,6 @@ app.post('/api/plan-images', async function(req, res) {
     res.json({ success: true, plan: fallback });
   }
 
-  try {
-    var txt = await claudeCall(sys, userMsg, 2000);
-    var plan = JSON.parse(txt.replace(/```json|```/g, '').trim());
-    res.json({ success: true, plan: plan });
-  } catch (e) {
-    // Fallback plan if Claude fails
-    var fallback = {
-      totalImages: 4,
-      coverPrompt: 'Professional ebook cover for ' + (ebook.title || 'guide') + ', elegant design, beautiful photography, no text, no watermarks, commercial quality',
-      images: (ebook.chapters || []).map(function(ch, i) {
-        return {
-          location: 'chapter' + (i+1),
-          purpose: 'Illustration for chapter ' + (i+1),
-          prompt: 'Professional illustration for ' + (ch.title || 'chapter') + ', beautiful photography, no text, no faces, commercial quality'
-        };
-      })
-    };
-    res.json({ success: true, plan: fallback });
-  }
 });
 
 app.post('/api/generate-pdf-html', async function(req, res) {
@@ -2287,11 +2284,10 @@ app.get('/api/test-openai', async function(req, res) {
   }
 });
 
-// Endpoint de config - expone solo la key de OpenAI para generacion de imagenes en frontend
+// Endpoint de config — solo indica si las keys están configuradas, NUNCA las expone
 app.get('/api/config', function(req, res) {
-  res.json({ 
-    ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY),
-    openaiKey: process.env.OPENAI_API_KEY || ''
+  res.json({
+    ready: !!(process.env.CLAUDE_API_KEY && process.env.OPENAI_API_KEY && process.env.SERPER_API_KEY)
   });
 });
 

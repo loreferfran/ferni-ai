@@ -1242,7 +1242,7 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
   } catch(e){}
 })();
 // Cargar OpenAI key para generacion de imagenes directa
-fetch('/api/config').then(r=>r.json()).then(d=>{ if(d.openaiKey) S.openaiKey=d.openaiKey; }).catch(()=>{});
+fetch('/api/config').then(r=>r.json()).then(d=>{ /* config check — las keys viven solo en el servidor */ }).catch(()=>{});
 
 // --- IndexedDB para imágenes (localStorage tiene límite 5MB, base64 es ~2MB/imagen) ---
 var _idb = null;
@@ -2527,7 +2527,9 @@ async function runVerification(ebook, isModule1) {
     });
     var data = await resp.json();
 
-    if (data.approved) {
+    if (data.verifyFailed) {
+      alertDiv.innerHTML = '<div style="background:rgba(253,203,110,0.12);border:1px solid #fdcb6e;border-radius:10px;padding:12px;font-size:12px;color:#b8860b;">⚠️ La verificación automática no pudo completarse (error técnico). Revisa los datos manualmente antes de aprobar, o regenera para reintentar.</div>';
+    } else if (data.approved) {
       alertDiv.innerHTML = '<div style="background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:14px;font-size:13px;color:#00b894;font-weight:600;">✅ Verificación aprobada — no se encontraron problemas de datos ni fuentes.</div>';
     } else {
       // Parsear bloques de problemas separados por doble salto
@@ -3046,6 +3048,7 @@ function saveFullDataToHist(histId){
     if(S.extrasLang) S.history[idx].extrasLang=S.extrasLang;
     if(S.extrasMarketing) S.history[idx].extrasMarketing=S.extrasMarketing;
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
+    if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
     try{ localStorage.setItem('ferni_active_id', histId); if(nc) localStorage.setItem('ferni_num_chapters', String(nc)); }catch(e){}
@@ -4750,7 +4753,8 @@ function dlFinalEbook(){
 
 async function genHotmart(o, langOverride, ebookOverride){
   o=o||S.selOpp; if(!o) return;
-  const lang = langOverride || S.approvedLang || o.idioma || o.language || 'Español';
+  // Sin approvedLang y sin finalEbook = borrador Fase 1 → siempre español (o.idioma es el idioma de BÚSQUEDA, no del ebook)
+  const lang = langOverride || S.approvedLang || (S.finalEbook ? (o.idioma || o.language) : 'Español') || 'Español';
   const marketInp = document.getElementById('hm-market-inp');
   const targetMarket = (marketInp && marketInp.value.trim()) || o.pais || o.country || '';
   const ebook = ebookOverride || S.finalEbook || S.ebookData || null;
@@ -5159,7 +5163,9 @@ function getHmEbookData(val){
     var h = (S.history||[]).find(function(x){ return String(x.id)===hid; });
     if(!h || (!h.ebook && !h.finalEbook)) return null;
     var opp = h.selOpp || (h.opps&&h.opps[0]);
-    return { opp: opp, ebook: h.finalEbook||h.ebook, lang: h.language||(opp&&(opp.idioma||opp.language))||'Español' };
+    // approvedLang = idioma real del ebook aprobado; sin aprobar, el borrador (h.ebook) es siempre español (Fase 1)
+    var hmLang = h.approvedLang || (h.finalEbook ? (h.language||(opp&&(opp.idioma||opp.language))) : 'Español') || 'Español';
+    return { opp: opp, ebook: h.finalEbook||h.ebook, lang: hmLang };
   }
   return null;
 }
@@ -5231,8 +5237,9 @@ function getMetaEbookData(val){
     var hid = val.replace('hist_','');
     var h = (S.history||[]).find(function(x){ return String(x.id)===hid; });
     if(!h || !h.finalEbook) return null;
-    var opp = h.opps && h.opps.find(function(o){ return o.tituloEbook&&h.ebook.title&&o.tituloEbook===h.ebook.title; }) || (h.opps&&h.opps[0]);
-    return { opp: opp, ebook: h.ebook, lang: h.language||'Español' };
+    var opp = h.selOpp || (h.opps&&h.opps[0]);
+    // Usar el ebook APROBADO (finalEbook), no el borrador en español (h.ebook)
+    return { opp: opp, ebook: h.finalEbook, lang: h.approvedLang||h.language||(opp&&(opp.idioma||opp.language))||'Español' };
   }
   return null;
 }
@@ -5304,7 +5311,8 @@ function resetMeta(){
 
 async function genMeta(o, langOverride, ebookOverride, priceOverride){
   o=o||S.selOpp; if(!o) return;
-  const lang = langOverride || S.approvedLang || o.idioma || o.language || 'Español';
+  // Sin approvedLang y sin finalEbook = borrador Fase 1 → siempre español (o.idioma es el idioma de BÚSQUEDA, no del ebook)
+  const lang = langOverride || S.approvedLang || (S.finalEbook ? (o.idioma || o.language) : 'Español') || 'Español';
   const eb = ebookOverride || S.finalEbook || S.ebookData || {};
   const price = priceOverride || S.maPrice || '';
   if(price) S.maPrice = price;
@@ -5757,13 +5765,12 @@ function delHist(id){
 
 setMode('trends'); renderHist();
 
-// Load API keys from server on startup
+// Comprobar configuración del servidor al iniciar (las API keys nunca llegan al navegador)
 async function initKeys() {
   try {
     const r = await fetch('/api/config');
     const d = await r.json();
-    S.claudeKey = d.claudeKey || '';
-    S.openaiKey = d.openaiKey || '';
+    if(!d.ready) console.warn('Ferni AI: faltan API keys en el servidor');
   } catch(e) {}
 }
 initKeys();
@@ -6157,7 +6164,9 @@ function getCrearEbookData(val) {
     var eb = h.finalEbook || h.ebook || h.ebookData;
     if(!eb) return null;
     var opp = h.selOpp || (h.opps&&h.opps[0]);
-    return { opp: opp||{}, ebook: eb, lang: h.language||'Español' };
+    // approvedLang = idioma real; si solo hay borrador (sin finalEbook), es español (Fase 1)
+    var crLang = h.approvedLang || (h.finalEbook ? h.language : 'Español') || 'Español';
+    return { opp: opp||{}, ebook: eb, lang: crLang };
   }
   return null;
 }
