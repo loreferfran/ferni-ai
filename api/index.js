@@ -867,6 +867,7 @@ app.post('/api/niche-report', async function(req, res) {
     causaRaiz: 'por qué existe ese dolor y por qué la gente no lo resuelve sola',
     solucion: 'la solución que ofrece el producto, en 2-3 frases',
     anguloVenta: 'cómo se posiciona frente a lo que ya existe en el mercado',
+    jerarquiaNicho: { nicho: 'el nicho amplio (ej: menopausia)', subNicho: 'el sub-nicho con más demanda según los datos (ej: malestares de la menopausia)', microNicho: 'el micro-nicho ganador (ej: controlar los malestares sin hormonas)', productoIdeal: 'el producto exacto que ese micro-nicho compra', porQueEsteCamino: 'evidencia de los datos que justifica cada nivel del descenso' },
     microProblema: { descripcion: 'micro-problema específico y buscado activamente (bajar del nicho amplio al problema concreto)', busquedasReales: ['3-5 búsquedas concretas detectadas en los datos'], porQueGana: 'por qué este micro-enfoque convierte mejor que el nicho genérico' },
     icp: { demografia: '', problemaCentral: '', doloresSecundarios: ['', ''], resultadoDeseado: '', deseosSecundarios: ['', ''], nivelConciencia: 'nivel 1-5 (Schwartz) + qué implica para el copy', objeciones: ['', '', ''] },
     evidenciaDemanda: {
@@ -885,8 +886,15 @@ app.post('/api/niche-report', async function(req, res) {
   });
 
   var sys = 'Eres un analista senior de mercado de infoproductos y marketing de respuesta directa. Generas INFORMES DE NICHO tipo "hoja de venta" que deciden si un producto se crea o no.' +
-    '\nPAIS OBJETIVO: ' + countryName + ' (población: ' + pop + '). IDIOMA DEL MERCADO: ' + language + '.' +
+    '\nPAIS OBJETIVO: ' + countryName + ' (población: ' + pop + '). IDIOMA PRINCIPAL DEL MERCADO: ' + language + '.' +
     '\nEl informe se escribe SIEMPRE en ESPAÑOL (documento interno de decisión). Las búsquedas y nombres de productos citados se mantienen en su idioma original.' +
+    '\n\nREGLA DE ALCANCE DEL MERCADO (crítica — error prohibido):' +
+    '\n- El mercado objetivo es TODO ' + countryName + ' en su idioma principal (' + language + '). PROHIBIDO redefinir el mercado a un sub-segmento lingüístico solo porque parte de la evidencia llegó en otro idioma (ej: si el país es Canadá y hay datos en español, el mercado sigue siendo el Canadá anglófono — la evidencia en español es complementaria).' +
+    '\n- Si falta evidencia en el idioma principal del país, dilo en advertencias y recomienda validarla — pero NO conviertas el informe en un análisis de otro segmento.' +
+    '\n\nJERARQUIA DE DESCENSO OBLIGATORIA (campo jerarquiaNicho):' +
+    '\nBaja SIEMPRE en 3 niveles hasta el producto: NICHO amplio → SUB-NICHO con más demanda → MICRO-NICHO ganador → PRODUCTO IDEAL.' +
+    '\nEjemplo del estándar: menopausia → malestares de la menopausia → cómo controlarlos sin hormonas → guía práctica de manejo natural de síntomas.' +
+    '\nCada nivel del descenso debe justificarse con señales concretas de los datos (búsquedas, productos, preguntas de la gente) — no con intuición.' +
     '\n\nREGLAS ANTI-ALUCINACION (críticas, sin excepciones):' +
     '\n- SOLO cita productos, precios y datos que aparezcan en los DATOS DE EVIDENCIA recibidos. Si no se detectaron productos, dilo honestamente en advertencias — NO inventes competidores.' +
     '\n- Si extrapolas algo, márcalo con [Estimación].' +
@@ -910,12 +918,15 @@ app.post('/api/niche-report', async function(req, res) {
     }
 
     // Investigación de evidencia de pago — todas las fuentes en paralelo
+    // kwLocal = keyword en el idioma PRINCIPAL del país (mercado completo); kwES = versión español (Hotmart es marketplace hispano)
     var hl = serperHl(language);
+    var kwES = o.keywordES || o.problema || o.problem || keyword;
+    var buyWords = { English:'ebook course guide price buy', French:'ebook guide cours prix acheter', German:'ebook kurs ratgeber preis kaufen', Italian:'ebook corso guida prezzo comprare', Portuguese:'ebook curso guia preço comprar' }[language] || 'ebook curso guia precio comprar';
     var clusterKws = (o.clusterKeywords && o.clusterKeywords.length ? o.clusterKeywords : buildSeedKeywords(keyword, language)).slice(0, 15);
     var ev = await Promise.all([
-      serperSearch(keyword + ' site:hotmart.com', hl),
-      serperSearch(keyword + ' curso ebook site:udemy.com OR site:gumroad.com', hl),
-      serperSearch(keyword + ' ebook curso guia precio comprar ' + countryName, hl),
+      serperSearch(kwES + ' site:hotmart.com', 'es'),
+      serperSearch(keyword + ' course ebook site:udemy.com OR site:gumroad.com', hl),
+      serperSearch(keyword + ' ' + buyWords + ' ' + countryName, hl),
       serperSearch('"' + keyword + '"', hl),
       serperAmazon(keyword, countryName, regs.currency),
       getDataForSEOVolumes(clusterKws, countryName, language)
@@ -931,11 +942,11 @@ app.post('/api/niche-report', async function(req, res) {
     }).join('\n') || '(sin datos de volumen)';
 
     var evidence =
-      '=== HOTMART (productos vendiéndose) ===\n' + fmtEv(ev[0]) +
-      '\n\n=== UDEMY / GUMROAD (cursos y productos) ===\n' + fmtEv(ev[1]) +
-      '\n\n=== BÚSQUEDA COMERCIAL EN ' + countryName.toUpperCase() + ' ===\n' + fmtEv(ev[2]) +
-      '\n\n=== BÚSQUEDA EXACTA DEL PROBLEMA ===\n' + fmtEv(ev[3]) +
-      '\n\n=== AMAZON (bestsellers con precio/reviews) ===\n' + fmtEv(ev[4]) +
+      '=== HOTMART — mercado en ESPAÑOL (sub-segmento hispano, complementario) ===\n' + fmtEv(ev[0]) +
+      '\n\n=== UDEMY / GUMROAD en ' + language + ' (mercado principal) ===\n' + fmtEv(ev[1]) +
+      '\n\n=== BÚSQUEDA COMERCIAL en ' + language + ' EN ' + countryName.toUpperCase() + ' (mercado principal) ===\n' + fmtEv(ev[2]) +
+      '\n\n=== BÚSQUEDA EXACTA DEL PROBLEMA (' + language + ') ===\n' + fmtEv(ev[3]) +
+      '\n\n=== AMAZON ' + countryName.toUpperCase() + ' (bestsellers con precio/reviews) ===\n' + fmtEv(ev[4]) +
       '\n\n=== VOLUMEN REAL DE BÚSQUEDAS (DataForSEO) ===\n' + dfsTxt;
 
     var oppSummary = {
