@@ -7,12 +7,13 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  /* Tema Marfil editorial — premium claro (Ferni Guides) */
-  --bg: #f6f4ef; --bg2: #efece4; --card: #ffffff;
-  --border: #e3ded2; --accent: #6c5ce7;
-  --accent2: #5b8ef0; --teal: #0d9488; --gold: #b8963e;
-  --red: #d1603f; --green: #0a9b7d; --text: #1f2333;
-  --text2: #4a4e63; --muted: #8a8799;
+  /* Tema AURORA — beige cálido + azul eléctrico + acentos aurora (lila, burdeo, verde, dorado) */
+  --bg: #f0eadd; --bg2: #e8e0cf; --card: #fbf8f1;
+  --border: #dcd3bf; --accent: #3f6df5;
+  --accent2: #7c5ce7; --teal: #1fa87a; --gold: #c9a04e;
+  --red: #c8503a; --green: #1fa87a; --text: #232336;
+  --text2: #4c4f63; --muted: #8b8677;
+  --wine: #a02456; --lila: #8b6fe8; --paleyellow: #f3e3b0;
 }
 body { background: var(--bg); font-family: 'Segoe UI', Arial, sans-serif; color: var(--text); font-size: 13px; min-height: 100vh; }
 .app { display: flex; flex-direction: column; height: 100vh; max-width: 1200px; margin: 0 auto; border: 1px solid var(--border); background: linear-gradient(160deg,#162040,#0f1729); box-shadow: 0 0 60px rgba(108,92,231,0.15); }
@@ -170,38 +171,42 @@ select option { background: #1e2d52; }
 .action-plan-item { font-size: 12px; color: var(--text2); padding: 6px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
 .resource-item { font-size: 12px; color: var(--teal); padding: 4px 0; }
 </style>
-<style id="theme-marfil">
-/* ===== MARFIL EDITORIAL — overrides de los colores oscuros hardcodeados ===== */
-.app { background: linear-gradient(160deg,#fbfaf7,#f6f4ef); box-shadow: 0 0 40px rgba(31,35,51,0.08); }
-.hdr { background: linear-gradient(90deg,rgba(108,92,231,0.07),rgba(184,150,62,0.06)); }
-.tabs { background: rgba(31,35,51,0.05); }
-.tab:hover:not(.active) { background: rgba(31,35,51,0.06); }
-.sb { background: rgba(255,255,255,0.55); }
-.sb-foot { background: #efece4; }
-select, input, textarea { background: #ffffff; border: 1px solid #ddd8ca; color: var(--text); }
+<style id="theme-aurora">
+/* ===== AURORA — beige cálido + azul eléctrico; overrides de colores oscuros hardcodeados ===== */
+.app { background: linear-gradient(160deg,#f5f0e4,#ede5d3); box-shadow: 0 0 40px rgba(35,35,54,0.10); }
+.hdr { background: linear-gradient(90deg,rgba(63,109,245,0.08),rgba(139,111,232,0.07),rgba(201,160,78,0.07)); }
+.logo-icon { background: linear-gradient(135deg,#3f6df5,#8b6fe8); box-shadow: 0 3px 10px rgba(63,109,245,0.3); }
+.logo-name { background: linear-gradient(90deg,#3f6df5,#8b6fe8,#a02456); -webkit-background-clip: text; }
+.tabs { background: rgba(35,35,54,0.05); }
+.tab.active { background: var(--accent); box-shadow: 0 2px 8px rgba(63,109,245,0.3); }
+.tab:hover:not(.active) { background: rgba(35,35,54,0.06); }
+.sb { background: rgba(251,248,241,0.6); }
+.sb-foot { background: #e8e0cf; }
+select, input, textarea { background: #ffffff; border: 1px solid #d6ccb6; color: var(--text); }
 select:focus, input:focus, textarea:focus { background: #ffffff; border-color: var(--accent); }
-select option { background: #ffffff; color: #1f2333; }
-.mbtn { background: #ffffff; border: 2px solid #ddd8ca; }
-.chip { background: #ffffff; border: 1px solid #ddd8ca; }
-.chip:hover,.chip.active { background: rgba(108,92,231,0.08); color: var(--accent); }
-.chat-area { background: #f1eee6; }
-.msg.ferni { background: rgba(108,92,231,0.08); border: 1px solid rgba(108,92,231,0.22); }
-.msg.user { background: rgba(91,142,240,0.09); border: 1px solid rgba(91,142,240,0.25); }
-.opp-card { background: #ffffff; border: 1px solid #e3ded2; box-shadow: 0 2px 10px rgba(31,35,51,0.05); }
-.opp-card.sel { background: rgba(108,92,231,0.06); }
-.fc { background: #ffffff; border: 1px solid #e6e2d6; }
-.btn-s { background: #ffffff; border: 1px solid #ddd8ca; color: var(--text2); }
-.btn-gold { background: rgba(184,150,62,0.10); color: var(--gold); border: 1px solid rgba(184,150,62,0.35); }
+select option { background: #ffffff; color: #232336; }
+.mbtn { background: #fbf8f1; border: 2px solid #d6ccb6; }
+.mbtn.active { border-color: var(--accent); background: var(--accent); box-shadow: 0 2px 8px rgba(63,109,245,0.3); }
+.chip { background: #fbf8f1; border: 1px solid #d6ccb6; }
+.chip:hover,.chip.active { background: rgba(63,109,245,0.08); color: var(--accent); border-color: var(--accent); }
+.btn-run { background: linear-gradient(135deg,#3f6df5,#7c5ce7); box-shadow: 0 4px 14px rgba(63,109,245,0.25); }
+/* Chat: fondo BLANCO (pedido de Lorena) */
+.chat-area { background: #ffffff; }
 .chat-inp { background:#ffffff; }
+.msg.ferni { background: rgba(63,109,245,0.06); border: 1px solid rgba(63,109,245,0.2); }
+.msg.user { background: rgba(139,111,232,0.08); border: 1px solid rgba(139,111,232,0.25); }
+.opp-card { background: #fbf8f1; border: 1px solid #dcd3bf; box-shadow: 0 2px 10px rgba(35,35,54,0.05); }
+.opp-card:hover { border-color: rgba(63,109,245,0.5); }
+.opp-card.sel { background: rgba(63,109,245,0.06); border-color: var(--accent); box-shadow: 0 4px 16px rgba(63,109,245,0.12); }
+.fc { background: #fbf8f1; border: 1px solid #ddd5c1; }
+.btn-p { background: linear-gradient(135deg,#3f6df5,#7c5ce7); box-shadow: 0 3px 10px rgba(63,109,245,0.25); }
+.btn-s { background: #fbf8f1; border: 1px solid #d6ccb6; color: var(--text2); }
+.btn-gold { background: rgba(201,160,78,0.12); color: #9a7a36; border: 1px solid rgba(201,160,78,0.4); }
+.btn-teal { background: rgba(31,168,122,0.10); color: #157a58; border: 1px solid rgba(31,168,122,0.4); }
 /* Cajas translúcidas "glass" que eran para fondo oscuro */
 [style*="rgba(255,255,255,0.04)"], [style*="rgba(255,255,255,0.05)"], [style*="rgba(255,255,255,0.06)"],
-[style*="rgba(255,255,255,0.07)"], [style*="rgba(255,255,255,0.08)"] { background-color: #ffffff !important; }
-[style*="background:var(--bg2)"], [style*="background: var(--bg2)"] { border-color: #ddd8ca; }
-/* Textos que eran blancos fijos sobre paneles de color siguen bien (van sobre acento).
-   Sombras violetas fuertes → suaves */
-.logo-icon { box-shadow: 0 3px 10px rgba(108,92,231,0.25); }
-.tab.active { box-shadow: 0 2px 8px rgba(108,92,231,0.25); }
-.btn-run { box-shadow: 0 4px 14px rgba(108,92,231,0.22); }
+[style*="rgba(255,255,255,0.07)"], [style*="rgba(255,255,255,0.08)"] { background-color: #fbf8f1 !important; }
+[style*="background:var(--bg2)"], [style*="background: var(--bg2)"] { border-color: #d6ccb6; }
 </style>
 </head>
 <body>
@@ -215,7 +220,8 @@ select option { background: #ffffff; color: #1f2333; }
       </div>
     </div>
     <div class="tabs">
-      <button class="tab active" onclick="showTab('search',this)">📊 Análisis</button>
+      <button class="tab active" onclick="showTab('search',this)" style="font-weight:800;">✦ Crear Producto</button>
+      <span style="font-size:8px;color:var(--muted);letter-spacing:1px;align-self:center;padding:0 4px;border-left:1px solid var(--border);margin-left:4px;">AVANZADO</span>
       <button class="tab" onclick="showTab('ebook',this)">📖 Ebook</button>
       <button class="tab" onclick="showTab('hotmart',this)" style="display:none;">🛒 Hotmart</button><!-- módulo dado de baja — el copy de venta vive en el Informe de Nicho (hojaVenta) -->
       <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
@@ -295,9 +301,11 @@ select option { background: #ffffff; color: #1f2333; }
 
     <div class="main">
 
-      <!-- ANÁLISIS -->
+      <!-- ANÁLISIS / CREAR PRODUCTO -->
       <div id="panel-search" class="panel active">
         <div class="panel-scroll">
+          <!-- BARRA WIZARD — 5 pasos, colores Aurora, navegable -->
+          <div id="wiz-bar" style="position:sticky;top:0;z-index:60;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px;box-shadow:0 2px 12px rgba(35,35,54,0.07);"></div>
           <div id="sw" class="state-c">
             <div class="big-icon">✦</div>
             <div class="state-title">FERNI AI — Inteligencia de Mercado Pro</div>
@@ -1703,6 +1711,7 @@ async function genNicheReport(){
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     document.getElementById('nr-loading').style.display='none';
     renderNicheReport(d.report);
+    _wizSet(2);
     addMsg('chat-search','📋 Informe listo. Veredicto: '+(d.report.veredicto||'—')+'. Revísalo y apruébalo para desbloquear la generación del PDF, o pide ajustes.','ferni');
   }catch(e){
     document.getElementById('nr-loading').style.display='none';
@@ -1779,6 +1788,7 @@ function approveNicheReport(){
   document.getElementById('nr-approved-badge').style.display='block';
   document.getElementById('btn-draft').disabled=false;
   _pipeShowConfig();
+  _wizSet(3);
   addMsg('chat-search','✅ Informe aprobado. Configura tu producto completo en la Línea de Producción (un clic genera todo: ebook + bonus + app + skill + Meta Ads) — o usa "Generar PDF" para solo el ebook.','ferni');
   document.getElementById('pipe-box').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -1830,6 +1840,40 @@ function _nicheReportSummary(){
   if(r.icp) parts.push('ICP: '+(r.icp.demografia||'')+' | Resultado deseado: '+(r.icp.resultadoDeseado||'')+' | Objeciones: '+((r.icp.objeciones||[]).join('; ')));
   if(r.productoRecomendado&&r.productoRecomendado.promesa) parts.push('PROMESA: '+r.productoRecomendado.promesa);
   return parts.join('\n');
+}
+
+// ===== MODO GUIADO — barra wizard de 5 pasos (colores Aurora) =====
+var WIZ_STEPS=[
+  {n:1,label:'Analizar',color:'#3f6df5'},
+  {n:2,label:'Informe',color:'#8b6fe8'},
+  {n:3,label:'Configurar',color:'#a02456'},
+  {n:4,label:'Generar',color:'#1fa87a'},
+  {n:5,label:'Resultado',color:'#c9a04e'}
+];
+function _wizRender(){
+  var bar=document.getElementById('wiz-bar'); if(!bar) return;
+  var cur=S._wizStep||1, max=S._wizMax||1;
+  bar.innerHTML='<div style="display:flex;align-items:center;gap:2px;overflow-x:auto;">'+WIZ_STEPS.map(function(st,i){
+    var done=st.n<cur, active=st.n===cur, reach=st.n<=max;
+    var circ=done?'✓':st.n;
+    var bgc=(active||done)?st.color:'transparent';
+    var col=(active||done)?'#fff':'var(--muted)';
+    var bord=(active||done)?st.color:'var(--border)';
+    return '<div onclick="_wizGo('+st.n+')" title="'+st.label+'" style="display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:20px;cursor:'+(reach?'pointer':'default')+';opacity:'+(reach?'1':'0.45')+';flex-shrink:0;">'+
+      '<span style="width:24px;height:24px;border-radius:50%;background:'+bgc+';border:2px solid '+bord+';color:'+col+';display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">'+circ+'</span>'+
+      '<span style="font-size:12px;font-weight:'+(active?'800':'600')+';color:'+(active?st.color:(done?'var(--text2)':'var(--muted)'))+';white-space:nowrap;">'+st.label+'</span>'+
+      (i<WIZ_STEPS.length-1?'<span style="color:var(--border);margin:0 2px;">─</span>':'')+
+    '</div>';
+  }).join('')+'</div>';
+}
+function _wizSet(n){ S._wizStep=n; S._wizMax=Math.max(S._wizMax||1,n); _wizRender(); }
+function _wizGo(n){
+  if(n>(S._wizMax||1)) return;
+  S._wizStep=n; _wizRender();
+  var targets={1:'sr',2:'nr-box',3:'pipe-config',4:'pipe-progress',5:'pipe-hub'};
+  var el=document.getElementById(targets[n]);
+  if(!el || el.style.display==='none' || (el.classList&&el.classList.contains('hidden'))) el=document.getElementById('sw');
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ===== LÍNEA DE PRODUCCIÓN — orquestador: un clic → producto completo =====
@@ -1923,6 +1967,7 @@ async function startPipeline(){
   if(cfg.skill) steps.push('skill');
   if(cfg.meta) steps.push('meta');
   _pipeRenderProgress(steps);
+  _wizSet(4);
   document.getElementById('pipe-progress').scrollIntoView({behavior:'smooth',block:'start'});
 
   // ── CADENA PRINCIPAL: ebook → verificación → traducción ──
@@ -2144,6 +2189,7 @@ function _pipeRenderHub(){
     '<div style="display:flex;flex-direction:column;gap:8px;">'+cards.join('')+'</div>'+
     '<button class="btn btn-p" style="width:100%;margin-top:12px;font-size:14px;padding:12px;" onclick="pipeZipAll()">⬇ DESCARGAR TODO (ZIP)</button>';
   hub.style.display='block';
+  _wizSet(5);
   hub.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -6638,6 +6684,7 @@ function loadHistData(e){
   S.nicheReport = e.nicheReport || null;
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
   S._nicheReportOppIdx = null;
+  _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
     S.selOpp=opp;
     document.getElementById('btn-report').disabled=false;
@@ -6674,7 +6721,7 @@ function delHist(id){
   renderHist();
 }
 
-setMode('trends'); renderHist();
+setMode('trends'); renderHist(); _wizRender();
 
 // Comprobar configuración del servidor al iniciar (las API keys nunca llegan al navegador)
 async function initKeys() {
