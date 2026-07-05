@@ -7097,19 +7097,26 @@ function onCrearEbookChange(prefix) {
   }
 }
 
-// Construye el string de contexto del ebook para el API
+// Construye el string de contexto del ebook para el API — RICO: la calidad de App/Skill depende de esto
 function _buildEbookContext(data) {
   if(!data || !data.ebook) return '';
   var eb = data.ebook; var o = data.opp||{};
   var ctx = 'Title: '+(eb.title||o.tituloEbook||'')+'\n';
+  if(eb.subtitle) ctx += 'Subtitle: '+eb.subtitle+'\n';
   ctx += 'Problem: '+(o.problema||o.problem||'')+'\n';
-  ctx += 'Audience: '+(o.rangoEdad||o.ageRange||'')+(o.genero?' '+o.genero:'')+'\n';
-  if(eb.intro) ctx += 'Intro: '+eb.intro.substring(0,250)+'\n';
+  ctx += 'Promise: '+(o.promesaEbook||o.ebookPromise||'')+'\n';
+  ctx += 'Audience: '+(o.rangoEdad||o.ageRange||'')+(o.genero?' '+o.genero:'')+' | Pain: '+(o.dolorODeseo||'')+'\n';
+  // Informe de nicho aprobado — ángulo de venta e ICP para que la app apunte al mismo comprador
+  try{ var nr=_nicheReportSummary(); if(nr) ctx += 'NICHE REPORT:\n'+nr.substring(0,600)+'\n'; }catch(e){}
+  if(eb.intro) ctx += 'Intro: '+eb.intro.substring(0,300)+'\n';
   if(eb.chapters&&eb.chapters.length) {
-    eb.chapters.slice(0,4).forEach(function(ch,i){
-      ctx += 'Ch'+(i+1)+': '+(ch.title||'')+(ch.content?'. '+ch.content.substring(0,120):'')+'\n';
+    eb.chapters.slice(0,8).forEach(function(ch,i){
+      ctx += '\n== Ch'+(i+1)+': '+(ch.title||'')+' ==\n';
+      if(ch.content) ctx += ch.content.substring(0,600)+'\n';
+      if(ch.keyPoints&&ch.keyPoints.length) ctx += 'Key points: '+ch.keyPoints.slice(0,4).join(' | ')+'\n';
     });
   }
+  if(eb.actionPlan&&eb.actionPlan.length) ctx += '\nAction plan: '+eb.actionPlan.join(' | ')+'\n';
   return ctx.trim();
 }
 

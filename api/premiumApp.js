@@ -3,14 +3,14 @@
 function escH(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 var MOD_META = {
-  dashboard:  { icon: '🏠', es:'Inicio',    en:'Home',    pt:'Início'    },
-  checklist:  { icon: '✅', es:'Pasos',     en:'Steps',   pt:'Etapas'    },
-  simulator:  { icon: '📊', es:'Simular',   en:'Score',   pt:'Simular'   },
-  comparador: { icon: '💳', es:'Comparar',  en:'Compare', pt:'Comparar'  },
-  quiz:       { icon: '⚠️', es:'Test',      en:'Quiz',    pt:'Quiz'      },
-  plan:       { icon: '📅', es:'Mi Plan',   en:'My Plan', pt:'Plano'     },
-  glosario:   { icon: '📚', es:'Glosario',  en:'Glossary',pt:'Glossário' },
-  logros:     { icon: '🏆', es:'Logros',    en:'Badges',  pt:'Conquistas'}
+  dashboard:  { icon: '🏠', es:'Inicio',    en:'Home',    pt:'Início',    fr:'Accueil',   de:'Start',     it:'Inizio',    nl:'Home',         pl:'Start',       sv:'Hem'       },
+  checklist:  { icon: '✅', es:'Pasos',     en:'Steps',   pt:'Etapas',    fr:'Étapes',    de:'Schritte',  it:'Passi',     nl:'Stappen',      pl:'Kroki',       sv:'Steg'      },
+  simulator:  { icon: '📊', es:'Simular',   en:'Score',   pt:'Simular',   fr:'Score',     de:'Score',     it:'Punteggio', nl:'Score',        pl:'Wynik',       sv:'Poäng'     },
+  comparador: { icon: '💳', es:'Comparar',  en:'Compare', pt:'Comparar',  fr:'Comparer',  de:'Vergleich', it:'Confronta', nl:'Vergelijk',    pl:'Porównaj',    sv:'Jämför'    },
+  quiz:       { icon: '⚠️', es:'Test',      en:'Quiz',    pt:'Quiz',      fr:'Quiz',      de:'Quiz',      it:'Quiz',      nl:'Quiz',         pl:'Quiz',        sv:'Quiz'      },
+  plan:       { icon: '📅', es:'Mi Plan',   en:'My Plan', pt:'Plano',     fr:'Mon Plan',  de:'Mein Plan', it:'Il Piano',  nl:'Mijn Plan',    pl:'Mój Plan',    sv:'Min Plan'  },
+  glosario:   { icon: '📚', es:'Glosario',  en:'Glossary',pt:'Glossário', fr:'Glossaire', de:'Glossar',   it:'Glossario', nl:'Woordenlijst', pl:'Słownik',     sv:'Ordlista'  },
+  logros:     { icon: '🏆', es:'Logros',    en:'Badges',  pt:'Conquistas',fr:'Succès',    de:'Erfolge',   it:'Traguardi', nl:'Badges',       pl:'Osiągnięcia', sv:'Utmärkelser'}
 };
 
 function modLabel(m, lang) {

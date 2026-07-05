@@ -2697,9 +2697,18 @@ app.post('/api/generate-skill', async function(req, res) {
     var countryName  = getCountryName(country);
 
     // Claude returns JSON only — server builds the HTML from a fixed template
-    var sys = 'You are an expert AI prompt engineer. Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.\n' +
+    // Patrón "mini-agentes": cada card es un ESPECIALISTA de un solo propósito del tema (como la biblioteca de agentes de Cosmos)
+    var sys = 'You are an expert AI prompt engineer who designs LIBRARIES OF SPECIALIZED AGENTS (like a professional AI agent marketplace). Return ONLY a valid JSON object — no markdown fences, no explanation, no extra text.\n' +
       'ALL text values must be in ' + lang + '. Market: ' + countryName + '.\n\n' +
       (context ? '=== MANDATORY AUTHOR REQUIREMENTS — follow these exactly, they override everything else ===\n' + context + '\n=== END ===\n\n' : '') +
+      'CONCEPT: The buyer of the ebook receives 5 MINI-AGENTS — each one a single-purpose specialist for a concrete recurring task of THIS specific topic. NOT generic prompts.\n' +
+      'Example for a "USA credit building" ebook: Agent 1 "Auditor de disputas de crédito" (analyzes a credit report entry and drafts the dispute), Agent 2 "Generador de cartas al buró", Agent 3 "Planificador de pagos", etc.\n\n' +
+      'RULES per card (each card = one mini-agent):\n' +
+      '- title = the agent\'s name + its single purpose (e.g. "Auditor de Disputas — analiza y redacta tu reclamo")\n' +
+      '- tip = one line: when the reader should call this agent\n' +
+      '- prompt = the FULL agent prompt ready to paste: role with expertise, exact step-by-step behavior, what input it asks the user for (marked as [CAMPO]), and the exact output format it must deliver. Minimum 120 words. It must produce a CONCRETE DELIVERABLE (a letter, a plan, an analysis, a script — not advice).\n' +
+      '- proTip = how to get a better result from this agent (a real technique, not filler)\n' +
+      '- systemPrompt = the master expert context the reader activates FIRST: deep domain expertise for this exact topic, market ' + countryName + ', rules and terminology from the ebook.\n\n' +
       'JSON schema — fill every empty string with real, expert-level, specific content:\n' +
       '{\n' +
       '  "title": "",\n' +
@@ -2806,7 +2815,7 @@ app.post('/api/generate-skill', async function(req, res) {
           '<div class="sys-text" id="sk-sys">'+escH((data.systemPrompt&&data.systemPrompt.text)||'')+'</div>\n' +
           '<button class="copy-btn" onclick="skCopySys(this)">⊕ Copiar System Prompt</button>\n' +
         '</div>\n' +
-        '<div class="slbl">▲ Los 5 Prompts de Acción</div>\n' +
+        '<div class="slbl">▲ Tus 5 Mini-Agentes Especialistas</div>\n' +
         cardsHtml + '\n' +
         '<div class="foot">Skill Pack · FERNI AI · Ferni Guides © '+year+'</div>\n' +
       '</div>\n' +
@@ -2858,11 +2867,20 @@ app.post('/api/generate-premium-app', async function(req, res) {
       '"glosario":{"title":"","terms":[{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""},{"term":"","def":""}],"faq":[{"q":"","a":""},{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}]},' +
       '"logros":{"title":"","badges":[{"id":"b1","icon":"🚀","title":"","desc":""},{"id":"b2","icon":"✅","title":"","desc":""},{"id":"b3","icon":"⭐","title":"","desc":""},{"id":"b4","icon":"💪","title":"","desc":""},{"id":"b5","icon":"🏆","title":"","desc":""}]}}';
 
-    var sys = 'You are an expert product designer. Return ONLY a valid JSON object — no markdown, no explanation.\n' +
+    var sys = 'You are a senior product designer who builds PAID companion apps for premium infoproducts. The buyer paid real money — the app must feel like a standalone product worth its price, not a free extra.\n' +
+      'Return ONLY a valid JSON object — no markdown, no explanation.\n' +
       'Language: ' + lang + '. Market: ' + countryName + '.\n' +
       (context ? 'Author requirements: ' + context + '\n' : '') +
       'Choose 4-5 modules that best fit the ebook topic. Always include "dashboard" and "logros" in "modules".\n' +
       'Accent color guide: finance/money=#f9ca24  health/fitness=#00b894  career/work=#6c5ce7  marketing=#e17055  other=#00cec9\n' +
+      '\nQUALITY BAR — no exceptions:\n' +
+      '- Every text must be SPECIFIC to the ebook content received: real steps from its chapters, its terminology, its examples. ZERO generic filler like "Define tus metas" or "Mantente motivado".\n' +
+      '- checklist tasks = concrete actions the reader can physically do today, taken from the ebook method, in logical order.\n' +
+      '- quiz questions = real diagnostic questions about the reader\'s situation regarding THIS topic (the risk logic must make sense).\n' +
+      '- glosario terms = the actual technical terms used in this ebook, defined simply.\n' +
+      '- plan months = a realistic 12-month progression of the ebook\'s method, each action measurable.\n' +
+      '- simulator sliders = the 4 real factors that drive results in this topic, weights reflecting true importance.\n' +
+      '- All copy in natural, native ' + lang + ' — never translated-sounding.\n' +
       'Fill every empty string "" with real, specific, expert content. Use this JSON structure:\n' + schema;
 
     var userMsg = (ebookContext && !topic)
