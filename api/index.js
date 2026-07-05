@@ -893,6 +893,10 @@ app.post('/api/niche-report', async function(req, res) {
     '\n- PROHIBIDO inventar porcentajes de probabilidad de venta. La probabilidad se argumenta con la proporción búsquedas/población + señales de pago, nunca con un número inventado.' +
     '\n- El veredicto debe ser honesto: si la evidencia es débil di VALIDAR o DESCARTAR. Un informe que siempre dice CREAR no sirve para decidir.' +
     '\n\nPROFUNDIDAD OBLIGATORIA: baja del nicho amplio al micro-problema específico más prometedor según los datos (ejemplo del estándar esperado: no "autos en Francia" sino "cómo reparar la guantera del Hyundai Sedán 2023").' +
+    '\n\nCONCISIÓN OBLIGATORIA (crítico — si el JSON se corta, el informe se pierde):' +
+    '\n- Ningún campo de texto supera 50 palabras, salvo descripcionVenta (máx 110 palabras) y veredictoJustificacion (máx 70 palabras).' +
+    '\n- Arrays: máximo 4 elementos cada uno. productosExistentes: máximo 5.' +
+    '\n- Escribe denso y directo: cada frase aporta un dato, cero relleno.' +
     '\n\nResponde SOLO con el objeto JSON. Sin markdown, sin texto fuera del JSON. Estructura exacta:\n' + reportSchema;
 
   try {
@@ -901,7 +905,7 @@ app.post('/api/niche-report', async function(req, res) {
       var revMsg = 'INFORME ACTUAL:\n' + JSON.stringify(previousReport) +
         '\n\nAJUSTE PEDIDO POR LA USUARIA (aplícalo manteniendo estructura, rigor y reglas anti-alucinación):\n' + revision +
         '\n\nDevuelve el informe completo ajustado. Solo JSON.';
-      var revTxt = await claudeCall(sys, revMsg, 4000);
+      var revTxt = await claudeCall(sys, revMsg, 5000);
       return res.json({ success: true, report: extractJSON(revTxt) });
     }
 
@@ -948,7 +952,7 @@ app.post('/api/niche-report', async function(req, res) {
       '\n\nDATOS DE EVIDENCIA (única fuente válida para citar productos, precios y volúmenes):\n' + evidence +
       '\n\nGenera el informe de nicho completo.';
 
-    var txt = await claudeCall(sys, userMsg, 4000);
+    var txt = await claudeCall(sys, userMsg, 5000);
     res.json({ success: true, report: extractJSON(txt) });
   } catch (e) {
     console.error('niche-report error:', e.message);
