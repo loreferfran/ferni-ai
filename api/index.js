@@ -1981,11 +1981,7 @@ app.post('/api/generate-meta', async function(req, res) {
   var bonuses = req.body.bonuses || [];
   var ebook = req.body.ebook || {};
   function safeParseKit(raw) {
-    var cleaned = raw.replace(/```json|```/g, '').trim();
-    try { return JSON.parse(cleaned); } catch(e) {
-      var fixed = cleaned; if (!fixed.endsWith('}')) fixed += '"}}}';
-      try { return JSON.parse(fixed); } catch(e2) { throw new Error('JSON truncado en kit Meta'); }
-    }
+    try { return extractJSON(raw); } catch(e) { throw new Error('JSON truncado en kit Meta'); }
   }
   try {
     var colorPalette = req.body.colorPalette || '';
@@ -2016,14 +2012,16 @@ app.post('/api/generate-meta', async function(req, res) {
       '\n\nSELF-SCORING (internal, mandatory): before returning, score each ad 0-100 on: hook strength (40), PTE compliance (30), CTA clarity (15), native-market sound (15). REWRITE any ad scoring under 80 before returning. Do not include scores in the output.' +
       '\n\nGenerate JSON with:' +
       '\nsegmentation (object: age, gender, interests array 6, behaviors array 4, painPoints array 5, excludeAudiences array 3, lookalike, budget).' +
-      '\nads (array 5, each: angle, platform, format, headline (PTE formula, max 40 chars), primaryText (2-line rule, 60-125 words), description (max 30 chars, reinforces the promise), shortCopy, longCopy, emotionalHook, cta, targetEmotion, dallePrompt).' +
+      '\nads (array 5, each: angle, platform, format, headline (PTE formula, max 40 chars), primaryText (2-line rule, 60-110 words), description (max 30 chars, reinforces the promise), shortCopy (max 25 words), longCopy (max 90 words), emotionalHook (max 15 words), cta, targetEmotion, dallePrompt (max 40 words)).' +
+      '\nCONCISION (critical — if the JSON gets cut off the whole kit is lost): respect every word cap above; dense and specific, zero filler.' +
       '\nAngles: problem, urgency, aspiration, curiosity, authority — one each.' +
       paletteRule +
       ' dallePrompt must start with "High quality Meta ad visual. NO TEXT NO WORDS anywhere." and describe a specific visual scene (subject, lighting, composition, mood) — no generic tag soup like "beautiful, stunning, 8k".';
-    var socialSection = 'FACEBOOK + INSTAGRAM KIT — Generate JSON with: facebook (object: post string, storytellingPost string, authorityPost string, viralHook string, engagementPost string, commentCTA string). instagram (object: caption string, carouselIdeas array 3 strings, reelHooks array 3 strings, storyHooks array 3 strings, hashtags array 15 strings, shortHooks array 3 strings). emailSequence (array 3, each: subject, body). retargeting (object: headline, copy, cta, offer).';
+    var socialSection = 'FACEBOOK + INSTAGRAM KIT — Generate JSON with: facebook (object: post string, storytellingPost string, authorityPost string, viralHook string, engagementPost string, commentCTA string). instagram (object: caption string, carouselIdeas array 3 strings, reelHooks array 3 strings, storyHooks array 3 strings, hashtags array 15 strings, shortHooks array 3 strings). emailSequence (array 3, each: subject, body). retargeting (object: headline, copy, cta, offer).' +
+      ' CONCISION (critical — if the JSON gets cut off the whole kit is lost): every facebook/instagram post max 60 words; each email body max 90 words; hooks and ideas max 15 words each. Dense and specific, zero filler.';
 
-    var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, metaSection), userMsg, 6000));
-    var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, socialSection), userMsg, 6000));
+    var p1 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, metaSection), userMsg, 7000));
+    var p2 = safeParseKit(await claudeCall(buildMarketingSystemPrompt(language, countryName, regs, socialSection), userMsg, 7000));
     res.json({ success: true, kit: Object.assign({}, p1, p2) });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -2721,7 +2719,8 @@ app.post('/api/generate-skill', async function(req, res) {
       'RULES per card (each card = one mini-agent):\n' +
       '- title = the agent\'s name + its single purpose (e.g. "Auditor de Disputas — analiza y redacta tu reclamo")\n' +
       '- tip = one line: when the reader should call this agent\n' +
-      '- prompt = the FULL agent prompt ready to paste: role with expertise, exact step-by-step behavior, what input it asks the user for (marked as [CAMPO]), and the exact output format it must deliver. Minimum 120 words. It must produce a CONCRETE DELIVERABLE (a letter, a plan, an analysis, a script — not advice).\n' +
+      '- prompt = the FULL agent prompt ready to paste: role with expertise, exact step-by-step behavior, what input it asks the user for (marked as [CAMPO]), and the exact output format it must deliver. Between 120 and 170 words — no more. It must produce a CONCRETE DELIVERABLE (a letter, a plan, an analysis, a script — not advice).\n' +
+      '- CONCISION (critical — if the JSON gets cut off, everything is lost): tip and proTip max 25 words each; title and subtitle max 12 words; systemPrompt.text max 150 words. Dense and specific, zero filler.\n' +
       '- proTip = how to get a better result from this agent (a real technique, not filler)\n' +
       '- systemPrompt = the master expert context the reader activates FIRST: deep domain expertise for this exact topic, market ' + countryName + ', rules and terminology from the ebook.\n\n' +
       'JSON schema — fill every empty string with real, expert-level, specific content:\n' +
@@ -2743,13 +2742,12 @@ app.post('/api/generate-skill', async function(req, res) {
       ? 'Create a premium Skill Pack for this ebook. Each of the 5 prompts must be expert-level, unique, and 100% specific to the ebook content — not generic.\n\nEbook data:\n' + ebookContext
       : 'Create a premium Skill Pack for: "' + topic + '"' + (ebookContext ? '\n\nComplements this ebook:\n' + ebookContext : '');
 
-    var result = await claudeCall(sys, userMsg, 4000, true, 'claude-sonnet-4-6');
+    var result = await claudeCall(sys, userMsg, 7000, true, 'claude-sonnet-4-6');
     var raw = (result.text || '').trim().replace(/^```[\w]*\s*/i, '').replace(/\s*```$/i, '').trim();
 
     var data;
     try { data = JSON.parse(raw); } catch(e) {
-      var m = raw.match(/\{[\s\S]*\}/);
-      if (m) { try { data = JSON.parse(m[0]); } catch(e2) {} }
+      try { data = extractJSON(raw); } catch(e2) {}
       if (!data) return res.json({ success: false, error: 'Error al procesar la respuesta. Intenta de nuevo.' });
     }
 
