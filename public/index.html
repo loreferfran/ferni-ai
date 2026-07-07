@@ -1325,6 +1325,8 @@ select option { background: #ffffff; color: #232336; }
 <script>
 const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null, extrasMarketing:null };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
+// Firma de identidad de una oportunidad — el ebook en memoria solo se reutiliza si su firma coincide con la oportunidad seleccionada
+function _oppSig(o){ if(!o) return null; return (((o.problema||o.problem||'')+'|'+(o.tituloEbook||o.ebookTitle||'')).toLowerCase().trim()) || null; }
 // Auto-restaurar ebook activo al recargar — busca la entrada más reciente con borrador
 (function(){
   try {
@@ -1336,6 +1338,7 @@ try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e
       S.selOpp = entry.selOpp || (entry.opps && entry.opps[0]) || null;
       if(entry.finalEbook){ S.finalEbook = entry.finalEbook; }
       else if(entry.ebook){ S.ebookData = entry.ebook; }
+      S.ebookOppSig = _oppSig(S.selOpp);
       if(entry.numChapters) S.numChapters = entry.numChapters;
       else if(entry.ebook && entry.ebook.chapters) S.numChapters = entry.ebook.chapters.length;
       else { var _nc=parseInt(localStorage.getItem('ferni_num_chapters')||'0'); if(_nc>0) S.numChapters=_nc; }
@@ -2017,7 +2020,15 @@ async function retryPipeStep(id){
 
 // ── RUNNERS ──────────────────────────────────────────────────────────────
 async function _pipeEbook(){
-  if(S.ebookData && (S.ebookData.chapters||[]).length){ return 'ya existía — reutilizado'; }
+  var sig = _oppSig(S.selOpp);
+  if(S.ebookData && (S.ebookData.chapters||[]).length && sig && S.ebookOppSig === sig){ return 'ya existía — reutilizado'; }
+  if((S.ebookData || S.finalEbook) && S.ebookOppSig !== sig){
+    // El ebook en memoria es de OTRA oportunidad — descartarlo junto con todas sus piezas derivadas para no contaminar este producto
+    S.ebookData=null; S.finalEbook=null; S.approvedLang=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[];
+    S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
+    S.extrasData=null; S.extrasLang=null; S.extrasMarketing=null; S.hmKit=null; S.maKit=null;
+    S_crApp=null; S_crSkill=null;
+  }
   S.ebookIsModule1 = true;
   // runEbookSteps actualiza la UI del tab Ebook (oculto) y setea S.ebookData al terminar
   await runEbookSteps(S.ebookRetryFrom || 'header');
@@ -3338,7 +3349,7 @@ function _registerImportedEbook(){
   });
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
-  S.selOpp = opp; S.ebookData = ebookData; S.lang = _impMeta.lang; S.country = _impMeta.market;
+  S.selOpp = opp; S.ebookData = ebookData; S.ebookOppSig = _oppSig(opp); S.lang = _impMeta.lang; S.country = _impMeta.market;
   S.hmKit = null; S.maKit = null; S.coverUrl = null;
   S.numChapters = chs.length;
   S.chapterImages = new Array(chs.length).fill(null);
@@ -3572,6 +3583,7 @@ async function runEbookSteps(startFrom){
       resources:parts.ending.resources, legalSection:parts.ending.legalSection
     };
     S.ebookData = ebook;
+    S.ebookOppSig = _oppSig(o);
     S.ebookAbort = null;
     S.ebookParts = {}; // limpiar partes — ebook completo guardado en S.ebookData
 
@@ -6693,6 +6705,7 @@ function loadHistData(e){
   }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
+  if(e.ebook || e.finalEbook){ S.ebookOppSig = _oppSig(opp); }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
   if(e.hmKit){ S.hmKit=e.hmKit; }
   if(e.coverUrl){ S.coverUrl=e.coverUrl; }
