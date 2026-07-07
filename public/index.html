@@ -1914,6 +1914,7 @@ function _pipeShowConfig(){
 
 function _pipeReset(){
   PIPE={ running:false, cfg:null, results:{}, states:{} };
+  var mk=document.getElementById('pipe-market'); if(mk) mk.value='';
   var box=document.getElementById('pipe-box'); if(!box) return;
   box.style.display='none';
   document.getElementById('pipe-progress').style.display='none';
