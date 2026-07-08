@@ -384,6 +384,7 @@ select option { background: #ffffff; color: #232336; }
                   <input id="pipe-market" type="text" placeholder="Mercado: México, USA, France..." style="flex:1;min-width:150px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                   <input id="pipe-price" type="text" inputmode="numeric" placeholder="Precio venta (opcional) ej: 17 USD" style="flex:1;min-width:150px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                 </div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:12px;"><input type="checkbox" id="pipe-ck-pause" checked style="accent-color:var(--accent);cursor:pointer;"> ⏸ Pausar tras el ebook para revisarlo antes de generar el resto (recomendado)</label>
                 <button class="btn btn-p" id="pipe-start-btn" style="width:100%;font-size:15px;padding:13px;" onclick="startPipeline()">✦ GENERAR PRODUCTO COMPLETO</button>
                 <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">Todo se genera en cadena automáticamente (~5-10 min según selección). Si una pieza falla, las demás continúan.</div>
               </div>
@@ -1923,7 +1924,7 @@ function _pipeShowConfig(){
   try{
     var saved=JSON.parse(localStorage.getItem('ferni_pipe_cfg')||'null');
     if(saved){
-      ['bonus','app','skill','meta'].forEach(function(k){
+      ['bonus','app','skill','meta','pause'].forEach(function(k){
         var ck=document.getElementById('pipe-ck-'+k); if(ck && typeof saved[k]==='boolean') ck.checked=saved[k];
       });
       if(saved.lang){ var ls=document.getElementById('pipe-lang'); if(ls) ls.value=saved.lang; }
@@ -1975,12 +1976,13 @@ async function startPipeline(){
     skill: !!(document.getElementById('pipe-ck-skill')||{}).checked,
     meta:  !!(document.getElementById('pipe-ck-meta')||{}).checked,
     epub:  !!(document.getElementById('pipe-ck-epub')||{}).checked,
+    pause: !!(document.getElementById('pipe-ck-pause')||{}).checked,
     lang:  (document.getElementById('pipe-lang')||{}).value||'Español',
     market:((document.getElementById('pipe-market')||{}).value||'').trim()||o.pais||o.country||'',
     price: ((document.getElementById('pipe-price')||{}).value||'').trim()
   };
   try{ localStorage.setItem('ferni_pipe_cfg', JSON.stringify(cfg)); }catch(e){}
-  PIPE.running=true; PIPE.cfg=cfg; PIPE.results={};
+  PIPE.running=true; PIPE.cfg=cfg; PIPE.results={}; PIPE.paused=false;
   document.getElementById('pipe-start-btn').disabled=true;
 
   var steps=['ebook','verify','translate'];
@@ -1998,18 +2000,57 @@ async function startPipeline(){
   if(chainOk) await _pipeRunStep('verify', _pipeVerify); // no bloquea la cadena si falla
   if(chainOk) chainOk = await _pipeRunStep('translate', _pipeTranslate);
 
-  // ── PIEZAS DERIVADAS: epub instantáneo, bonus+app en paralelo, luego skill, luego meta (para que mencione todos los extras) ──
-  if(chainOk){
-    if(cfg.epub) await _pipeRunStep('epub', _pipeEpub);
-    var par=[];
-    if(cfg.bonus) par.push(_pipeRunStep('bonus', _pipeBonus));
-    if(cfg.app) par.push(_pipeRunStep('app', _pipeApp));
-    await Promise.all(par);
-    if(cfg.skill) await _pipeRunStep('skill', _pipeSkill);
-    if(cfg.meta) await _pipeRunStep('meta', _pipeMeta);
-  } else {
-    ['bonus','app','skill','meta'].forEach(function(id){ if(PIPE.states[id]==='pending') _pipeSetStep(id,'skip','requiere el ebook'); });
+  if(!chainOk){
+    ['epub','bonus','app','skill','meta'].forEach(function(id){ if(PIPE.states[id]==='pending') _pipeSetStep(id,'skip','requiere el ebook'); });
+    PIPE.running=false;
+    document.getElementById('pipe-start-btn').disabled=false;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    _pipeRenderHub();
+    return;
   }
+
+  if(cfg.pause){
+    // Checkpoint: pausa antes de gastar créditos en el resto (bonus/app/skill/meta) para que se pueda revisar y corregir el ebook primero
+    PIPE.paused=true;
+    document.getElementById('pipe-start-btn').disabled=false;
+    _pipeRenderPauseCheckpoint();
+    return;
+  }
+
+  await _pipeContinue();
+}
+
+// Renderiza el checkpoint de pausa tras ebook+verificación+traducción, antes de generar el resto
+function _pipeRenderPauseCheckpoint(){
+  var pg=document.getElementById('pipe-progress'); if(!pg) return;
+  var old=document.getElementById('pipe-pause-block'); if(old) old.remove();
+  var div=document.createElement('div');
+  div.id='pipe-pause-block';
+  div.style.cssText='margin-top:14px;padding:14px;background:rgba(253,203,110,0.1);border:1px solid #fdcb6e;border-radius:10px;';
+  div.innerHTML='<div style="font-size:13px;font-weight:700;color:#b8860b;margin-bottom:4px;">⏸ Ebook listo — revísalo antes de continuar</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:10px;">El resto del producto (EPUB, Bonus Pack, App Premium, Skill Pack, Kit Meta Ads) aún no se ha generado — así no gastas en piezas basadas en un ebook que todavía no revisas.</div>'+
+    '<div class="btn-row">'+
+      '<button class="btn btn-s" onclick="showTab(\'ebook\',document.querySelectorAll(\'.tab\')[1])">👁 Revisar ebook</button>'+
+      '<button class="btn btn-p" onclick="_pipeContinue()">▶ Continuar con el resto</button>'+
+    '</div>';
+  pg.appendChild(div);
+}
+
+// Continúa con las piezas derivadas — se llama directo (sin pausa) o al presionar "Continuar" tras revisar el ebook
+async function _pipeContinue(){
+  var old=document.getElementById('pipe-pause-block'); if(old) old.remove();
+  PIPE.paused=false; PIPE.running=true;
+  document.getElementById('pipe-start-btn').disabled=true;
+  var cfg=PIPE.cfg;
+
+  // ── PIEZAS DERIVADAS: epub instantáneo, bonus+app en paralelo, luego skill, luego meta (para que mencione todos los extras) ──
+  if(cfg.epub) await _pipeRunStep('epub', _pipeEpub);
+  var par=[];
+  if(cfg.bonus) par.push(_pipeRunStep('bonus', _pipeBonus));
+  if(cfg.app) par.push(_pipeRunStep('app', _pipeApp));
+  await Promise.all(par);
+  if(cfg.skill) await _pipeRunStep('skill', _pipeSkill);
+  if(cfg.meta) await _pipeRunStep('meta', _pipeMeta);
 
   PIPE.running=false;
   document.getElementById('pipe-start-btn').disabled=false;
