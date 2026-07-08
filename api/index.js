@@ -877,6 +877,47 @@ app.post('/api/lovable-gaps', async function(req, res) {
   }
 });
 
+// Feature Score de calidad — mide calidad COMERCIAL del ebook (completitud/profundidad/accionabilidad/
+// diferenciación), no errores factuales (eso ya lo hace /api/verify-content en 3 capas — este panel es
+// adicional, no reemplaza nada). Evalúa contra la promesa de venta real: recibe la oportunidad y un
+// resumen del informe de nicho como vara de medir, no en abstracto.
+app.post('/api/ebook-score', async function(req, res) {
+  try {
+    var ebook = req.body.ebook || {};
+    var o = req.body.opportunity || {};
+    var nicheReport = (req.body.nicheReport || '').trim();
+    var language = req.body.language || 'Español';
+    var sys = 'Eres un editor senior de infoproductos y quality-assurance de contenido premium, especialista en ' + language + '.' +
+      ' Tu trabajo: evaluar si este ebook CUMPLE la promesa por la que el comprador pagó — no evalúas en abstracto, evalúas contra esa promesa concreta.' +
+      '\n\nMÉTRICAS (cada una 0-100):' +
+      '\n- Completitud: ¿cubre todo lo que la promesa/título anuncia, o deja huecos evidentes?' +
+      '\n- Profundidad: ¿aporta know-how específico y accionable, o generalidades que ya están gratis en cualquier búsqueda?' +
+      '\n- Accionabilidad: ¿el lector sabe EXACTAMENTE qué hacer mañana (pasos, cantidades, plantillas), o se queda en teoría?' +
+      '\n- Diferenciación: ¿qué tiene este contenido que no tenga un PDF genérico del mismo tema?' +
+      '\n\nREGLA ANTI-COMPLACENCIA (crítica): PROHIBIDO puntuar todo sobre 80 por cortesía. Si el contenido es genérico o superficial, dilo con el número que corresponde. Un score que siempre aprueba no sirve para nada — sé un editor exigente, no un porrista.' +
+      '\n\nSUGERENCIAS: 3-5 mejoras concretas y accionables (no genéricas tipo "agrega más ejemplos" — di CUÁL ejemplo, CUÁL capítulo, CUÁL sección), cada una máx 35 palabras, con prioridad Alta/Media/Baja según cuánto afecta la venta.' +
+      '\n\nResponde SOLO JSON: {"completitud":0-100,"profundidad":0-100,"accionabilidad":0-100,"diferenciacion":0-100,' +
+      '"global":0-5 con un decimal,"areaDebil":"nombre de la métrica más débil","sugerencias":[{"texto":"","prioridad":"Alta|Media|Baja","capitulo":numero_o_null}]}';
+    var chaptersTxt = (ebook.chapters || []).map(function(ch, i) {
+      return 'CAPÍTULO ' + (i + 1) + ' — ' + (ch.title || '') + ':\n' + (ch.excerpt || '') + (ch.keyPoints && ch.keyPoints.length ? '\nPuntos clave: ' + ch.keyPoints.join('; ') : '');
+    }).join('\n\n');
+    var userMsg = 'TÍTULO: ' + (ebook.title || '') + ' | SUBTÍTULO: ' + (ebook.subtitle || '') +
+      '\nPROMESA DE VENTA AL COMPRADOR: ' + (o.promesaEbook || o.ebookPromise || '') +
+      '\nPROBLEMA QUE DEBE RESOLVER: ' + (o.problema || o.problem || '') + ' | Dolor/deseo: ' + (o.dolorODeseo || '') +
+      (nicheReport ? '\n\nINFORME DE NICHO APROBADO (vara de medir — el ebook debe cumplir este ángulo/ICP):\n' + nicheReport.slice(0, 1200) : '') +
+      '\n\nINTRODUCCIÓN:\n' + (ebook.intro || '') +
+      '\n\nCAPÍTULOS:\n' + chaptersTxt +
+      (ebook.conclusion ? '\n\nCONCLUSIÓN:\n' + ebook.conclusion : '') +
+      '\n\nEvalúa este ebook.';
+    var txt = await claudeCall(sys, userMsg, 2500);
+    var score = extractJSON(txt);
+    if (!score) throw new Error('No se pudo procesar la evaluación');
+    res.json({ success: true, score: score });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/chat', async function(req, res) {
   try {
     var sys = 'Eres FERNI, AI experta en market intelligence y creacion de productos digitales vendibles para Europa y USA. Contexto: ' + req.body.context + '. Responde SIEMPRE en espanol, conciso y accionable. Maximo 3 parrafos.';

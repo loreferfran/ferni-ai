@@ -391,6 +391,9 @@ select option { background: #ffffff; color: #232336; }
               <div id="pipe-progress" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:10px;"></div>
               <div id="pipe-hub" style="display:none;margin-top:10px;"></div>
 
+              <!-- Score de calidad comercial — panel de detalle (métricas + sugerencias), la card del hub solo muestra la nota global -->
+              <div id="ebook-score-detail" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:10px;"></div>
+
               <!-- Página de Ventas — prompt para Lovable, ensamblado desde el copy ya generado -->
               <div id="lovable-section" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:10px;">
                 <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">🌐 Página de Ventas — prompt para Lovable</div>
@@ -558,6 +561,11 @@ select option { background: #ffffff; color: #232336; }
             <iframe id="eb-draft-preview" style="background:white;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:12px;height:600px;width:100%;display:block;" frameborder="0"></iframe>
             <!-- Alerta de verificación de hechos (Capa 3) -->
             <div id="eb-verify-alert" style="display:none;margin-bottom:12px;"></div>
+            <!-- Score de calidad comercial — panel adicional, no reemplaza la verificación de hechos de arriba -->
+            <div style="margin-bottom:12px;">
+              <button class="btn btn-s" id="eb-score-btn" onclick="runEbookScoreManual()">📊 Score de calidad</button>
+              <div id="eb-score-detail" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
+            </div>
           </div><!-- /eb-content -->
 
           <div id="eb-approved" class="hidden">
@@ -1932,6 +1940,7 @@ var PIPE = { running:false, cfg:null, results:{}, states:{} };
 var PIPE_LABELS = {
   ebook:     '📕 Ebook (capítulos completos)',
   verify:    '🔍 Verificación de datos (3 capas)',
+  score:     '📊 Score de calidad comercial',
   translate: '🌍 Traducción y PDF final',
   epub:      '📖 EPUB para Amazon KDP',
   bonus:     '🎁 Bonus Pack (4 mini infoproductos)',
@@ -2012,7 +2021,7 @@ async function startPipeline(){
   PIPE.running=true; PIPE.cfg=cfg; PIPE.results={}; PIPE.paused=false;
   document.getElementById('pipe-start-btn').disabled=true;
 
-  var steps=['ebook','verify','translate'];
+  var steps=['ebook','verify','score','translate'];
   if(cfg.epub) steps.push('epub');
   if(cfg.bonus) steps.push('bonus');
   if(cfg.app) steps.push('app');
@@ -2025,6 +2034,7 @@ async function startPipeline(){
   // ── CADENA PRINCIPAL: ebook → verificación → traducción ──
   var chainOk = await _pipeRunStep('ebook', _pipeEbook);
   if(chainOk) await _pipeRunStep('verify', _pipeVerify); // no bloquea la cadena si falla
+  if(chainOk) await _pipeRunStep('score', _pipeScore); // tampoco bloquea — es un panel adicional, no un gate
   if(chainOk) chainOk = await _pipeRunStep('translate', _pipeTranslate);
 
   if(!chainOk){
@@ -2100,7 +2110,7 @@ async function _pipeRunStep(id, runner){
 }
 
 async function retryPipeStep(id){
-  var runners={ebook:_pipeEbook,verify:_pipeVerify,translate:_pipeTranslate,epub:_pipeEpub,bonus:_pipeBonus,app:_pipeApp,skill:_pipeSkill,meta:_pipeMeta};
+  var runners={ebook:_pipeEbook,verify:_pipeVerify,score:_pipeScore,translate:_pipeTranslate,epub:_pipeEpub,bonus:_pipeBonus,app:_pipeApp,skill:_pipeSkill,meta:_pipeMeta};
   if(!runners[id]) return;
   var ok = await _pipeRunStep(id, runners[id]);
   if(ok){ if(S.currentHistId) saveFullDataToHist(S.currentHistId); _pipeRenderHub(); }
@@ -2115,7 +2125,7 @@ async function _pipeEbook(){
     S.ebookData=null; S.finalEbook=null; S.approvedLang=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[];
     S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
     S.extrasData=null; S.extrasLang=null; S.extrasMarketing=null; S.hmKit=null; S.maKit=null;
-    S_crApp=null; S_crSkill=null;
+    S_crApp=null; S_crSkill=null; S.ebookScore=null;
   }
   S.ebookIsModule1 = true;
   // runEbookSteps actualiza la UI del tab Ebook (oculto) y setea S.ebookData al terminar
@@ -2137,6 +2147,25 @@ async function _pipeVerify(){
   var problems = d.approved ? 0 : (d.result||'').split(/\n\s*\n/).filter(function(b){return b.trim();}).length;
   PIPE.results.verify={approved:d.approved, problems:problems, result:d.result||''};
   return d.approved ? 'sin problemas' : problems+' problema(s) — revisar en tab Ebook';
+}
+
+// Score de calidad COMERCIAL (completitud/profundidad/accionabilidad/diferenciación) — no reemplaza la
+// verificación factual de arriba, la complementa. No bloquea la cadena si falla (mismo patrón que verify).
+async function _pipeScore(){
+  var eb=S.ebookData; if(!eb) throw new Error('Sin ebook para evaluar');
+  var o=S.selOpp||{};
+  var ebSummary={
+    title:eb.title, subtitle:eb.subtitle, intro:(eb.intro||'').slice(0,400),
+    chapters:(eb.chapters||[]).map(function(ch){ return { title:(ch&&ch.title)||'', excerpt:((ch&&ch.content)||'').slice(0,500), keyPoints:(ch&&ch.keyPoints)||[] }; }),
+    conclusion:(eb.conclusion||'').slice(0,300)
+  };
+  var resp=await fetch('/api/ebook-score',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ebook:ebSummary, opportunity:o, nicheReport:_nicheReportSummary(), language:S.ebookLang||'Español'})});
+  var d=await resp.json();
+  if(!d.success) throw new Error(d.error||'Error evaluando el ebook');
+  S.ebookScore=d.score;
+  if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  return 'Nota global: '+(d.score.global!==undefined?d.score.global:'—')+'/5';
 }
 
 async function _pipeTranslate(){
@@ -2258,6 +2287,10 @@ function _pipeRenderHub(){
     var v=PIPE.results.verify;
     cards.push(card('🔍','Verificación de datos', v.approved?'✅ Sin problemas detectados':'⚠️ '+v.problems+' problema(s) encontrados',
       v.approved?'':abtn('Ver detalle en tab Ebook',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+  }
+  if(S.ebookScore){
+    cards.push(card('📊','Score de calidad comercial — '+S.ebookScore.global+'/5','Área más débil: '+_escHtml(S.ebookScore.areaDebil||''),
+      abtn('Ver detalle','toggleEbookScoreDetail()')));
   }
   if(st.epub==='done'){
     cards.push(card('📖','EPUB para Amazon KDP','Formato válido con portada y metadata — súbelo directo a KDP',
@@ -2463,7 +2496,7 @@ async function expandToMarket(){
   S.translationProgress = null;
   S.numChapters = (S.ebookData.chapters||[]).length;
   S.extrasData = null; S.extrasLang = null; S.extrasMarketing = null;
-  S.hmKit = null; S.maKit = null;
+  S.hmKit = null; S.maKit = null; S.ebookScore = null;
   S_crApp = null; S_crSkill = null; window._crAppTopic = null; window._crSkillTopic = null;
   S.coverUrl = coverUrl; S.chapterImages = chapterImages;
   S.nicheReportApproved = true; // el clon ya viene de un producto aprobado — no repetir el checkpoint del informe de nicho
@@ -2491,6 +2524,78 @@ async function expandToMarket(){
   _wizSet(3);
   addMsg('chat-search','🌍 Producto clonado para expandir a un nuevo mercado — tu producto original sigue intacto en el Historial. Elige el idioma y escribe el país/mercado destino abajo, y presiona "GENERAR PRODUCTO COMPLETO": el ebook ya aprobado se traducirá (no se reescribe) y el resto se regenera en ese idioma.','ferni');
   setTimeout(function(){ var box=document.getElementById('pipe-box'); if(box) box.scrollIntoView({behavior:'smooth',block:'start'}); }, 100);
+}
+
+// ── SCORE DE CALIDAD COMERCIAL — panel adicional a la verificación factual, no la reemplaza ──
+function _scoreBarColor(v){ return v>=75?'#00b894':v>=50?'#fdcb6e':'#e17055'; }
+function _scoreBar(label,val){
+  var v=Math.max(0,Math.min(100,val||0));
+  return '<div style="margin-bottom:10px;">'+
+    '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text);margin-bottom:4px;"><span>'+label+'</span><span style="font-weight:700;">'+v+'%</span></div>'+
+    '<div style="height:8px;border-radius:4px;background:var(--bg2);overflow:hidden;"><div style="height:100%;width:'+v+'%;background:'+_scoreBarColor(v)+';"></div></div>'+
+  '</div>';
+}
+// El score queda desactualizado apenas se corrige un capítulo o se regenera el ebook — se limpia y hay que reevaluar
+function _invalidateEbookScore(){
+  S.ebookScore=null;
+  var d1=document.getElementById('eb-score-detail'); if(d1){ d1.style.display='none'; d1.innerHTML=''; }
+  var d2=document.getElementById('ebook-score-detail'); if(d2){ d2.style.display='none'; d2.innerHTML=''; }
+}
+function copySuggestion(i){
+  var s=S.ebookScore && S.ebookScore.sugerencias && S.ebookScore.sugerencias[i];
+  if(!s) return;
+  navigator.clipboard.writeText(s.texto||'').catch(function(){});
+}
+function renderEbookScore(score, containerId){
+  var el=document.getElementById(containerId); if(!el||!score) return;
+  var prioColor={Alta:'#e17055',Media:'#fdcb6e',Baja:'var(--muted)'};
+  var sugs=(score.sugerencias||[]).map(function(s,i){
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'+
+      '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:'+(prioColor[s.prioridad]||'var(--muted)')+'22;color:'+(prioColor[s.prioridad]||'var(--muted)')+';white-space:nowrap;">'+_escHtml(s.prioridad||'')+'</span>'+
+      '<div style="flex:1;font-size:12px;color:var(--text);">'+_escHtml(s.texto||'')+(s.capitulo?' <span style="color:var(--muted);">(Cap. '+s.capitulo+')</span>':'')+'</div>'+
+      '<button class="btn btn-s" style="font-size:10px;padding:4px 8px;" onclick="copySuggestion('+i+')">📋</button>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=
+    '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;">📊 Score de calidad comercial</div>'+
+    '<div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:12px;">'+score.global+' / 5</div>'+
+    _scoreBar('Completitud',score.completitud)+
+    _scoreBar('Profundidad',score.profundidad)+
+    _scoreBar('Accionabilidad',score.accionabilidad)+
+    _scoreBar('Diferenciación',score.diferenciacion)+
+    '<div style="font-size:12px;color:var(--text2);margin:10px 0;">Área más débil: <b>'+_escHtml(score.areaDebil||'')+'</b></div>'+
+    (sugs?'<div style="font-size:12px;font-weight:700;color:var(--text);margin-top:8px;margin-bottom:4px;">Sugerencias de mejora</div>'+sugs:'');
+  el.style.display='block';
+}
+function toggleEbookScoreDetail(){
+  var el=document.getElementById('ebook-score-detail'); if(!el) return;
+  if(el.style.display==='none'||!el.innerHTML.trim()){ renderEbookScore(S.ebookScore,'ebook-score-detail'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  else{ el.style.display='none'; }
+}
+// Botón manual en la tab Ebook — genera/reevalúa bajo demanda (útil para ebooks de Importar/Directo que no pasan por el pipeline)
+async function runEbookScoreManual(){
+  var eb=S.finalEbook||S.ebookData;
+  if(!eb){ alert('Genera el ebook primero.'); return; }
+  var btn=document.getElementById('eb-score-btn');
+  if(btn){ btn.disabled=true; btn.textContent='📊 Evaluando...'; }
+  try{
+    var ebSummary={
+      title:eb.title, subtitle:eb.subtitle, intro:(eb.intro||'').slice(0,400),
+      chapters:(eb.chapters||[]).map(function(ch){ return { title:(ch&&ch.title)||'', excerpt:((ch&&ch.content)||'').slice(0,500), keyPoints:(ch&&ch.keyPoints)||[] }; }),
+      conclusion:(eb.conclusion||'').slice(0,300)
+    };
+    var resp=await fetch('/api/ebook-score',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ebook:ebSummary, opportunity:S.selOpp||{}, nicheReport:_nicheReportSummary(), language:S.approvedLang||S.ebookLang||'Español'})});
+    var d=await resp.json();
+    if(!d.success) throw new Error(d.error||'Error evaluando el ebook');
+    S.ebookScore=d.score;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    renderEbookScore(d.score,'eb-score-detail');
+  }catch(e){
+    alert('Error: '+e.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='📊 Score de calidad'; }
+  }
 }
 
 function _pipeOpenHtml(html){
@@ -3898,6 +4003,7 @@ async function runEbookSteps(startFrom){
     S.ebookData = ebook;
     S.ebookOppSig = _oppSig(o);
     S.ebookLang = language;
+    S.ebookScore = null;
     S.ebookAbort = null;
     S.ebookParts = {}; // limpiar partes — ebook completo guardado en S.ebookData
 
@@ -4328,6 +4434,7 @@ function saveFullDataToHist(histId){
     if(S.pipelineSource) S.history[idx].pipelineSource=S.pipelineSource;
     if(S.lovableCheckout) S.history[idx].lovableCheckout=S.lovableCheckout;
     if(S.lovableVideo) S.history[idx].lovableVideo=S.lovableVideo;
+    if(S.ebookScore) S.history[idx].ebookScore=S.ebookScore;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -5160,6 +5267,7 @@ async function sendCorrectionChat(){
           ebook.chapters[chNum-1] = chData;
           if(S.finalEbook) S.finalEbook = ebook;
           else S.ebookData = ebook;
+          _invalidateEbookScore();
           S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, countryName, S.coverUrl, S.chapterImages||[]);
           var previewDraft = document.getElementById('eb-draft-preview');
           var previewFinal = document.getElementById('eb-final-preview');
@@ -5241,6 +5349,7 @@ function undoChPatch(){
   if(!ebook || !ebook.chapters){ return; }
   ebook.chapters[n-1] = S.chapterSnapshots[n];
   if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+  _invalidateEbookScore();
   var o = S.selOpp || {};
   var lang = S.approvedLang || o.idioma || o.language || 'Español';
   var cName = S.countryName || o.pais || o.country || '';
@@ -5319,6 +5428,7 @@ async function runChPatch(){
   }
   if (didQuickPatch) {
     if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+    _invalidateEbookScore();
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     var o2 = S.selOpp || {};
     var lang2 = S.approvedLang || o2.idioma || o2.language || 'Español';
@@ -5361,6 +5471,7 @@ async function runChPatch(){
       ebook.chapters[n-1] = d.chapter;
     }
     if(S.finalEbook) S.finalEbook = ebook; else S.ebookData = ebook;
+    _invalidateEbookScore();
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
     var lang = S.approvedLang || o.idioma || o.language || 'Español';
     var cName = S.countryName || o.pais || o.country || '';
@@ -5478,6 +5589,7 @@ async function runChRewrite(){
     ebook.chapters[n-1] = chData;
     if(S.finalEbook) S.finalEbook = ebook;
     else S.ebookData = ebook;
+    _invalidateEbookScore();
     var lang = S.approvedLang || o.idioma || o.language || 'Español';
     var cName = S.countryName || o.pais || o.country || '';
     S.pdfHtml = buildFinalPdfHtml(ebook, o, lang, cName, S.coverUrl, S.chapterImages||[]);
@@ -7037,6 +7149,7 @@ function loadHistData(e){
   S.pipelineSource = e.pipelineSource || 'analysis';
   S.lovableCheckout = e.lovableCheckout || '';
   S.lovableVideo = e.lovableVideo || '';
+  S.ebookScore = e.ebookScore || null;
   S._nicheReportOppIdx = null;
   _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
