@@ -221,15 +221,24 @@ select option { background: #ffffff; color: #232336; }
     </div>
     <div class="tabs">
       <button class="tab active" onclick="showTab('search',this)" style="font-weight:800;">✦ Crear Producto</button>
-      <span style="font-size:8px;color:var(--muted);letter-spacing:1px;align-self:center;padding:0 4px;border-left:1px solid var(--border);margin-left:4px;">AVANZADO</span>
-      <button class="tab" onclick="showTab('ebook',this)">📖 Ebook</button>
+      <span style="font-size:8px;color:var(--muted);letter-spacing:1px;align-self:center;padding:0 4px;border-left:1px solid var(--border);margin-left:4px;display:none;">AVANZADO</span>
+      <button class="tab" onclick="showTab('ebook',this)" style="display:none;">📖 Ebook</button>
       <button class="tab" onclick="showTab('hotmart',this)" style="display:none;">🛒 Hotmart</button><!-- módulo dado de baja — el copy de venta vive en el Informe de Nicho (hojaVenta) -->
-      <button class="tab" onclick="showTab('meta',this)">📣 Meta Ads</button>
-      <button class="tab" onclick="showTab('extras',this)">🎁 Bonus Pack</button>
+      <button class="tab" onclick="showTab('meta',this)" style="display:none;">📣 Meta Ads</button>
+      <button class="tab" onclick="showTab('extras',this)" style="display:none;">🎁 Bonus Pack</button>
       <button class="tab" onclick="showTab('directo',this)">✍️ Directo</button>
       <button class="tab" onclick="showTab('import',this)">📥 Importar</button>
-      <button class="tab" onclick="showTab('crear',this)">📱 Crear</button>
+      <button class="tab" onclick="showTab('crear',this)" style="display:none;">📱 Crear</button>
       <button class="tab" onclick="showTab('hist',this)">🕐 Historial</button>
+      <div style="position:relative;display:inline-block;">
+        <button class="tab" onclick="var m=document.getElementById('adv-menu');m.style.display=m.style.display==='none'?'block':'none';">⚙ Avanzado</button>
+        <div id="adv-menu" style="display:none;position:absolute;right:0;top:100%;z-index:300;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:170px;box-shadow:0 6px 24px rgba(0,0,0,0.15);">
+          <button class="btn btn-s" style="display:block;width:100%;text-align:left;margin-bottom:4px;" onclick="showTab('ebook',_tabBtn('ebook'));document.getElementById('adv-menu').style.display='none';">📖 Ebook</button>
+          <button class="btn btn-s" style="display:block;width:100%;text-align:left;margin-bottom:4px;" onclick="showTab('meta',_tabBtn('meta'));document.getElementById('adv-menu').style.display='none';">📣 Meta Ads</button>
+          <button class="btn btn-s" style="display:block;width:100%;text-align:left;margin-bottom:4px;" onclick="showTab('extras',_tabBtn('extras'));document.getElementById('adv-menu').style.display='none';">🎁 Bonus Pack</button>
+          <button class="btn btn-s" style="display:block;width:100%;text-align:left;" onclick="showTab('crear',_tabBtn('crear'));document.getElementById('adv-menu').style.display='none';">🛠 Crear suelto</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -577,7 +586,7 @@ select option { background: #ffffff; color: #232336; }
               <div class="btn-row" style="flex-wrap:wrap;gap:8px;margin-bottom:10px;">
                 <button class="btn btn-p" style="font-size:15px;padding:12px 24px;" onclick="dlPDF()">📄 Descargar PDF</button>
                 <button class="btn btn-gold" style="font-size:13px;" onclick="dlEpub()">📖 EPUB (Amazon KDP)</button>
-                <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
+                <button class="btn btn-s" onclick="showTab('meta',_tabBtn('meta'))">→ Ver Meta Ads</button>
                 <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
                 <button class="btn btn-s" style="font-size:13px;background:rgba(0,120,0,0.15);border-color:rgba(0,180,0,0.4);color:#00b894;" onclick="downloadCoverComposed()">🖼️ Descargar portada</button>
                 <button class="btn btn-p" id="eb-approved-pipeline-btn" style="display:none;" onclick="goToPipelineFromEbook()">🏭 Continuar en la Línea de producción</button>
@@ -1483,7 +1492,9 @@ async function genImgDirectGlobal(prompt, imageType, niche){
 
 const LANGS = { 'France':{lang:'French',flag:'🇫🇷'}, 'Germany':{lang:'German',flag:'🇩🇪'}, 'Italy':{lang:'Italian',flag:'🇮🇹'}, 'Spain':{lang:'Spanish',flag:'🇪🇸'}, 'Portugal':{lang:'Portuguese',flag:'🇵🇹'}, 'United Kingdom':{lang:'English',flag:'🇬🇧'}, 'Netherlands':{lang:'Dutch',flag:'🇳🇱'}, 'Belgium':{lang:'French',flag:'🇧🇪'}, 'Sweden':{lang:'Swedish',flag:'🇸🇪'}, 'Switzerland':{lang:'German',flag:'🇨🇭'}, 'Austria':{lang:'German',flag:'🇦🇹'}, 'Poland':{lang:'Polish',flag:'🇵🇱'}, 'USA':{lang:'English',flag:'🇺🇸'}, 'Canada':{lang:'English',flag:'🇨🇦'}, 'Mexico':{lang:'Spanish',flag:'🇲🇽'}, 'Colombia':{lang:'Spanish',flag:'🇨🇴'}, 'Argentina':{lang:'Spanish',flag:'🇦🇷'}, 'Chile':{lang:'Spanish',flag:'🇨🇱'}, 'Peru':{lang:'Spanish',flag:'🇵🇪'}, 'Uruguay':{lang:'Spanish',flag:'🇺🇾'}, 'Ecuador':{lang:'Spanish',flag:'🇪🇨'}, 'Brazil':{lang:'Portuguese',flag:'🇧🇷'} };
 
-function showTab(id,el){ 
+// Selección robusta del botón de tab por nombre — NUNCA por índice (los índices cambian al ocultar tabs)
+function _tabBtn(id){ return document.querySelector('.tab[onclick*="\''+id+'\'"]'); }
+function showTab(id,el){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); 
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
   document.getElementById('panel-'+id).classList.add('active'); 
@@ -2308,12 +2319,12 @@ function _pipeRenderHub(){
   if(st.translate==='done'||S.pdfHtml){
     cards.push(card('📕','Ebook — '+_escHtml(eb.title||''),(S.approvedLang||'Español')+' · '+((eb.chapters||[]).length)+' capítulos',
       abtn('👁 Vista previa','openFullPreview()')+
-      abtn('✏️ Editar / imágenes / descargar',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+      abtn('✏️ Editar / imágenes / descargar',"showTab('ebook',_tabBtn('ebook'))")));
   }
   if(PIPE.results.verify){
     var v=PIPE.results.verify;
     cards.push(card('🔍','Verificación de datos', v.approved?'✅ Sin problemas detectados':'⚠️ '+v.problems+' problema(s) encontrados',
-      v.approved?'':abtn('Ver detalle en tab Ebook',"showTab('ebook',document.querySelectorAll('.tab')[1])")));
+      v.approved?'':abtn('Ver detalle en tab Ebook',"showTab('ebook',_tabBtn('ebook'))")));
   }
   if(S.ebookScore){
     cards.push(card('📊','Score de calidad comercial — '+S.ebookScore.global+'/5','Área más débil: '+_escHtml(S.ebookScore.areaDebil||''),
@@ -2326,7 +2337,7 @@ function _pipeRenderHub(){
   if(st.bonus==='done'&&S.extrasData&&S.extrasData.length){
     var bBtns=S.extrasData.map(function(ex,i){ return abtn('👁 '+(i+1),'previewExtra('+i+')')+abtn('🖨 PDF','dlExtra('+i+')'); }).join('');
     cards.push(card('🎁','Bonus Pack — '+S.extrasData.length+' mini infoproductos',S.extrasData.map(function(e){return e.title;}).join(' · ').slice(0,90),
-      bBtns+abtn('Ver todo',"showTab('extras',document.querySelectorAll('.tab')[4])")));
+      bBtns+abtn('Ver todo',"showTab('extras',_tabBtn('extras'))")));
   }
   if(st.app==='done'&&S_crApp){
     cards.push(card('📱','App Premium — '+_escHtml(window._crAppTopic||''),'Multi-módulo interactiva, lista para entregar',
@@ -2338,7 +2349,7 @@ function _pipeRenderHub(){
   }
   if(st.meta==='done'&&S.maKit){
     cards.push(card('📣','Kit Meta Ads — '+((S.maKit.ads||[]).length)+' anuncios','Segmentación + anuncios + redes sociales'+(cfg.price?' · Precio: '+cfg.price:''),
-      abtn('Ver kit completo',"showTab('meta',document.querySelectorAll('.tab')[3])")));
+      abtn('Ver kit completo',"showTab('meta',_tabBtn('meta'))")));
   }
 
   var failed=Object.keys(st).filter(function(k){return st[k]==='fail';});
@@ -2560,7 +2571,7 @@ async function expandToMarket(){
   S.history.unshift(newEntry);
   try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', newHistId); }catch(e){}
 
-  var mainTab = document.querySelector('.tab[onclick*="showTab(\'search\'"]') || document.querySelectorAll('.tab')[0];
+  var mainTab = _tabBtn('search');
   showTab('search', mainTab);
   _pipeShowConfig();
   // Reafirmar checkboxes según lo que tenía el producto original (_pipeShowConfig ya restauró preferencias globales encima)
@@ -3928,7 +3939,7 @@ function _syncEbookPipelineCTA(){
 }
 
 function goToPipelineFromEbook(){
-  var mainTab = document.querySelector('.tab[onclick*="showTab(\'search\'"]') || document.querySelectorAll('.tab')[0];
+  var mainTab = _tabBtn('search');
   showTab('search', mainTab);
   _pipeShowConfig();
   _wizSet(3);
@@ -4289,7 +4300,7 @@ function runChRewriteFin() {
 async function goEbook(isModule1){
   const o=S.selOpp; if(!o) return;
   S.ebookIsModule1 = (isModule1 !== false);
-  showTab('ebook',document.querySelectorAll('.tab')[1]);
+  showTab('ebook',_tabBtn('ebook'));
   hide('eb-empty'); hide('eb-content'); hide('eb-approved'); show('eb-loading');
   var _ca = document.getElementById('chat-area-ebook'); if(_ca) _ca.style.display='none';
   var verAlert = document.getElementById('eb-verify-alert');
@@ -7246,7 +7257,7 @@ function loadAndDraft(id){
   S.numChapters = numCh;
   rebuildChapterSteps(numCh);
   rebuildRewriteBtns(numCh);
-  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  showTab('ebook', _tabBtn('ebook'));
   restoreImagesIDB(e.id, numCh, function(imgs){
     applyIDBImages(e.id, e.ebook, imgs);
     setTimeout(function(){ hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content'); renderDraft(S.selOpp||e.opps[0]||e.selOpp, e.ebook); }, 100);
@@ -7261,7 +7272,7 @@ function loadAndShowPDF(id){
   S.numChapters = numCh;
   rebuildChapterSteps(numCh);
   rebuildRewriteBtns(numCh);
-  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  showTab('ebook', _tabBtn('ebook'));
   restoreImagesIDB(e.id, numCh, function(imgs){
     applyIDBImages(e.id, e.finalEbook, imgs);
     setTimeout(function(){
@@ -7288,7 +7299,7 @@ function loadAndApproveDraft(id){
   const e=S.history.find(h=>String(h.id)===String(id)); if(!e||!e.ebook) return;
   loadHistData(e);
   S.ebookData = e.ebook;
-  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  showTab('ebook', _tabBtn('ebook'));
   setTimeout(function(){ approveEbook(); }, 200);
 }
 
@@ -7301,7 +7312,7 @@ function loadAndGenerateDraft(id){
     S.selOpp = e.opps[0]; 
     document.getElementById('btn-draft').disabled=false;
   }
-  showTab('ebook', document.querySelectorAll('.tab')[1]);
+  showTab('ebook', _tabBtn('ebook'));
   setTimeout(function(){ goEbook(); }, 200);
 }
 
@@ -7340,7 +7351,7 @@ function loadHistData(e){
 function loadHist(id){
   const e=S.history.find(h=>String(h.id)===String(id));if(!e)return;
   loadHistData(e);
-  showTab('search', document.querySelectorAll('.tab')[0]);
+  showTab('search', _tabBtn('search'));
 }
 function dlHistExcel(id){const e=S.history.find(h=>String(h.id)===String(id));if(e)genCSV(e.opps,e.country,e.niche);}
 function delHistImages(id){
@@ -7442,7 +7453,7 @@ function safeStr(v) {
   rebuildRewriteBtns(nc);
   // Si hay ebook activo, mostrar tab Ebook automáticamente
   if(eb && S.selOpp){
-    var ebTab = document.querySelectorAll('.tab')[1];
+    var ebTab = _tabBtn('ebook');
     showTab('ebook', ebTab);
     if(ebTab) ebTab.classList.add('active');
   }
