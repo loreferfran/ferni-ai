@@ -281,6 +281,8 @@ select option { background: #ffffff; color: #232336; }
           <div class="fl">Nicho <span style="color:var(--teal);font-size:9px;">(escribe o elige)</span></div>
           <input type="text" id="inp-niche" placeholder="ej: salud, ansiedad..." oninput="if(this.value.trim())setMode('niche')" onclick="setMode('niche')" />
           <div class="hint" id="niche-hint">💡 Haz clic y escribe tu nicho</div>
+          <input type="text" id="inp-subniche" placeholder="Sub-nicho (opcional) — ej: fibromialgia" style="margin-top:6px;" />
+          <input type="text" id="inp-subniche2" placeholder="Micro-tema (opcional) — ej: dolores, tratamiento" style="margin-top:6px;" />
           <div class="chips" style="margin-top:8px;">
             <span class="chip" onclick="pickChip('salud',this)">salud</span>
             <span class="chip" onclick="pickChip('finanzas',this)">finanzas</span>
@@ -1588,13 +1590,16 @@ async function runSearch(){
   var nicheVal=document.getElementById('inp-niche').value.trim();
   if(S.mode==='niche' && !nicheVal){alert('Escribe un nicho primero (ej: salud, ansiedad, menopausia)');return;}
   S.niche=nicheVal||'salud bienestar';
+  var subNiche=(document.getElementById('inp-subniche').value||'').trim();
+  var microNiche=(document.getElementById('inp-subniche2').value||'').trim();
+  S.subNiche=subNiche; S.microNiche=microNiche;
   showLoading();
   try{
-    const resp=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country,niche:S.niche,language:info.lang})});
+    const resp=await fetch('/api/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country,niche:S.niche,subNiche:subNiche,microNiche:microNiche,language:info.lang})});
     const d=await resp.json();
     if(d.success){
-      showResults(d.opportunities,country,S.niche,info);
-      saveHist(country,S.niche,info,d.opportunities);
+      showResults(d.opportunities,country,S.niche,info,subNiche,microNiche);
+      saveHist(country,S.niche,info,d.opportunities,subNiche,microNiche);
     }else{alert('Error en búsqueda: '+d.error);}
   }catch(e){alert('Error conectando con el servidor: '+e.message);}
 }
@@ -1602,10 +1607,11 @@ async function runSearch(){
 function showLoading(){ hide('sw'); hide('sr'); show('sl'); document.getElementById('sl-steps').innerHTML=['→ Serper: búsquedas en inglés + idioma local','→ Consultando Reddit, Amazon, Quora, YouTube','→ Claude AI: analizando oportunidades reales','→ Calculando Monetization Score'].map((s,i)=>`<div class="lstep" id="ls${i}"><div class="ldot"></div>${s}</div>`).join(''); let i=0; const iv=setInterval(()=>{ if(i>0)step(i-1,'done'); if(i<4){step(i,'active');i++;}else clearInterval(iv); },3000); }
 function step(i,s){const e=document.getElementById('ls'+i);if(e)e.className='lstep '+s;}
 
-function showResults(opps,country,niche,info){
+function showResults(opps,country,niche,info,subNiche,microNiche){
   S.results=opps;
   hide('sl'); show('sr');
-  document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${niche} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
+  var nicheRoute=niche+(subNiche?' → '+subNiche:'')+(microNiche?' → '+microNiche:'');
+  document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${nicheRoute} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
   document.getElementById('sr-count').textContent=opps.length+' oportunidades';
   const avg=Math.round(opps.reduce((a,b)=>a+(b.monetizationScore||0),0)/opps.length);
   const hi=opps.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
@@ -1654,7 +1660,7 @@ function showResults(opps,country,niche,info){
       </div>
     </div>`;
   }).join('');
-  addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${S.niche}. Score máximo: ${Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
+  addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${nicheRoute}. Score máximo: ${Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
 }
 
 function selOpp(i){
@@ -6581,7 +6587,7 @@ function genCSV(data,country,niche){
   a.download=`FERNI_AI_${country}_${niche}_${now.toLocaleDateString('es-CL').replace(/\//g,'-')}.csv`; a.click();
 }
 
-function saveHist(country,niche,info,opps){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); S.currentHistId=e.id; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
+function saveHist(country,niche,info,opps,subNiche,microNiche){ const e={id:Date.now(),date:new Date().toLocaleDateString('es-CL'),time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),country,niche,subNiche:subNiche||'',microNiche:microNiche||'',flag:info.flag,language:info.lang,count:opps.length,topScore:Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0)),opps}; S.history.unshift(e); S.currentHistId=e.id; try{localStorage.setItem('ferni_pro',JSON.stringify(S.history.slice(0,30)));}catch(err){} renderHist(); }
 function renderHist(){ 
   document.getElementById('hist-count').textContent=S.history.length+' búsquedas'; 
   const el=document.getElementById('hist-body'); 
@@ -6727,7 +6733,7 @@ function loadHistData(e){
   if(e.coverUrl){ S.coverUrl=e.coverUrl; }
   if(e.chapterImages){ S.chapterImages=e.chapterImages; }
   const info=LANGS[e.country]||{lang:'English',flag:e.flag};
-  showResults(e.opps,e.country,e.niche,{...info,flag:e.flag});
+  showResults(e.opps,e.country,e.niche,{...info,flag:e.flag},e.subNiche,e.microNiche);
 }
 function loadHist(id){
   const e=S.history.find(h=>String(h.id)===String(id));if(!e)return;

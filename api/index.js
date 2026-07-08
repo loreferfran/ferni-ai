@@ -645,14 +645,27 @@ async function searchWithSerper(country, niche, language) {
   return allResults;
 }
 
-async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
+async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, subNiche, microNiche) {
   const pop = POPULATION[country] || '50 millones total, 40 millones adultos';
   const isGeneral = !niche || niche === 'general' || niche === 'salud bienestar';
+  const focusTerm = microNiche || subNiche || null;
+
+  var hierarchyBlock = '';
+  if (subNiche || microNiche) {
+    hierarchyBlock = '\n\n=== ACOTACION DEL USUARIO (OBLIGATORIA — error prohibido si se ignora) ===' +
+      '\nNicho amplio: "' + (niche || 'general') + '"' +
+      (subNiche ? ' → Sub-nicho: "' + subNiche + '"' : '') +
+      (microNiche ? ' → Micro-tema: "' + microNiche + '"' : '') +
+      '\nTODAS las 10 oportunidades deben caer DENTRO del nivel MAS ESPECIFICO indicado: "' + focusTerm + '".' +
+      '\nPROHIBIDO subir al nicho amplio o al sub-nicho cuando el usuario especifico un nivel mas concreto — cada oportunidad debe ser una variacion real DENTRO de "' + focusTerm + '", nunca del tema general.' +
+      '\nEjemplo: si el usuario pidio salud → fibromialgia → dolores/tratamiento, las oportunidades deben tratar sobre dolores y tratamiento de fibromialgia especificamente, no sobre "salud" ni sobre fibromialgia en general.';
+  }
 
   const sys = 'Eres un sistema avanzado de inteligencia de mercado y analisis de demanda real. Tu mision: detectar oportunidades REALES de productos digitales basadas en comportamiento de busqueda humano.' +
     ' NO inventas ideas — solo detectas lo que la gente ya esta buscando, repitiendo, comprando y pagando.' +
     ' Pais objetivo: ' + country + ' (poblacion: ' + pop + '). Idioma de busqueda: ' + language + '.' +
     ' RESPONDE TODO EN ESPANOL excepto los campos que requieren el idioma local del pais.' +
+    hierarchyBlock +
 
     '\n\n=== PASO 1: CLUSTERING SEMANTICO (OBLIGATORIO) ===' +
     '\nAntes de analizar, AGRUPA las busquedas con intencion similar en clusters. Ejemplo:' +
@@ -759,7 +772,7 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes) {
   var trendsResults = results.filter(function(r){ return r.source.startsWith('trends'); });
 
   var userMsg = 'PAIS: ' + country + ' (poblacion: ' + pop + ')\n' +
-    'NICHO: ' + (niche || 'general') + '\n' +
+    'NICHO: ' + (niche || 'general') + (subNiche ? ' -> ' + subNiche : '') + (microNiche ? ' -> ' + microNiche : '') + '\n' +
     'IDIOMA: ' + language + '\n\n';
 
   // DataForSEO — volumen real de búsquedas (va al principio para que GPT-4o lo priorice)
@@ -821,15 +834,19 @@ app.post('/api/search', async function(req, res) {
   try {
     var country = req.body.country;
     var niche = req.body.niche;
+    var subNiche = (req.body.subNiche || '').trim();
+    var microNiche = (req.body.microNiche || '').trim();
     var language = req.body.language;
-    var seedKws = buildSeedKeywords(niche, language);
+    // Término más específico no vacío — acota TODO el embudo (seed keywords, búsquedas, prompt de GPT-4o)
+    var searchTerm = microNiche || subNiche || niche;
+    var seedKws = buildSeedKeywords(searchTerm, language);
     var results = await Promise.all([
-      searchWithSerper(country, niche, language),
+      searchWithSerper(country, searchTerm, language),
       getDataForSEOVolumes(seedKws, country, language)
     ]);
     var serperResults = results[0];
     var dfsVolumes = results[1];
-    var opportunities = await analyzeWithGPT4(serperResults, country, niche, language, dfsVolumes);
+    var opportunities = await analyzeWithGPT4(serperResults, country, niche, language, dfsVolumes, subNiche, microNiche);
     res.json({ success: true, opportunities: opportunities, searchCount: serperResults.length, dfsKeywords: dfsVolumes.length });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
