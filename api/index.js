@@ -827,7 +827,41 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
     })
   });
   const d = await resp.json();
-  return JSON.parse(d.choices[0].message.content.replace(/```json|```/g, '').trim());
+  return extractOpportunitiesArray(d.choices[0].message.content);
+}
+
+// Parser de respaldo para el array de oportunidades de GPT-4o (a diferencia de extractJSON, que asume un
+// objeto {...}, aquí la respuesta es un array [...] de 10 oportunidades). Si GPT-4o corta o corrompe algo
+// a mitad de camino, en vez de fallar la búsqueda completa, se recupera cada oportunidad ya completa antes
+// del punto de error — mejor devolver 6-8 oportunidades válidas que ningún resultado.
+function extractOpportunitiesArray(txt) {
+  var cleaned = (txt || '').replace(/```json|```/g, '').trim();
+  try { return JSON.parse(cleaned); } catch (e) {}
+  var start = cleaned.indexOf('[');
+  var end = cleaned.lastIndexOf(']');
+  if (start !== -1 && end !== -1 && end > start) {
+    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch (e) {}
+  }
+  if (start !== -1) {
+    var partial = cleaned.slice(start + 1); // contenido despues del '[' inicial
+    var depth = 0, inStr = false, esc = false, lastGoodEnd = -1;
+    for (var i = 0; i < partial.length; i++) {
+      var c = partial[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { inStr = !inStr; continue; }
+      if (inStr) continue;
+      if (c === '{') depth++;
+      else if (c === '}') { depth--; if (depth === 0) lastGoodEnd = i; }
+    }
+    if (lastGoodEnd > -1) {
+      try {
+        var arr = JSON.parse('[' + partial.slice(0, lastGoodEnd + 1) + ']');
+        if (arr.length) return arr;
+      } catch (e2) {}
+    }
+  }
+  throw new Error('No se pudo procesar la respuesta del análisis. Preview: ' + cleaned.slice(0, 300));
 }
 
 app.post('/api/search', async function(req, res) {

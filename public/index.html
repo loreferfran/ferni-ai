@@ -5896,6 +5896,7 @@ function renderExtras(o, extras, lang){
         '<div style="display:flex;gap:6px;">' +
           '<button class="btn btn-s" style="flex:1;font-size:11px;opacity:0.8;" onclick="openExtraEdit('+i+')">✏ Editar</button>' +
           '<button id="ex-regen-btn-'+i+'" class="btn btn-s" style="flex:1;font-size:11px;opacity:0.8;" onclick="regenBonus('+i+')">↺ Regenerar</button>' +
+          '<button class="btn btn-s" style="font-size:11px;opacity:0.8;color:var(--red);" title="Eliminar este bonus" onclick="deleteExtra('+i+')">🗑</button>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -6189,6 +6190,21 @@ function _getExtraColors(){
   var o = S.selOpp || {};
   var eb = S.finalEbook || S.ebookData || {};
   return _ebookColors(o, eb);
+}
+
+// Elimina un bonus del Bonus Pack — a diferencia de Regenerar (reemplaza por otro), esto deja el pack
+// con menos de 4 piezas si la usuaria decide que ese bonus no sirve.
+function deleteExtra(idx){
+  var ex = S.extrasData && S.extrasData[idx];
+  if(!ex) return;
+  if(!confirm('¿Eliminar "'+(ex.title||'este bonus')+'"? No se puede deshacer.')) return;
+  S.extrasData.splice(idx,1);
+  if(S.extrasData.length){
+    renderExtras(S.selOpp||{}, S.extrasData, S.extrasLang||'Español');
+  } else {
+    hide('ex-content'); show('ex-empty');
+  }
+  _saveExtras();
 }
 
 function previewExtra(idx){
