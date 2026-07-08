@@ -1061,7 +1061,13 @@ app.post('/api/niche-report', async function(req, res) {
       posicionamiento: 'una frase con la forma: el único producto que ___ para ___ (máx 20 palabras)'
     },
     validacionManualMeta: 'instrucción concreta: qué keyword buscar en facebook.com/ads/library para ' + countryName + ' y cómo leer el resultado con la rúbrica 0-15 débil / 16-30 precaución / 31-90 oferta validada / 91+ escalada',
-    productoRecomendado: { tipo: 'ebook | ebook+extras | app standalone', titulo: '', promesa: '', precioSugerido: 'en ' + regs.currency, extras: ['qué bonus/app/skill acompañan mejor este producto'] },
+    productoRecomendado: { tipo: 'ebook | ebook+extras | app standalone', titulo: '', promesa: '', precioSugerido: 'en ' + regs.currency,
+      mixProducto: {
+        app:   { concepto: 'QUÉ app companion exacta para ESTE comprador — con el ciclo diario que trackea/entrega (ej: "tracker diario de sofocos y sueño con protocolo semanal progresivo") — máx 20 palabras', porQue: 'máx 15 palabras' },
+        bonus: { incluir: 'true|false', tipos: ['2-4 del catálogo: checklist/tarjetas/plan30/plantilla/recetas/calendario/tracker/materiales/guiarapida/rutina/presupuesto'], porQue: 'máx 15 palabras' },
+        skill: { incluir: 'true|false', porQue: 'máx 15 palabras' },
+        epub:  { incluir: 'true|false', porQue: '¿este tema/mercado compra en Amazon KDP? — máx 15 palabras' }
+      } },
     hojaVenta: { headline: 'promesa PTE: Problema + Temporal + Específica', subheadline: '', bullets: ['3-5 bullets de beneficio concreto'], descripcionVenta: 'texto de venta de 150-200 palabras listo para usar en cualquier plataforma' }
   });
 
@@ -1085,6 +1091,9 @@ app.post('/api/niche-report', async function(req, res) {
     '\n- La debilidad de cada competidor debe ser un flanco explotable REAL deducible de su título/precio/plataforma (ej: "solo teoría, sin plan diario", "precio alto sin extras", "en inglés para mercado alemán") — nunca inventada.' +
     '\n- planDiferenciacion: acciones EJECUTABLES dentro del contenido y marketing de este producto. PROHIBIDO lo vago ("ser mejor", "más calidad"). Cada acción responde: ¿qué hacemos nosotros que ellos no?' +
     '\n- posicionamiento: la frase que un comprador repetiría para justificar elegirnos.' +
+    '\n\nMIX DE PRODUCTO (campo productoRecomendado.mixProducto):' +
+    '\n- app NO tiene campo incluir: la app companion va SIEMPRE. Tu trabajo es definir el CONCEPTO exacto de app que este comprador usaría CADA DÍA (qué métrica trackea, qué le entrega a diario).' +
+    '\n- bonus/skill/epub: decide con honestidad según el tema y el ICP. NO marques todo true por defecto — un mix donde sobra una pieza reduce el valor percibido del conjunto.' +
     '\n\nPROFUNDIDAD OBLIGATORIA: baja del nicho amplio al micro-problema específico más prometedor según los datos (ejemplo del estándar esperado: no "autos en Francia" sino "cómo reparar la guantera del Hyundai Sedán 2023").' +
     '\n\nCONCISIÓN OBLIGATORIA (crítico — si el JSON se corta, el informe se pierde):' +
     '\n- Ningún campo de texto supera 50 palabras, salvo descripcionVenta (máx 110 palabras) y veredictoJustificacion (máx 70 palabras).' +
@@ -3130,6 +3139,7 @@ app.post('/api/generate-premium-app', async function(req, res) {
     var lang         = req.body.lang         || 'Español';
     var ebookContext = (req.body.ebookContext || '').slice(0, 5000); // cap to avoid token overflow
     var context      = req.body.context      || '';
+    var appConcept   = (req.body.appConcept  || '').trim(); // concepto de app definido por el análisis del informe de nicho (mixProducto.app.concepto)
     var countryName  = getCountryName(country);
     var year         = new Date().getFullYear();
     var langCode     = lang.slice(0,2).toLowerCase();
@@ -3150,6 +3160,7 @@ app.post('/api/generate-premium-app', async function(req, res) {
       'Return ONLY a valid JSON object — no markdown, no explanation.\n' +
       'Language: ' + lang + '. Market: ' + countryName + '.\n' +
       (context ? 'Author requirements: ' + context + '\n' : '') +
+      (appConcept ? 'APP CONCEPT (mandatory direction from the market analysis — build THIS app): ' + appConcept + '\n' : '') +
       'Choose 4-5 modules that best fit the ebook topic. Always include "dashboard" and "logros" in "modules".\n' +
       'Accent color guide: finance/money=#f9ca24  health/fitness=#00b894  career/work=#6c5ce7  marketing=#e17055  other=#00cec9\n' +
       '\nQUALITY BAR — no exceptions:\n' +

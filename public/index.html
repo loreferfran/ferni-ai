@@ -1860,7 +1860,12 @@ function renderNicheReport(r){
       sec('📦 Producto recomendado',
         '<b>'+esc(pr.titulo)+'</b> ('+esc(pr.tipo)+')<br>'+esc(pr.promesa)+
         '<br><b>Precio sugerido:</b> '+esc(pr.precioSugerido)+
-        (pr.extras&&pr.extras.length?'<br><b>Extras recomendados:</b> '+esc((pr.extras||[]).join(' · ')):''))+
+        (pr.mixProducto?'<div style="margin-top:8px;font-size:12px;">'+
+          '<div>📱 <b>App companion (siempre):</b> '+esc(pr.mixProducto.app&&pr.mixProducto.app.concepto)+'</div>'+
+          '<div>'+(pr.mixProducto.bonus&&String(pr.mixProducto.bonus.incluir)==='true'?'✅':'➖')+' <b>Bonus Pack:</b> '+esc(((pr.mixProducto.bonus||{}).tipos||[]).join(', ')||'—')+' <span style="color:var(--muted);">'+esc((pr.mixProducto.bonus||{}).porQue)+'</span></div>'+
+          '<div>'+(pr.mixProducto.skill&&String(pr.mixProducto.skill.incluir)==='true'?'✅':'➖')+' <b>Skill Pack</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.skill||{}).porQue)+'</span></div>'+
+          '<div>'+(pr.mixProducto.epub&&String(pr.mixProducto.epub.incluir)==='true'?'✅':'➖')+' <b>EPUB KDP</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.epub||{}).porQue)+'</span></div>'+
+        '</div>':''))+
       sec('📝 Hoja de venta',
         '<div style="font-size:15px;font-weight:800;color:var(--text);">'+esc(hv.headline)+'</div>'+
         '<div style="font-size:13px;color:var(--text2);margin:4px 0 8px;">'+esc(hv.subheadline)+'</div>'+
@@ -2017,6 +2022,33 @@ function _pipeShowConfig(){
       if(saved.lang){ var ls=document.getElementById('pipe-lang'); if(ls) ls.value=saved.lang; }
     }
   }catch(e){}
+  // El preset del informe pisa las preferencias guardadas — por eso se llama DESPUÉS de restaurarlas
+  if(S.nicheReport && S.nicheReport.productoRecomendado && S.nicheReport.productoRecomendado.mixProducto) _pipeApplyMix();
+}
+
+// Presetea la Línea de producción según el mix recomendado por el informe — la usuaria puede cambiar todo (preset, no candado)
+function _pipeApplyMix(){
+  var mx=S.nicheReport&&S.nicheReport.productoRecomendado&&S.nicheReport.productoRecomendado.mixProducto;
+  if(!mx) return;
+  function setCk(id,val){ var ck=document.getElementById('pipe-ck-'+id); if(ck) ck.checked=(String(val)==='true'); }
+  setCk('app',true); // regla de Lorena: la app companion SIEMPRE
+  if(mx.bonus) setCk('bonus',mx.bonus.incluir);
+  if(mx.skill) setCk('skill',mx.skill.incluir);
+  if(mx.epub)  setCk('epub', mx.epub.incluir);
+  // Chips "✦ recomendado" / "— no recomendado" junto a cada checkbox (idempotente: limpiar chips previos primero)
+  document.querySelectorAll('.pipe-mix-chip').forEach(function(c){c.remove();});
+  [['app',true,(mx.app||{}).porQue],
+   ['bonus',String((mx.bonus||{}).incluir)==='true',(mx.bonus||{}).porQue],
+   ['skill',String((mx.skill||{}).incluir)==='true',(mx.skill||{}).porQue],
+   ['epub',String((mx.epub||{}).incluir)==='true',(mx.epub||{}).porQue]
+  ].forEach(function(row){
+    var ck=document.getElementById('pipe-ck-'+row[0]); if(!ck||!ck.parentElement) return;
+    var chip=document.createElement('span'); chip.className='pipe-mix-chip';
+    chip.style.cssText='font-size:9px;font-weight:700;margin-left:6px;padding:1px 7px;border-radius:8px;'+(row[1]?'background:rgba(0,184,148,0.15);color:#00b894;':'background:rgba(225,112,85,0.12);color:#e17055;');
+    chip.textContent=row[1]?'✦ recomendado':'— no recomendado';
+    chip.title=row[2]||'';
+    ck.parentElement.appendChild(chip);
+  });
 }
 
 function _pipeReset(){
@@ -2271,8 +2303,9 @@ async function _pipeApp(){
   var cfg=PIPE.cfg, o=S.selOpp, eb=S.finalEbook||S.ebookData;
   if(S_crApp){ return 'ya existía — reutilizada'; }
   var ebookContext=_buildEbookContext({opp:o, ebook:eb, lang:cfg.lang});
+  var appConcept=(S.nicheReport&&S.nicheReport.productoRecomendado&&S.nicheReport.productoRecomendado.mixProducto&&S.nicheReport.productoRecomendado.mixProducto.app&&S.nicheReport.productoRecomendado.mixProducto.app.concepto)||'';
   var resp=await fetch('/api/generate-premium-app',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({topic:'', country:cfg.market||o.pais||o.country||'España', lang:cfg.lang, context:'', ebookContext:ebookContext})});
+    body:JSON.stringify({topic:'', country:cfg.market||o.pais||o.country||'España', lang:cfg.lang, context:'', ebookContext:ebookContext, appConcept:appConcept})});
   var d=await resp.json();
   if(!d.success) throw new Error(d.error||'Error en App Premium');
   S_crApp=d.html; window._crAppTopic=d.productName||'App Premium';
