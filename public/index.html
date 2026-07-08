@@ -587,6 +587,24 @@ select option { background: #ffffff; color: #232336; }
               <div id="eb-score-detail-fin" style="display:none;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
               <div id="eb-gap-detail-fin" style="display:none;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
 
+              <!-- Página de Ventas — mismo bloque que el hub, para cuando se trabaja el producto ya aprobado desde la tab Ebook -->
+              <div id="lovable-section-fin" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;">
+                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">🌐 Página de Ventas — prompt para Lovable</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                  <input id="lv-checkout-fin" type="text" placeholder="Link de checkout — Hotmart, Stripe, Gumroad... (obligatorio)" oninput="S.lovableCheckout=this.value;_syncLovableOpenBtn('-fin');" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <input id="lv-video-fin" type="text" placeholder="Link de video promocional (opcional)" oninput="S.lovableVideo=this.value;" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                </div>
+                <button class="btn btn-teal" id="lv-generate-btn-fin" onclick="generateLovablePrompt('-fin')">✦ Generar prompt</button>
+                <div id="lv-output-fin" style="display:none;margin-top:12px;">
+                  <textarea id="lv-prompt-out-fin" rows="10" oninput="_updateLovableCounter('-fin');_syncLovableOpenBtn('-fin');" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+                  <div id="lv-counter-fin" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+                  <div class="btn-row" style="margin-top:8px;">
+                    <button class="btn btn-s" onclick="copyLovablePrompt('-fin')">📋 Copiar Prompt</button>
+                    <button class="btn btn-p" id="lv-open-btn-fin" onclick="openInLovable('-fin')">🚀 Abrir en Lovable</button>
+                  </div>
+                </div>
+              </div>
+
             <!-- Panel corrección por capítulo en vista final -->
             <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;">
               <div style="font-weight:700;color:#00b894;font-size:12px;margin-bottom:8px;">✍️ Corregir un capítulo del PDF final</div>
@@ -1512,6 +1530,9 @@ function restoreEbookTab(){
     if(_chatEb) _chatEb.style.display = '';
   }
   _syncEbookPipelineCTA();
+  var lvCkFin=document.getElementById('lv-checkout-fin'); if(lvCkFin) lvCkFin.value=S.lovableCheckout||'';
+  var lvVdFin=document.getElementById('lv-video-fin'); if(lvVdFin) lvVdFin.value=S.lovableVideo||'';
+  _syncLovableOpenBtn('-fin');
 }
 function restoreTranslateTab(){
   if(S.ebookData){
@@ -2347,14 +2368,15 @@ function _pipeRenderHub(){
 // Ensambla el prompt desde el copy YA generado (informe de nicho + kit Hotmart si existe) — sin gastar
 // créditos nuevos en el camino feliz. Solo si falta copy de venta (nicheReport y/o hmKit ausentes, el caso
 // más común hoy porque la tab Hotmart quedó oculta) se pide a Claude SOLO las piezas que faltan.
-async function generateLovablePrompt(){
+async function generateLovablePrompt(suffix){
+  suffix = suffix || '';
   var eb = S.finalEbook||S.ebookData;
   if(!eb){ alert('Genera el ebook primero.'); return; }
   var o = S.selOpp||{};
   var nr = S.nicheReport||null;
   var hv = (nr && nr.hojaVenta) || {};
   var hm = S.hmKit||null;
-  var btn=document.getElementById('lv-generate-btn');
+  var btn=document.getElementById('lv-generate-btn'+suffix);
   btn.disabled=true; btn.textContent='✦ Generando...';
   try{
     var gaps=null;
@@ -2366,11 +2388,13 @@ async function generateLovablePrompt(){
       var d=await r.json();
       if(d.success) gaps=d.copy;
     }
+    var checkoutEl=document.getElementById('lv-checkout'+suffix); if(checkoutEl) S.lovableCheckout=(checkoutEl.value||'').trim();
+    var videoEl=document.getElementById('lv-video'+suffix); if(videoEl) S.lovableVideo=(videoEl.value||'').trim();
     var prompt=buildLovablePrompt(eb,o,nr,hm,gaps,S.lovableCheckout||'',S.lovableVideo||'');
-    document.getElementById('lv-prompt-out').value=prompt;
-    document.getElementById('lv-output').style.display='block';
-    _updateLovableCounter();
-    _syncLovableOpenBtn();
+    document.getElementById('lv-prompt-out'+suffix).value=prompt;
+    document.getElementById('lv-output'+suffix).style.display='block';
+    _updateLovableCounter(suffix);
+    _syncLovableOpenBtn(suffix);
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
   }catch(e){
     alert('Error generando el prompt: '+e.message);
@@ -2427,30 +2451,34 @@ function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
   return L.join('\n');
 }
 
-function _updateLovableCounter(){
-  var ta=document.getElementById('lv-prompt-out'); if(!ta) return;
+function _updateLovableCounter(suffix){
+  suffix = suffix || '';
+  var ta=document.getElementById('lv-prompt-out'+suffix); if(!ta) return;
   var len=ta.value.length;
   var urlLen=encodeURIComponent(ta.value).length+30;
   var pct=Math.round(urlLen/50000*100);
-  var c=document.getElementById('lv-counter'); if(c) c.textContent=len+' caracteres — '+pct+'% del límite de Lovable (50.000)';
+  var c=document.getElementById('lv-counter'+suffix); if(c) c.textContent=len+' caracteres — '+pct+'% del límite de Lovable (50.000)';
 }
 
-function _syncLovableOpenBtn(){
-  var btn=document.getElementById('lv-open-btn'); if(!btn) return;
+function _syncLovableOpenBtn(suffix){
+  suffix = suffix || '';
+  var btn=document.getElementById('lv-open-btn'+suffix); if(!btn) return;
   var hasCheckout=!!(S.lovableCheckout&&S.lovableCheckout.trim());
-  var ta=document.getElementById('lv-prompt-out');
+  var ta=document.getElementById('lv-prompt-out'+suffix);
   var tooLong = !!(ta && ta.value && (encodeURIComponent(ta.value).length+30)>50000);
   btn.disabled = !hasCheckout || tooLong;
   btn.title = !hasCheckout ? 'Configura el link de checkout para continuar' : tooLong ? 'Prompt muy largo para abrir por URL — usa Copiar Prompt' : '';
 }
 
-function copyLovablePrompt(){
-  var ta=document.getElementById('lv-prompt-out'); if(!ta||!ta.value) return;
+function copyLovablePrompt(suffix){
+  suffix = suffix || '';
+  var ta=document.getElementById('lv-prompt-out'+suffix); if(!ta||!ta.value) return;
   navigator.clipboard.writeText(ta.value).then(function(){ alert('Prompt copiado al portapapeles.'); }).catch(function(){ ta.select(); document.execCommand('copy'); alert('Prompt copiado al portapapeles.'); });
 }
 
-function openInLovable(){
-  var ta=document.getElementById('lv-prompt-out'); if(!ta||!ta.value) return;
+function openInLovable(suffix){
+  suffix = suffix || '';
+  var ta=document.getElementById('lv-prompt-out'+suffix); if(!ta||!ta.value) return;
   if(!S.lovableCheckout||!S.lovableCheckout.trim()){ alert('Configura el link de checkout para continuar'); return; }
   var encoded=encodeURIComponent(ta.value);
   if(encoded.length+30>50000){ alert('El prompt es muy largo para abrir por URL. Usa "Copiar Prompt" y pégalo directamente en Lovable.'); return; }
@@ -2463,6 +2491,21 @@ function openInLovable(){
 // (_pipeTranslate ya sabe traducir cuando S.ebookLang difiere del idioma pedido); bonus/app/skill/meta
 // se regeneran desde cero en el idioma nuevo (más simple y fiable que traducir su JSON/HTML a mano, y ya
 // usan el mismo endpoint multi-idioma que el resto del pipeline).
+// Punto de entrada desde el Historial — carga esa entrada como producto activo (datos + imágenes desde
+// IndexedDB) y luego dispara exactamente el mismo expandToMarket() que se usa desde el hub.
+function expandHistToMarket(id){
+  var e=S.history.find(function(h){return String(h.id)===String(id);});
+  if(!e){ alert('No se encontró ese producto en el historial.'); return; }
+  var eb=e.finalEbook||e.ebook;
+  if(!eb){ alert('Ese producto no tiene un ebook generado.'); return; }
+  loadHistData(e);
+  var numCh=(eb.chapters||[]).length;
+  restoreImagesIDB(e.id, numCh, function(imgs){
+    applyIDBImages(e.id, eb, imgs);
+    setTimeout(function(){ expandToMarket(); }, 100);
+  });
+}
+
 async function expandToMarket(){
   var srcEb = S.finalEbook || S.ebookData;
   if(!srcEb || !S.selOpp){ alert('Genera y aprueba un producto primero.'); return; }
@@ -7142,7 +7185,8 @@ function renderHist(){
         : '';
     const actionBtns = hasPDF
       ? `<button class="btn btn-p" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndShowPDF('${e.id}')">📄 Ver PDF final</button>
-         <button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft('${e.id}')">📖 Ver borrador</button>`
+         <button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft('${e.id}')">📖 Ver borrador</button>
+         <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();expandHistToMarket('${e.id}')">🌍 Expandir a otro mercado</button>`
       : hasDraft
         ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndApproveDraft('${e.id}')">✓ Generar PDF final</button>
            <button class="btn btn-s" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();loadAndDraft('${e.id}')">📖 Ver borrador</button>`
