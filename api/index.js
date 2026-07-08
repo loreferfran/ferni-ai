@@ -971,6 +971,79 @@ app.post('/api/niche-report', async function(req, res) {
   }
 });
 
+// ── VALIDAR ADVERTENCIAS — investigación dirigida a resolver las dudas puntuales del informe de nicho ──
+// Reemplaza a "Ajustar"/"Regenerar": no repite la investigación completa ni reescribe a ciegas,
+// convierte cada advertencia en consultas ejecutables, las corre, y cruza el resultado con el informe
+// original para emitir un veredicto final BINARIO (CREAR o DESCARTAR) con nivel de confianza.
+app.post('/api/validate-niche', async function(req, res) {
+  var report = req.body.report || {};
+  var o = req.body.opportunity || {};
+  var countryName = getCountryName(req.body.country || o.pais || o.country || 'España');
+  var language = req.body.language || o.idioma || o.language || 'Spanish';
+  var regs = getRegs(countryName);
+  var keyword = o.busquedaExacta || o.keyword || o.problema || o.problem || '';
+  var advertencias = (report.evidenciaDemanda && report.evidenciaDemanda.advertencias) || [];
+
+  if (!advertencias.length) {
+    return res.status(400).json({ success: false, error: 'El informe no tiene advertencias que validar.' });
+  }
+
+  try {
+    // Paso 1 — convertir advertencias en consultas de investigación ejecutables
+    var qSys = 'Convierte cada advertencia de un informe de nicho en 1-2 consultas de investigación ejecutables.' +
+      '\nTipos disponibles: "dataforseo" (volumen real de búsqueda — da las keywords EN EL IDIOMA DEL MERCADO: ' + language + '), ' +
+      '"serper" (búsqueda de Google — da query + hl de 2 letras), "amazon" (búsqueda de productos ya vendiéndose).' +
+      '\nMáximo 6 consultas en total. Prioriza resolver las advertencias más críticas para la decisión de crear o no el producto.' +
+      '\nResponde SOLO JSON: {"queries":[{"tipo":"dataforseo|serper|amazon","query":"(para serper/amazon)","keywords":["(para dataforseo)"],"proposito":"qué advertencia resuelve"}]}';
+    var qMsg = 'PAÍS: ' + countryName + ' | IDIOMA DEL MERCADO: ' + language + ' | KEYWORD DEL PRODUCTO: "' + keyword + '"' +
+      '\n\nADVERTENCIAS A RESOLVER:\n' + advertencias.map(function(a){ return '- ' + a; }).join('\n');
+    var qTxt = await claudeCall(qSys, qMsg, 1000);
+    var plan = extractJSON(qTxt) || { queries: [] };
+    var queries = (plan.queries || []).slice(0, 6);
+
+    // Paso 2 — ejecutar las consultas dirigidas en paralelo
+    var hl = serperHl(language);
+    var results = await Promise.all(queries.map(function(q){
+      try {
+        if (q.tipo === 'dataforseo') return getDataForSEOVolumes((q.keywords || []).slice(0, 10), countryName, language);
+        if (q.tipo === 'amazon') return serperAmazon(q.query || keyword, countryName, regs.currency);
+        return serperSearch(q.query || keyword, hl);
+      } catch (e) { return []; }
+    }));
+
+    function fmtEv(arr) {
+      return (arr || []).slice(0, 6).map(function(r) {
+        if (r && r.keyword && r.searchVolume !== undefined) return '- "' + r.keyword + '": ' + r.searchVolume.toLocaleString() + ' búsquedas/mes' + (r.cpc > 0 ? ' | CPC $' + r.cpc.toFixed(2) : '');
+        return '- ' + ((r && r.title) || '') + ' :: ' + ((r && r.snippet) || '');
+      }).join('\n') || '(sin resultados detectados)';
+    }
+    var evidenceBlock = queries.map(function(q, i){
+      return '=== ' + (q.proposito || q.tipo).toUpperCase() + ' (' + q.tipo + ') ===\n' + fmtEv(results[i]);
+    }).join('\n\n') || '(sin consultas ejecutadas)';
+
+    // Paso 3 — cruzar informe original + evidencia nueva → veredicto final binario
+    var vSys = 'Eres el mismo analista senior que escribió este informe de nicho. Llega evidencia NUEVA dirigida a resolver tus advertencias.' +
+      '\nCruza el informe original con la evidencia nueva y emite un VEREDICTO FINAL BINARIO.' +
+      '\nReglas: (1) honestidad absoluta — si la evidencia nueva no resuelve una advertencia, márcala resuelta:false y explica exactamente qué falta;' +
+      ' (2) si el volumen de búsqueda real en el idioma del mercado resulta despreciable Y no hay señales de pago locales → DESCARTAR;' +
+      ' (3) la competencia NO es motivo de descarte automático: si hay demanda y el ángulo del producto es diferenciado, la competencia VALIDA el mercado — evalúa hueco vs saturación, no solo presencia;' +
+      ' (4) marca [Estimación] toda extrapolación; prohibido inventar cifras que no estén en la evidencia.' +
+      '\nResponde SOLO JSON: {"veredictoFinal":"CREAR|DESCARTAR","confianza":"alta|media|baja",' +
+      '"resolucionAdvertencias":[{"advertencia":"","queSeEncontro":"(máx 40 palabras)","resuelta":true|false}],' +
+      '"justificacion":"(máx 80 palabras)","recomendaciones":["(máx 3, solo si veredictoFinal es CREAR)"]}';
+    var vMsg = 'INFORME ORIGINAL:\n' + JSON.stringify({ titulo: report.titulo, veredicto: report.veredicto, dolor: report.dolor, anguloVenta: report.anguloVenta, advertencias: advertencias }) +
+      '\n\nEVIDENCIA NUEVA (dirigida a resolver las advertencias):\n' + evidenceBlock +
+      '\n\nEmite el veredicto final.';
+    var vTxt = await claudeCall(vSys, vMsg, 2500);
+    var validation = extractJSON(vTxt);
+    if (!validation) throw new Error('No se pudo procesar la validación');
+    res.json({ success: true, validation: validation });
+  } catch (e) {
+    console.error('validate-niche error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 function buildEbookSystem(countryName, regs) {
   return 'You are a Premium Ebook Creative Director, Market Psychologist, Editorial Designer, and Digital Product Architect.' +
     ' Your job is to create a sellable premium PDF ebook adapted to the niche, audience, emotional context, and commercial objective.' +

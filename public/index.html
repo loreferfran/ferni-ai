@@ -336,13 +336,9 @@ select option { background: #ffffff; color: #232336; }
               <div id="nr-actions" style="display:none;margin-top:12px;">
                 <div class="btn-row">
                   <button class="btn btn-p" onclick="approveNicheReport()">✅ Aprobar informe</button>
-                  <button class="btn btn-s" onclick="toggleNicheAdjust()">✏️ Ajustar</button>
-                  <button class="btn btn-s" onclick="genNicheReport()">↺ Regenerar</button>
+                  <button class="btn btn-s" id="nr-validate-btn" onclick="validateNicheWarnings()">🔍 Validar advertencias</button>
                 </div>
-                <div id="nr-adjust-row" style="display:none;margin-top:10px;">
-                  <textarea id="nr-adjust-inp" rows="2" placeholder="Ej: enfoca el ángulo en madres primerizas, baja el precio sugerido, profundiza más el micro-problema..." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5;"></textarea>
-                  <button class="btn btn-teal" style="margin-top:6px;" onclick="applyNicheAdjust()">Aplicar ajuste</button>
-                </div>
+                <div id="nr-validation" style="display:none;margin-top:12px;"></div>
               </div>
               <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — configura abajo tu producto completo, o usa "Generar PDF" para solo el ebook.</div>
             </div>
@@ -1691,7 +1687,8 @@ function _resetNrUI(){
   document.getElementById('nr-content').style.display='none';
   document.getElementById('nr-content').innerHTML='';
   document.getElementById('nr-actions').style.display='none';
-  document.getElementById('nr-adjust-row').style.display='none';
+  document.getElementById('nr-validation').style.display='none';
+  document.getElementById('nr-validation').innerHTML='';
   document.getElementById('nr-approved-badge').style.display='none';
 }
 
@@ -1711,11 +1708,12 @@ async function genNicheReport(){
     var d=await r.json();
     if(!d.success) throw new Error(d.error||'Error generando el informe');
     S.nicheReport=d.report;
+    S.nicheValidation=null;
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     document.getElementById('nr-loading').style.display='none';
     renderNicheReport(d.report);
     _wizSet(2);
-    addMsg('chat-search','📋 Informe listo. Veredicto: '+(d.report.veredicto||'—')+'. Revísalo y apruébalo para desbloquear la generación del PDF, o pide ajustes.','ferni');
+    addMsg('chat-search','📋 Informe listo. Veredicto: '+(d.report.veredicto||'—')+'. Revísalo y apruébalo para desbloquear la generación del PDF, o usa "🔍 Validar advertencias" si el veredicto es VALIDAR y quieres profundizar antes de decidir.','ferni');
   }catch(e){
     document.getElementById('nr-loading').style.display='none';
     alert('Error generando el informe: '+e.message);
@@ -1737,7 +1735,7 @@ function renderNicheReport(r){
     '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'+
         '<div style="font-size:16px;font-weight:800;color:var(--text);">'+esc(r.titulo||'Informe de nicho')+'</div>'+
-        '<span style="background:'+vc+'22;border:1.5px solid '+vc+';color:'+vc+';font-size:12px;font-weight:800;padding:5px 14px;border-radius:20px;letter-spacing:1px;">'+esc(v||'—')+'</span>'+
+        '<span style="background:'+vc+'22;border:1.5px solid '+vc+';color:'+vc+';font-size:12px;font-weight:800;padding:5px 14px;border-radius:20px;letter-spacing:1px;cursor:default;" title="Veredicto del análisis — no es un botón. Si dice VALIDAR, usa el botón Validar advertencias de abajo.">'+esc(v||'—')+'</span>'+
       '</div>'+
       sec('Veredicto — por qué', esc(r.veredictoJustificacion))+
       sec('Dolor central', esc(r.dolor))+
@@ -1796,41 +1794,56 @@ function approveNicheReport(){
   document.getElementById('pipe-box').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-function toggleNicheAdjust(){
-  var row=document.getElementById('nr-adjust-row');
-  row.style.display = row.style.display==='none' ? 'block' : 'none';
-  if(row.style.display==='block') document.getElementById('nr-adjust-inp').focus();
+// "Validar advertencias" — investigación dirigida a resolver las dudas puntuales del informe (no repite la investigación completa, no reescribe a ciegas)
+async function validateNicheWarnings(){
+  if(!S.nicheReport){ alert('Genera primero el informe.'); return; }
+  var advertencias=(S.nicheReport.evidenciaDemanda&&S.nicheReport.evidenciaDemanda.advertencias)||[];
+  if(!advertencias.length){ alert('El informe no tiene advertencias que validar — puedes aprobarlo directamente.'); return; }
+  var btn=document.getElementById('nr-validate-btn');
+  btn.disabled=true; btn.textContent='🔍 Investigando...';
+  var panel=document.getElementById('nr-validation');
+  panel.style.display='block';
+  panel.innerHTML='<div style="text-align:center;padding:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;"><div class="spinner"></div><div style="font-size:13px;color:var(--text);margin-top:10px;font-weight:600;">Investigando cada advertencia con búsquedas dirigidas... ~40 segundos</div></div>';
+  try{
+    var o=S.selOpp;
+    var r=await fetch('/api/validate-niche',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({report:S.nicheReport, opportunity:o,
+        country:(o&&(o.pais||o.country))||S.country, language:(o&&(o.idioma||o.language))||S.lang})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'Error validando el informe');
+    S.nicheValidation=d.validation;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    renderNicheValidation(d.validation);
+  }catch(e){
+    panel.innerHTML='<div style="background:rgba(225,112,85,0.1);border:1px solid #e17055;border-radius:10px;padding:12px;font-size:13px;color:#e17055;">⚠️ '+_escHtml(e.message)+'</div>';
+  }finally{
+    btn.disabled=false; btn.textContent='🔍 Validar advertencias';
+  }
 }
 
-async function applyNicheAdjust(){
-  var inp=document.getElementById('nr-adjust-inp');
-  var instruction=(inp.value||'').trim();
-  if(!instruction){ alert('Escribe qué quieres ajustar del informe.'); return; }
-  if(!S.nicheReport){ alert('Genera primero el informe.'); return; }
-  S.nicheReportApproved=false;
-  document.getElementById('btn-draft').disabled=true;
-  document.getElementById('nr-approved-badge').style.display='none';
-  document.getElementById('nr-content').style.display='none';
-  document.getElementById('nr-actions').style.display='none';
-  document.getElementById('nr-loading').style.display='block';
-  try{
-    var r=await fetch('/api/niche-report',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({opportunity:S.selOpp, revision:instruction, previousReport:S.nicheReport,
-        country:(S.selOpp&&(S.selOpp.pais||S.selOpp.country))||S.country, language:(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||S.lang})});
-    var d=await r.json();
-    if(!d.success) throw new Error(d.error||'Error ajustando el informe');
-    S.nicheReport=d.report;
-    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-    inp.value='';
-    document.getElementById('nr-loading').style.display='none';
-    document.getElementById('nr-adjust-row').style.display='none';
-    renderNicheReport(d.report);
-  }catch(e){
-    document.getElementById('nr-loading').style.display='none';
-    document.getElementById('nr-content').style.display='block';
-    document.getElementById('nr-actions').style.display='block';
-    alert('Error: '+e.message);
-  }
+function renderNicheValidation(v){
+  var panel=document.getElementById('nr-validation');
+  var esc=function(s){ return _escHtml(String(s||'')); };
+  var isCrear=(v.veredictoFinal||'').toUpperCase().trim()==='CREAR';
+  var vc=isCrear?'#00b894':'#e17055';
+  var confLbl={alta:'Confianza alta',media:'Confianza media',baja:'Confianza baja'}[(v.confianza||'').toLowerCase()]||'';
+  var rows=(v.resolucionAdvertencias||[]).map(function(a){
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'+
+      '<div style="font-size:12px;color:var(--text);"><b>'+(a.resuelta?'✅':'❌')+' '+esc(a.advertencia)+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text2);margin-top:2px;">'+esc(a.queSeEncontro)+'</div></div>';
+  }).join('');
+  var recs=(v.recomendaciones&&v.recomendaciones.length)?
+    '<div style="margin-top:10px;"><b style="font-size:12px;color:var(--text);">Recomendaciones:</b><ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2);">'+
+    v.recomendaciones.map(function(x){return '<li style="margin-bottom:4px;">'+esc(x)+'</li>';}).join('')+'</ul></div>' : '';
+  panel.innerHTML=
+    '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">'+
+        '<div style="font-size:15px;font-weight:800;color:'+vc+';">🔍 Validación final — '+esc(v.veredictoFinal||'—')+'</div>'+
+        (confLbl?'<span style="font-size:11px;color:var(--muted);">'+confLbl+'</span>':'')+
+      '</div>'+
+      '<div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:10px;">'+esc(v.justificacion)+'</div>'+
+      rows+recs+
+    '</div>';
 }
 
 // Resumen compacto del informe para inyectarlo en la generación del ebook
@@ -4009,6 +4022,7 @@ function saveFullDataToHist(histId){
     if(S.selOpp) S.history[idx].selOpp=S.selOpp;
     if(S.nicheReport) S.history[idx].nicheReport=S.nicheReport;
     if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
+    if(S.nicheValidation) S.history[idx].nicheValidation=S.nicheValidation;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -6696,6 +6710,7 @@ function loadHistData(e){
   // Restaurar informe de nicho; entradas antiguas (con ebook ya generado, sin informe) quedan desbloqueadas
   S.nicheReport = e.nicheReport || null;
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
+  S.nicheValidation = e.nicheValidation || null;
   S._nicheReportOppIdx = null;
   _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
