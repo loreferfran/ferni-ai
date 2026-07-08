@@ -1807,9 +1807,12 @@ function renderNicheReport(r){
   function esc(s){ return _escHtml(String(s||'')); }
   function list(arr){ return (arr||[]).map(function(x){ return '<li style="margin-bottom:4px;">'+esc(x)+'</li>'; }).join(''); }
   function sec(title,body){ return '<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">'+title+'</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+body+'</div></div>'; }
-  var icp=r.icp||{}, evd=r.evidenciaDemanda||{}, mp=r.microProblema||{}, pr=r.productoRecomendado||{}, hv=r.hojaVenta||{}, jq=r.jerarquiaNicho||{};
+  var icp=r.icp||{}, evd=r.evidenciaDemanda||{}, mp=r.microProblema||{}, pr=r.productoRecomendado||{}, hv=r.hojaVenta||{}, jq=r.jerarquiaNicho||{}, ac=r.analisisCompetencia||null;
   var prodRows=(evd.productosExistentes||[]).map(function(p){
     return '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.nombre)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.plataforma)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">'+esc(p.precio)+'</td></tr>';
+  }).join('');
+  var compRows=(ac&&ac.competidoresTop||[]).map(function(c){
+    return '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(c.nombre)+' <span style="color:var(--muted);">('+esc(c.plataforma)+')</span></td><td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">'+esc(c.precio)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);color:#e17055;">'+esc(c.debilidad)+'</td></tr>';
   }).join('');
   document.getElementById('nr-content').innerHTML=
     '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;">'+
@@ -1847,6 +1850,12 @@ function renderNicheReport(r){
         '<br><b>Urgencia:</b> '+esc(evd.urgencia)+
         (evd.senalesPago&&evd.senalesPago.length?'<br><b>Señales de pago:</b><ul style="margin:4px 0 0;padding-left:18px;">'+list(evd.senalesPago)+'</ul>':'')+
         (evd.advertencias&&evd.advertencias.length?'<div style="background:rgba(253,203,110,0.1);border:1px solid rgba(253,203,110,0.4);border-radius:8px;padding:8px 12px;margin-top:8px;"><b style="color:#b8860b;">⚠ Advertencias:</b><ul style="margin:4px 0 0;padding-left:18px;">'+list(evd.advertencias)+'</ul></div>':''))+
+      (ac?sec('⚔️ Análisis de competencia — cómo ganamos',
+        (compRows?'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;"><tr><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;">COMPETIDOR</th><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;">PRECIO</th><th style="text-align:left;padding:5px 8px;color:var(--muted);font-size:10px;">SU DEBILIDAD</th></tr>'+compRows+'</table>':'')+
+        '<b>Lo que todos hacen:</b> '+esc(ac.loQueTodosHacen)+
+        '<br><b>Lo que nadie hace:</b> '+esc(ac.loQueNadieHace)+
+        ((ac.planDiferenciacion&&ac.planDiferenciacion.length)?'<br><b>Plan de diferenciación:</b><ol style="margin:4px 0 0;padding-left:20px;">'+ac.planDiferenciacion.map(function(x){return '<li style="margin-bottom:4px;">'+esc(x)+'</li>';}).join('')+'</ol>':'')+
+        '<div style="margin-top:8px;padding:8px 12px;border-left:3px solid var(--accent);background:rgba(108,92,231,0.06);font-weight:700;color:var(--text);">🎯 '+esc(ac.posicionamiento)+'</div>'):'')+
       sec('🕵️ Validación manual en Meta Ads', esc(r.validacionManualMeta))+
       sec('📦 Producto recomendado',
         '<b>'+esc(pr.titulo)+'</b> ('+esc(pr.tipo)+')<br>'+esc(pr.promesa)+
@@ -1935,6 +1944,10 @@ function _nicheReportSummary(){
   if(r.microProblema&&r.microProblema.descripcion) parts.push('MICRO-PROBLEMA: '+r.microProblema.descripcion);
   if(r.icp) parts.push('ICP: '+(r.icp.demografia||'')+' | Resultado deseado: '+(r.icp.resultadoDeseado||'')+' | Objeciones: '+((r.icp.objeciones||[]).join('; ')));
   if(r.productoRecomendado&&r.productoRecomendado.promesa) parts.push('PROMESA: '+r.productoRecomendado.promesa);
+  if(r.analisisCompetencia){
+    if(r.analisisCompetencia.posicionamiento) parts.push('POSICIONAMIENTO: '+r.analisisCompetencia.posicionamiento);
+    if((r.analisisCompetencia.planDiferenciacion||[]).length) parts.push('DIFERENCIACIÓN OBLIGATORIA (el contenido debe ejecutar esto): '+r.analisisCompetencia.planDiferenciacion.join('; '));
+  }
   return parts.join('\n');
 }
 
@@ -2449,6 +2462,7 @@ function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
   if(video) L.push('Video promocional embebido en el hero: '+video);
   if(dolor){ L.push(''); L.push('=== PROBLEMA ==='); L.push(dolor+(causaRaiz?(' '+causaRaiz):'')); }
   if(solucion||descripcionVenta){ L.push(''); L.push('=== SOLUCIÓN ==='); if(solucion) L.push(solucion); if(descripcionVenta) L.push(descripcionVenta); }
+  if(nr&&nr.analisisCompetencia){ L.push(''); L.push('=== POSICIONAMIENTO vs COMPETENCIA ==='); L.push(nr.analisisCompetencia.posicionamiento||''); if(nr.analisisCompetencia.loQueNadieHace) L.push('Somos los únicos que cubrimos: '+nr.analisisCompetencia.loQueNadieHace); }
   L.push('');
   L.push('=== QUÉ INCLUYE ===');
   incluye.forEach(function(i){ L.push('- '+i); });

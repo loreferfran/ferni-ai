@@ -1053,6 +1053,13 @@ app.post('/api/niche-report', async function(req, res) {
       senalesPago: ['señales concretas de disposición a pagar detectadas en los datos'],
       advertencias: ['riesgos o señales débiles a vigilar — sé honesto']
     },
+    analisisCompetencia: {
+      competidoresTop: [{ nombre: '', plataforma: '', precio: '', fortaleza: 'máx 15 palabras', debilidad: 'el flanco explotable — máx 15 palabras' }],
+      loQueTodosHacen: 'el ángulo comoditizado que comparten los competidores detectados (máx 30 palabras)',
+      loQueNadieHace: 'el hueco desatendido según la evidencia (máx 30 palabras)',
+      planDiferenciacion: ['3-5 acciones concretas: qué hará ESTE producto distinto en título/ángulo/contenido/formato/precio para superar a los competidores (máx 25 palabras c/u)'],
+      posicionamiento: 'una frase con la forma: el único producto que ___ para ___ (máx 20 palabras)'
+    },
     validacionManualMeta: 'instrucción concreta: qué keyword buscar en facebook.com/ads/library para ' + countryName + ' y cómo leer el resultado con la rúbrica 0-15 débil / 16-30 precaución / 31-90 oferta validada / 91+ escalada',
     productoRecomendado: { tipo: 'ebook | ebook+extras | app standalone', titulo: '', promesa: '', precioSugerido: 'en ' + regs.currency, extras: ['qué bonus/app/skill acompañan mejor este producto'] },
     hojaVenta: { headline: 'promesa PTE: Problema + Temporal + Específica', subheadline: '', bullets: ['3-5 bullets de beneficio concreto'], descripcionVenta: 'texto de venta de 150-200 palabras listo para usar en cualquier plataforma' }
@@ -1073,6 +1080,11 @@ app.post('/api/niche-report', async function(req, res) {
     '\n- Si extrapolas algo, márcalo con [Estimación].' +
     '\n- PROHIBIDO inventar porcentajes de probabilidad de venta. La probabilidad se argumenta con la proporción búsquedas/población + señales de pago, nunca con un número inventado.' +
     '\n- El veredicto debe ser honesto: si la evidencia es débil di VALIDAR o DESCARTAR. Un informe que siempre dice CREAR no sirve para decidir.' +
+    '\n\nANÁLISIS DE COMPETENCIA (campo analisisCompetencia):' +
+    '\n- competidoresTop: máximo 4, SOLO productos presentes en los DATOS DE EVIDENCIA. Si no se detectó competencia, deja el array vacío y dilo en loQueNadieHace.' +
+    '\n- La debilidad de cada competidor debe ser un flanco explotable REAL deducible de su título/precio/plataforma (ej: "solo teoría, sin plan diario", "precio alto sin extras", "en inglés para mercado alemán") — nunca inventada.' +
+    '\n- planDiferenciacion: acciones EJECUTABLES dentro del contenido y marketing de este producto. PROHIBIDO lo vago ("ser mejor", "más calidad"). Cada acción responde: ¿qué hacemos nosotros que ellos no?' +
+    '\n- posicionamiento: la frase que un comprador repetiría para justificar elegirnos.' +
     '\n\nPROFUNDIDAD OBLIGATORIA: baja del nicho amplio al micro-problema específico más prometedor según los datos (ejemplo del estándar esperado: no "autos en Francia" sino "cómo reparar la guantera del Hyundai Sedán 2023").' +
     '\n\nCONCISIÓN OBLIGATORIA (crítico — si el JSON se corta, el informe se pierde):' +
     '\n- Ningún campo de texto supera 50 palabras, salvo descripcionVenta (máx 110 palabras) y veredictoJustificacion (máx 70 palabras).' +
@@ -1086,7 +1098,7 @@ app.post('/api/niche-report', async function(req, res) {
       var revMsg = 'INFORME ACTUAL:\n' + JSON.stringify(previousReport) +
         '\n\nAJUSTE PEDIDO POR LA USUARIA (aplícalo manteniendo estructura, rigor y reglas anti-alucinación):\n' + revision +
         '\n\nDevuelve el informe completo ajustado. Solo JSON.';
-      var revTxt = await claudeCall(sys, revMsg, 5000);
+      var revTxt = await claudeCall(sys, revMsg, 6000);
       return res.json({ success: true, report: extractJSON(revTxt) });
     }
 
@@ -1136,7 +1148,7 @@ app.post('/api/niche-report', async function(req, res) {
       '\n\nDATOS DE EVIDENCIA (única fuente válida para citar productos, precios y volúmenes):\n' + evidence +
       '\n\nGenera el informe de nicho completo.';
 
-    var txt = await claudeCall(sys, userMsg, 5000);
+    var txt = await claudeCall(sys, userMsg, 6000);
     res.json({ success: true, report: extractJSON(txt) });
   } catch (e) {
     console.error('niche-report error:', e.message);
