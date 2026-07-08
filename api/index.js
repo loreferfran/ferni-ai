@@ -661,11 +661,27 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
       '\nEjemplo: si el usuario pidio salud → fibromialgia → dolores/tratamiento, las oportunidades deben tratar sobre dolores y tratamiento de fibromialgia especificamente, no sobre "salud" ni sobre fibromialgia en general.';
   }
 
+  var consolidationBlock = '';
+  if (subNiche || microNiche) {
+    consolidationBlock = '\n\n=== OPORTUNIDAD CONSOLIDADA (elemento 0 del array — OBLIGATORIO evaluar) ===' +
+      '\nCuando el usuario acota con sub-nicho/micro-tema, es habitual que las 10 oportunidades resulten ser el MISMO producto fragmentado por sintoma o aspecto (ej: menopausia sin hormonas → 10 tarjetas: sofocos, insomnio, ansiedad...). La gente BUSCA por sintoma, pero COMPRA el producto que resuelve el conjunto.' +
+      '\nREGLA: si 3 o mas de tus oportunidades comparten el mismo problema raiz Y el mismo demografico (variando solo el sintoma/aspecto), genera ADEMAS un elemento extra AL INICIO del array (posicion 0) con "esConsolidada":true que represente EL PRODUCTO GANADOR UNICO que cubre los 3-5 sintomas/dolores MAS RECURRENTES de ese grupo (los de mayor volumen y score — el mayor dolor combinado).' +
+      '\nEl elemento consolidado lleva TODOS los campos obligatorios de una oportunidad normal (mismo schema), Y ADEMAS:' +
+      '\n- "esConsolidada": true' +
+      '\n- "sintomasCubiertos": array con los 3-5 sintomas/dolores que cubre (los mas buscados del grupo)' +
+      '\n- "volumenCombinado": suma de volumenEstimado de las oportunidades que agrupa' +
+      '\n- "oportunidadesFuente": array con los campos "problema" de las oportunidades agrupadas' +
+      '\nSu "problema" es el problema paraguas (ej: "Manejo integral no hormonal de los sintomas de la menopausia"). Su "tituloEbook" es el titulo del producto multi-sintoma ganador (ej: "Menopausia sin hormonas: el plan integral contra sofocos, insomnio y ansiedad"). Su "promesaEbook" promete resolver el CONJUNTO. Su "scoreMonetizacion" refleja la demanda combinada (puede superar el score de cualquier tarjeta individual, maximo 100). Sus "clusterKeywords" son la union de las mejores keywords del grupo.' +
+      '\nSi NO existe ese patron (las oportunidades son genuinamente distintas), NO generes el elemento consolidado — devuelve solo las 10 normales.' +
+      '\nLas 10 oportunidades individuales SIEMPRE se devuelven completas despues del consolidado (si existe): el array tiene 11 elementos con consolidado, 10 sin el.';
+  }
+
   const sys = 'Eres un sistema avanzado de inteligencia de mercado y analisis de demanda real. Tu mision: detectar oportunidades REALES de productos digitales basadas en comportamiento de busqueda humano.' +
     ' NO inventas ideas — solo detectas lo que la gente ya esta buscando, repitiendo, comprando y pagando.' +
     ' Pais objetivo: ' + country + ' (poblacion: ' + pop + '). Idioma de busqueda: ' + language + '.' +
     ' RESPONDE TODO EN ESPANOL excepto los campos que requieren el idioma local del pais.' +
     hierarchyBlock +
+    consolidationBlock +
 
     '\n\n=== PASO 1: CLUSTERING SEMANTICO (OBLIGATORIO) ===' +
     '\nAntes de analizar, AGRUPA las busquedas con intencion similar en clusters. Ejemplo:' +
@@ -736,11 +752,11 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
     '\n✓ Potencial de monetizacion realista en ' + country + ' al precio de mercado local' +
 
     '\n\n=== REGLAS DE INCLUSION ===' +
-    '\nSIEMPRE devuelve exactamente 10 oportunidades ordenadas por scoreMonetizacion descendente.' +
+    '\nSIEMPRE devuelve las 10 oportunidades individuales ordenadas por scoreMonetizacion descendente (mas el elemento consolidado en posicion 0 si aplica, ver bloque OPORTUNIDAD CONSOLIDADA).' +
     ' Refleja la diferencia de calidad de señal en el score: señal fuerte = score alto, señal debil = score bajo.' +
     ' Si los datos son escasos, extrapola razonablemente con patrones de mercados similares e indicalo en porQueEstaOportunidad.' +
 
-    '\n\nDevuelve SOLO JSON array con 10 oportunidades. NINGUN texto fuera del JSON.' +
+    '\n\nDevuelve SOLO el JSON array (10 oportunidades, u 11 si generaste el elemento consolidado en posicion 0), sin texto fuera del JSON.' +
     ' scoreMonetizacion = viralidad(0-25) + repeticion-multifuente(0-25) + intencion-pago(0-25) + oportunidad-nicho(0-25).' +
     '\n\nCampos obligatorios por oportunidad:' +
     ' problema, problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como busca la gente real),' +
@@ -1081,6 +1097,10 @@ app.post('/api/niche-report', async function(req, res) {
     '\nBaja SIEMPRE en 3 niveles hasta el producto: NICHO amplio → SUB-NICHO con más demanda → MICRO-NICHO ganador → PRODUCTO IDEAL.' +
     '\nEjemplo del estándar: menopausia → malestares de la menopausia → cómo controlarlos sin hormonas → guía práctica de manejo natural de síntomas.' +
     '\nCada nivel del descenso debe justificarse con señales concretas de los datos (búsquedas, productos, preguntas de la gente) — no con intuición.' +
+    '\n\nOPORTUNIDAD CONSOLIDADA (si esConsolidada=true en la oportunidad):' +
+    '\n- El producto ideal DEBE cubrir TODOS los sintomasCubiertos como un sistema/metodo unico (ej: un plan integral por fases), no como capitulos sueltos.' +
+    '\n- productoRecomendado.titulo y hojaVenta.headline deben nombrar los 2-3 dolores principales del conjunto.' +
+    '\n- Usa volumenCombinado como la señal de demanda del micro-nicho (es la suma real de los sintomas agrupados).' +
     '\n\nREGLAS ANTI-ALUCINACION (críticas, sin excepciones):' +
     '\n- SOLO cita productos, precios y datos que aparezcan en los DATOS DE EVIDENCIA recibidos. Si no se detectaron productos, dilo honestamente en advertencias — NO inventes competidores.' +
     '\n- Si extrapolas algo, márcalo con [Estimación].' +
@@ -1150,7 +1170,8 @@ app.post('/api/niche-report', async function(req, res) {
       emocion: o.emocion || o.emotion || '', rangoEdad: o.rangoEdad || o.ageRange || '',
       genero: o.genero || o.gender || '', precioHotmart: o.precioHotmart || o.hotmartPrice || '',
       tipoCiclo: o.tipoCiclo || '', clusterKeywords: o.clusterKeywords || [],
-      porQueEstaOportunidad: o.porQueEstaOportunidad || ''
+      porQueEstaOportunidad: o.porQueEstaOportunidad || '',
+      esConsolidada: !!o.esConsolidada, sintomasCubiertos: o.sintomasCubiertos || [], volumenCombinado: o.volumenCombinado || ''
     };
 
     var userMsg = 'OPORTUNIDAD SELECCIONADA:\n' + JSON.stringify(oppSummary) +

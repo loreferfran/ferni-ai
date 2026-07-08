@@ -1685,14 +1685,40 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
   hide('sl'); show('sr');
   var nicheRoute=niche+(subNiche?' → '+subNiche:'')+(microNiche?' → '+microNiche:'');
   document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${nicheRoute} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
-  document.getElementById('sr-count').textContent=opps.length+' oportunidades';
-  const avg=Math.round(opps.reduce((a,b)=>a+(b.scoreMonetizacion||b.monetizationScore||0),0)/opps.length);
-  const hi=opps.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
+  var consIdx=opps.findIndex(function(o){ return o && o.esConsolidada; });
+  var regular=opps.filter(function(o){ return !(o && o.esConsolidada); });
+  document.getElementById('sr-count').textContent=regular.length+' oportunidades';
+  const avg=Math.round(regular.reduce((a,b)=>a+(b.scoreMonetizacion||b.monetizationScore||0),0)/(regular.length||1));
+  const hi=regular.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
   document.getElementById('sr-stats').innerHTML=`
-    <div class="stat"><div class="stat-n" style="color:#a29bfe">${opps.length}</div><div class="stat-l">Oportunidades</div></div>
+    <div class="stat"><div class="stat-n" style="color:#a29bfe">${regular.length}</div><div class="stat-l">Oportunidades</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--green)">${avg}</div><div class="stat-l">Score prom.</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--gold)">${hi}</div><div class="stat-l">Prioridad alta</div></div>`;
-  document.getElementById('sr-list').innerHTML=opps.map((o,i)=>{
+  var heroHtml='';
+  if(consIdx>-1){
+    var c=opps[consIdx];
+    var cs=c.scoreMonetizacion||c.monetizationScore||0;
+    heroHtml='<div class="opp-card" onclick="selOpp('+consIdx+')" id="oc'+consIdx+'" style="border:2px solid var(--accent);background:linear-gradient(135deg,rgba(108,92,231,0.08),rgba(0,184,148,0.05));">'+
+      '<div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--accent);margin-bottom:6px;">🎯 PRODUCTO GANADOR CONSOLIDADO — cubre los '+((c.sintomasCubiertos||[]).length)+' dolores más buscados</div>'+
+      '<div class="opp-top"><div><div class="opp-prob">'+(c.problema||'')+'</div>'+
+      (c.problemaEnIdioma?'<div style="font-size:11px;color:var(--teal);margin-top:3px;font-style:italic;">🌍 '+c.problemaEnIdioma+'</div>':'')+
+      '</div><div class="sbox sh"><div class="sn">'+cs+'</div><div class="sl2">SCORE</div></div></div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">'+
+        (c.sintomasCubiertos||[]).map(function(s){ return '<span class="pill" style="border-color:var(--accent);color:var(--accent);">'+s+'</span>'; }).join('')+
+      '</div>'+
+      '<div class="pills">'+
+        '<span class="pill">📍 '+(c.pais||c.country||'')+'</span>'+
+        '<span class="pill">👤 '+(c.rangoEdad||c.ageRange||'')+'</span>'+
+        '<span class="pill">📊 '+(c.volumenCombinado||c.volumenEstimado||'')+' búsq/mes combinadas</span>'+
+        '<span class="pill">🏷 '+(c.precioHotmart||c.hotmartPrice||'')+'</span>'+
+      '</div>'+
+      (c.porQueEstaOportunidad?'<div class="opp-why">🔍 '+c.porQueEstaOportunidad+'</div>':'')+
+      '<div class="opp-hint">💡 '+(c.tituloEbook||'')+'</div>'+
+      '<div style="margin-top:8px;font-size:12px;color:var(--muted);">Agrupa: '+((c.oportunidadesFuente||[]).join(' · ')||'—')+'</div>'+
+    '</div>';
+  }
+  document.getElementById('sr-list').innerHTML=heroHtml+opps.map((o,i)=>{
+    if(o && o.esConsolidada) return '';
     const s=o.scoreMonetizacion||o.monetizationScore||0; const sc=s>=80?'sh':s>=60?'sm':'sl'; const _p=o.prioridad||o.priorityLevel; const bc=_p==='ALTA'?'bg2':_p==='MEDIA'?'bgold':'bred';
     const dd=o.datosDetallados||{};
     return `<div class="opp-card" onclick="selOpp(${i})" id="oc${i}">
@@ -1733,7 +1759,12 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
       </div>
     </div>`;
   }).join('');
-  addMsg('chat-search',`✅ Encontré ${opps.length} oportunidades en ${country} — nicho ${nicheRoute}. Score máximo: ${Math.max(...opps.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
+  if(consIdx>-1){
+    var _c=opps[consIdx];
+    addMsg('chat-search',`🎯 Detecté que varias oportunidades son el MISMO producto fragmentado por síntoma — te propuse arriba el producto consolidado que cubre los ${(_c.sintomasCubiertos||[]).length} dolores más buscados (${_c.volumenCombinado||_c.volumenEstimado||''} búsquedas/mes combinadas). Puedes seleccionarlo o elegir una individual.`,'ferni');
+  } else {
+    addMsg('chat-search',`✅ Encontré ${regular.length} oportunidades en ${country} — nicho ${nicheRoute}. Score máximo: ${Math.max(...regular.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
+  }
 }
 
 function selOpp(i){
