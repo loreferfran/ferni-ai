@@ -471,6 +471,12 @@ select option { background: #ffffff; color: #232336; }
               <button onclick="approveEbook()" style="padding:9px 22px;border-radius:8px;border:none;background:linear-gradient(135deg,#00b894,#00cec9);color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">✅ APROBAR y traducir</button>
             </div>
 
+            <!-- CTA solo para ebooks de Importar/Directo — Analizar ya tiene su propio camino a la Línea de producción vía el informe de nicho -->
+            <div id="eb-pipeline-cta" style="display:none;background:rgba(0,184,148,0.08);border:1px solid #00b894;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+              <div style="font-size:13px;color:var(--text);margin-bottom:8px;">🏭 Genera bonus, app, skill y kit de Meta Ads para este ebook en un clic.</div>
+              <button class="btn btn-p" onclick="goToPipelineFromEbook()">🏭 Continuar en la Línea de producción</button>
+            </div>
+
             <!-- Panel de imágenes -->
             <div id="img-panel" style="background:rgba(108,92,231,0.08);border:1px solid rgba(108,92,231,0.3);border-radius:10px;padding:14px;margin-bottom:12px;">
               <div style="font-weight:700;color:var(--accent);margin-bottom:10px;">🖼️ Imágenes del PDF</div>
@@ -546,6 +552,7 @@ select option { background: #ffffff; color: #232336; }
                 <button class="btn btn-s" onclick="showTab('meta',document.querySelectorAll('.tab')[3])">→ Ver Meta Ads</button>
                 <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
                 <button class="btn btn-s" style="font-size:13px;background:rgba(0,120,0,0.15);border-color:rgba(0,180,0,0.4);color:#00b894;" onclick="downloadCoverComposed()">🖼️ Descargar portada</button>
+                <button class="btn btn-p" id="eb-approved-pipeline-btn" style="display:none;" onclick="goToPipelineFromEbook()">🏭 Continuar en la Línea de producción</button>
               </div>
 
             <!-- Panel corrección por capítulo en vista final -->
@@ -1245,7 +1252,7 @@ select option { background: #ffffff; color: #232336; }
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
               <button onclick="downloadImpPDF()" class="btn btn-p" style="font-size:14px;padding:11px 22px;">📄 Descargar PDF</button>
               <button onclick="dlEpubImport()" class="btn btn-gold" style="font-size:13px;padding:11px 18px;">📖 EPUB (Amazon KDP)</button>
-              <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Ir a Hotmart, Meta Ads y Bonus Pack">📊 Hotmart / Meta / Bonus</button>
+              <button onclick="sendToEbook()" class="btn btn-teal" style="font-size:13px;padding:11px 16px;" title="Generar bonus, app, skill y kit de Meta Ads en un clic">🏭 Continuar en la Línea de producción</button>
               <button onclick="toggleImpTranslate()" id="imp-translate-btn" class="btn" style="font-size:13px;padding:11px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);">🌐 Traducir</button>
             </div>
 
@@ -1322,7 +1329,7 @@ select option { background: #ffffff; color: #232336; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null, extrasMarketing:null };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null, extrasMarketing:null, pipelineSource:'analysis' };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 // Firma de identidad de una oportunidad — el ebook en memoria solo se reutiliza si su firma coincide con la oportunidad seleccionada
 function _oppSig(o){ if(!o) return null; return (((o.problema||o.problem||'')+'|'+(o.tituloEbook||o.ebookTitle||'')).toLowerCase().trim()) || null; }
@@ -1472,6 +1479,7 @@ function restoreEbookTab(){
     hide('eb-loading'); hide('eb-content'); hide('eb-approved'); show('eb-empty');
     if(_chatEb) _chatEb.style.display = '';
   }
+  _syncEbookPipelineCTA();
 }
 function restoreTranslateTab(){
   if(S.ebookData){
@@ -1510,7 +1518,7 @@ function pickChip(n,el){
   inp.focus();
 }
 function setFmt(f,el){ S.fmt=f; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
-function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; S.nicheReport=null; S.nicheReportApproved=false; S._nicheReportOppIdx=null; _resetNrUI(); _pipeReset(); document.getElementById('btn-draft').disabled=true; document.getElementById('btn-report').disabled=true; }
+function resetSearch(){ show('sw'); hide('sl'); hide('sr'); S.selOpp=null; S.nicheReport=null; S.nicheReportApproved=false; S._nicheReportOppIdx=null; S.pipelineSource='analysis'; _resetNrUI(); _pipeReset(); document.getElementById('btn-draft').disabled=true; document.getElementById('btn-report').disabled=true; }
 function openFullPreview(){
   var html = S.pdfHtml;
   if(!html){ alert('Genera el borrador primero'); return; }
@@ -1668,6 +1676,7 @@ function selOpp(i){
   document.querySelectorAll('.opp-card').forEach(c=>c.classList.remove('sel'));
   document.getElementById('oc'+i).classList.add('sel');
   S.selOpp=S.results[i];
+  S.pipelineSource='analysis';
   // Checkpoint: al cambiar de oportunidad se invalida el informe anterior
   if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; _resetNrUI(); _pipeReset(); }
   S._nicheReportOppIdx = i;
@@ -1969,7 +1978,7 @@ async function startPipeline(){
   if(PIPE.running){ alert('El pipeline ya está corriendo.'); return; }
   var o=S.selOpp;
   if(!o){ alert('Selecciona una oportunidad primero.'); return; }
-  if(!S.nicheReportApproved){ alert('Aprueba primero el informe de nicho.'); return; }
+  if(!S.nicheReportApproved && S.pipelineSource==='analysis'){ alert('Aprueba primero el informe de nicho.'); return; }
   var cfg={
     bonus: !!(document.getElementById('pipe-ck-bonus')||{}).checked,
     app:   !!(document.getElementById('pipe-ck-app')||{}).checked,
@@ -2669,6 +2678,8 @@ async function generateDirectEbook(){
 
     var opp = d.opportunity;
     opp.targetMarket = market; // para que approveEbook() use el mercado correcto
+    opp.pais = opp.pais || opp.country || country; // asegurar país para prellenar Mercado en la Línea de producción
+    S.pipelineSource = 'direct';
     S.ebookSerperContext = d.serperContext || ''; // datos reales de web para enriquecer capítulos
     // Guardar en historial como nueva entrada
     var histId = 'dir_' + Date.now();
@@ -2690,7 +2701,7 @@ async function generateDirectEbook(){
       time: new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
       count: 1,
       topScore: opp.scoreMonetizacion || opp.monetizationScore || 0,
-      opp: opp, opps: [opp], selOpp: opp
+      opp: opp, opps: [opp], selOpp: opp, pipelineSource: 'direct'
     };
     S.history.unshift(entry);
     try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', histId); }catch(e){}
@@ -3411,7 +3422,7 @@ function _registerImportedEbook(){
   });
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
-  S.selOpp = opp; S.ebookData = ebookData; S.ebookOppSig = _oppSig(opp); S.ebookLang = _impMeta.lang; S.lang = _impMeta.lang; S.country = _impMeta.market;
+  S.selOpp = opp; S.ebookData = ebookData; S.ebookOppSig = _oppSig(opp); S.ebookLang = _impMeta.lang; S.lang = _impMeta.lang; S.country = _impMeta.market; S.pipelineSource = 'import';
   S.hmKit = null; S.maKit = null; S.coverUrl = null;
   S.numChapters = chs.length;
   S.chapterImages = new Array(chs.length).fill(null);
@@ -3430,8 +3441,28 @@ function _registerImportedEbook(){
 function sendToEbook(){
   _registerImportedEbook();
   if(!S.selOpp) return;
-  var hmTab = document.querySelector('.tab[onclick*="hotmart"]');
-  showTab('hotmart', hmTab);
+  goToPipelineFromEbook();
+}
+
+// Lleva a la Línea de producción con la oportunidad/ebook actual ya cargado — usado por Importar y Directo,
+// que no pasan por Analizar→Informe de nicho y por eso no tienen ese checkpoint (ver S.pipelineSource en startPipeline)
+// Muestra/oculta el CTA "Continuar en la Línea de producción" en la tab Ebook — solo aplica a Importar/Directo,
+// que no pasan por Analizar→Informe de nicho (ese flujo ya llega solo a la Línea de producción al aprobar el informe)
+function _syncEbookPipelineCTA(){
+  var showCta = !!S.pipelineSource && S.pipelineSource !== 'analysis';
+  var cta1 = document.getElementById('eb-pipeline-cta'); if(cta1) cta1.style.display = showCta ? 'block' : 'none';
+  var cta2 = document.getElementById('eb-approved-pipeline-btn'); if(cta2) cta2.style.display = showCta ? '' : 'none';
+}
+
+function goToPipelineFromEbook(){
+  var mainTab = document.querySelector('.tab[onclick*="showTab(\'search\'"]') || document.querySelectorAll('.tab')[0];
+  showTab('search', mainTab);
+  _pipeShowConfig();
+  _wizSet(3);
+  setTimeout(function(){
+    var box = document.getElementById('pipe-box');
+    if(box) box.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
 }
 
 function toggleImpTranslate(){
@@ -3669,6 +3700,7 @@ async function runEbookSteps(startFrom){
     var preview = document.getElementById('eb-draft-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
     renderImgSlots(ebook);
+    _syncEbookPipelineCTA();
     addMsg('chat-ebook','📄 PDF listo en '+language+' — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista presiona ✅ APROBAR.','ferni');
     // CAPA 3: verificación automática de hechos antes de que el usuario pueda aprobar
     runVerification(ebook, S.ebookIsModule1);
@@ -4075,6 +4107,7 @@ function saveFullDataToHist(histId){
     if(S.nicheReport) S.history[idx].nicheReport=S.nicheReport;
     if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
     if(S.nicheValidation) S.history[idx].nicheValidation=S.nicheValidation;
+    if(S.pipelineSource) S.history[idx].pipelineSource=S.pipelineSource;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -4125,6 +4158,7 @@ async function approveEbook(){
     var badgeDirect=document.getElementById('eb-approved-badge'); if(badgeDirect) badgeDirect.textContent='✓ '+lang;
     var previewDirect=document.getElementById('eb-final-preview'); if(previewDirect) previewDirect.srcdoc=S.pdfHtml;
     try{ rebuildRewriteBtns((S.finalEbook.chapters||[]).length); }catch(e){}
+    _syncEbookPipelineCTA();
     return;
   }
 
@@ -4241,6 +4275,7 @@ async function approveEbook(){
     var preview = document.getElementById('eb-final-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
     rebuildRewriteBtns(translated.chapters ? translated.chapters.length : 7);
+    _syncEbookPipelineCTA();
     addMsg('chat-ebook', '✅ PDF traducido al ' + lang + ' y listo para descargar.', 'ferni');
 
   } catch(e) {
@@ -6779,6 +6814,7 @@ function loadHistData(e){
   S.nicheReport = e.nicheReport || null;
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
   S.nicheValidation = e.nicheValidation || null;
+  S.pipelineSource = e.pipelineSource || 'analysis';
   S._nicheReportOppIdx = null;
   _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
@@ -6851,6 +6887,7 @@ initKeys();
         S.pdfHtml = buildFinalPdfHtml(eb, o, lang, lang, S.coverUrl, S.chapterImages||[]);
         var prev = document.getElementById('eb-final-preview');
         if(prev) prev.srcdoc = S.pdfHtml;
+        _syncEbookPipelineCTA();
       }, 200);
     });
   } else if(last.ebook){
@@ -6860,6 +6897,7 @@ initKeys();
       setTimeout(function(){
         hide('eb-empty'); hide('eb-loading'); hide('eb-approved'); show('eb-content');
         renderDraft(S.selOpp||last.opps[0], last.ebook);
+        _syncEbookPipelineCTA();
       }, 200);
     });
   }
