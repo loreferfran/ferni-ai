@@ -3,6 +3,8 @@
 function escH(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 var MOD_META = {
+  hoy:        { icon: '📆', es:'Hoy',       en:'Today',   pt:'Hoje',      fr:'Aujourd\'hui', de:'Heute',  it:'Oggi',      nl:'Vandaag',      pl:'Dziś',        sv:'Idag'      },
+  registro:   { icon: '📈', es:'Registro',  en:'Log',     pt:'Registro',  fr:'Journal',      de:'Verlauf', it:'Registro',  nl:'Logboek',      pl:'Dziennik',    sv:'Logg'      },
   dashboard:  { icon: '🏠', es:'Inicio',    en:'Home',    pt:'Início',    fr:'Accueil',   de:'Start',     it:'Inizio',    nl:'Home',         pl:'Start',       sv:'Hem'       },
   checklist:  { icon: '✅', es:'Pasos',     en:'Steps',   pt:'Etapas',    fr:'Étapes',    de:'Schritte',  it:'Passi',     nl:'Stappen',      pl:'Kroki',       sv:'Steg'      },
   simulator:  { icon: '📊', es:'Simular',   en:'Score',   pt:'Simular',   fr:'Score',     de:'Score',     it:'Punteggio', nl:'Score',        pl:'Wynik',       sv:'Poäng'     },
@@ -24,10 +26,11 @@ function buildPremiumApp(data, year) {
   var title  = data.appTitle   || 'Mi App';
   var tagline= data.appTagline || '';
 
-  // Normalize module list
-  var mods = (data.modules||[]).filter(function(m){ return !!data[m]; });
-  if(mods.indexOf('dashboard')===-1) mods.unshift('dashboard');
-  if(data.logros && mods.indexOf('logros')===-1) mods.push('logros');
+  // Normalize module list — orden fijo: dashboard, hoy (si existe ciclo diario), el resto, registro, logros
+  var mods = (data.modules||[]).filter(function(m){ return !!data[m] && m!=='hoy' && m!=='registro' && m!=='dashboard' && m!=='logros'; });
+  mods.unshift('dashboard');
+  if(data.hoy){ mods.splice(1,0,'hoy'); mods.push('registro'); }
+  if(data.logros) mods.push('logros');
 
   // ── CSS ───────────────────────────────────────────────────────────────────
   var css =
@@ -187,6 +190,30 @@ function buildPremiumApp(data, year) {
     '.btn-p{background:var(--a);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px 24px;cursor:pointer;font-family:inherit;width:100%;margin-top:12px;transition:opacity .2s}\n' +
     '.btn-p:hover{opacity:.85}\n' +
     '.slbl{font-size:10px;letter-spacing:3px;color:var(--mu);text-transform:uppercase;font-weight:600;margin:18px 0 9px}\n' +
+    /* Hoy (ciclo diario) */
+    '.hmetric{margin-bottom:16px}\n' +
+    '.hmhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}\n' +
+    '.hmlbl{font-size:13px;font-weight:600;color:var(--t)}\n' +
+    '.hmval{font-size:15px;font-weight:700;color:var(--a)}\n' +
+    '.haction{background:rgba(0,184,148,.1);border:1px solid rgba(0,184,148,.3);border-left:4px solid var(--green);border-radius:10px;padding:14px;margin-bottom:12px}\n' +
+    '.halbl{font-size:10px;color:var(--green);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px}\n' +
+    '.hatxt{font-size:14px;color:var(--t);line-height:1.6;margin-bottom:10px}\n' +
+    '.hadone-btn{background:transparent;border:1.5px solid var(--green);color:var(--green);border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}\n' +
+    '.hadone-btn.done{background:var(--green);color:#fff}\n' +
+    '.htip{background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:14px}\n' +
+    '.htlbl{font-size:10px;color:var(--a);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}\n' +
+    '.httxt{font-size:13px;color:var(--t2);line-height:1.5}\n' +
+    /* Registro */
+    '.regstreak{display:flex;gap:14px;margin-bottom:14px}\n' +
+    '.regsbox{flex:1;background:var(--bg2);border:1px solid var(--bdr);border-radius:12px;padding:14px;text-align:center}\n' +
+    '.regsnum{font-size:26px;font-weight:700;color:var(--a)}\n' +
+    '.regslbl{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}\n' +
+    '.regchart{margin-bottom:16px}\n' +
+    '.regmname{font-size:12px;font-weight:600;color:var(--t);margin-bottom:6px}\n' +
+    '.regbars{display:flex;align-items:flex-end;gap:3px;height:64px;margin-bottom:6px}\n' +
+    '.regbar{flex:1;background:rgba(255,255,255,.08);border-radius:3px 3px 0 0;min-height:2px;transition:height .3s}\n' +
+    '.regbar.today{background:var(--a)}\n' +
+    '.regsum{font-size:11px;color:var(--mu)}\n' +
     '</style>\n';
 
   // ── ONBOARDING ────────────────────────────────────────────────────────────
@@ -229,6 +256,7 @@ function buildPremiumApp(data, year) {
       '<div class="mhdr"><div class="mtitle">'+escH(dash.title||'Panel')+'</div><div class="msub" id="dash-sub"></div></div>'+
       '<div class="mbody">'+
         '<div class="dhero"><div class="dgr" id="dgr">'+escH((dash.greeting||'¡Hola, [name]! 👋'))+'</div><div class="dday" id="dday">Día 1</div></div>'+
+        (data.hoy ? '<div class="dstats" style="grid-template-columns:repeat(2,1fr);margin-bottom:10px;"><div class="dstat"><div class="dsnum" id="ds-streak">0</div><div class="dslbl">🔥 racha</div></div><div class="dstat"><div class="dsnum" id="ds-best">0</div><div class="dslbl">mejor racha</div></div></div>' : '')+
         '<div class="dpct" id="dpct">0%</div><div class="dpct-lbl">completado</div>'+
         '<div class="dbar"><div class="dfill" id="dfill" style="width:0%"></div></div>'+
         '<div class="dstats">'+
@@ -237,6 +265,7 @@ function buildPremiumApp(data, year) {
           '<div class="dstat"><div class="dsnum" id="ds-total">0</div><div class="dslbl">total</div></div>'+
         '</div>'+
         (steps.length ? '<div class="slbl">Tu recorrido</div><div class="journey">'+journeyHtml+'</div>' : '')+
+        (data.hoy ? '<div class="nact" style="cursor:pointer;" onclick="showM(\'hoy\')"><div class="nalbl">👉 Tu acción de hoy</div><div class="natxt">Abrir el check-in diario →</div></div>' : '')+
         '<div class="nact"><div class="nalbl">'+escH(dash.nextActionLabel||'Tu próxima acción')+'</div><div class="natxt" id="natxt">'+escH((dash.nextActions&&dash.nextActions[0])||'Comienza el checklist')+'</div></div>'+
       '</div>'+
     '</div>';
@@ -399,6 +428,40 @@ function buildPremiumApp(data, year) {
       '<div class="mbody"><div class="bgrid">'+bgHtml+'</div></div></div>';
   }
 
+  // ── HOY (ciclo diario) ───────────────────────────────────────────────────
+  var hoyMod = '';
+  if(data.hoy) {
+    var hoyData = data.hoy;
+    var hMetricsHtml = (hoyData.metrics||[]).map(function(m){
+      var mn = m.min!==undefined?m.min:0, mx = m.max!==undefined?m.max:10;
+      return '<div class="hmetric"><div class="hmhdr"><span class="hmlbl">'+escH(m.emoji||'')+' '+escH(m.label)+'</span><span class="hmval" id="hmv-'+escH(m.id)+'">'+mn+'</span></div>'+
+        '<input type="range" class="slinput" id="hm-'+escH(m.id)+'" min="'+mn+'" max="'+mx+'" value="'+mn+'" oninput="document.getElementById(\'hmv-'+escH(m.id)+'\').textContent=this.value">'+
+      '</div>';
+    }).join('');
+    hoyMod = '<div class="mod" id="mod-hoy">'+
+      '<div class="mhdr"><div class="mtitle" id="hoy-date">Hoy</div><div class="msub">'+escH(hoyData.title||'Tu check-in diario')+'</div></div>'+
+      '<div class="mbody">'+
+        hMetricsHtml+
+        '<div class="haction"><div class="halbl">Acción de hoy</div><div class="hatxt" id="hoy-action"></div><button class="hadone-btn" id="hoy-done-btn" onclick="hoyDone()">✓ Hecha</button></div>'+
+        '<div class="htip"><div class="htlbl">Tip del día</div><div class="httxt" id="hoy-tip"></div></div>'+
+        '<button class="btn-p" id="hoy-save-btn" onclick="hoySave()">Guardar mi día</button>'+
+      '</div></div>';
+  }
+
+  // ── REGISTRO (historial + tendencias del ciclo diario) ───────────────────
+  var regMod = '';
+  if(data.hoy) {
+    var hMetricsReg = (data.hoy.metrics||[]).map(function(m){
+      return '<div class="regchart"><div class="regmname">'+escH(m.emoji||'')+' '+escH(m.label)+' <span id="regsum-'+escH(m.id)+'" class="regsum"></span></div><div class="regbars" id="regbars-'+escH(m.id)+'"></div></div>';
+    }).join('');
+    regMod = '<div class="mod" id="mod-registro">'+
+      '<div class="mhdr"><div class="mtitle">Registro</div><div class="msub">Tu progreso a lo largo del tiempo</div></div>'+
+      '<div class="mbody">'+
+        '<div class="regstreak"><div class="regsbox"><div class="regsnum" id="reg-streak">0</div><div class="regslbl">racha actual</div></div><div class="regsbox"><div class="regsnum" id="reg-best">0</div><div class="regslbl">mejor racha</div></div></div>'+
+        hMetricsReg+
+      '</div></div>';
+  }
+
   // ── NAV ──────────────────────────────────────────────────────────────────
   var navHtml =
     '<nav class="nav" id="nav"><div class="nav-inner">'+
@@ -426,10 +489,16 @@ function buildPremiumApp(data, year) {
 
   var js =
     '<script>\n' +
-    'var SK="'+SK.replace(/"/g,'\\"')+'",ST={name:"",ans:{},chk:{},start:null,quizA:[],logros:[]},ob=0;\n' +
+    'var SK="'+SK.replace(/"/g,'\\"')+'",ST={name:"",ans:{},chk:{},start:null,quizA:[],logros:[],log:{},bestStreak:0},ob=0;\n' +
     'var OBI='+onbIds+',PC='+phaseCounts+',SW='+simW+',SZ='+simZ+',QRY='+qRY+',QRL='+qRL+',NAS='+nas+',LID='+lids+',SL='+stepsLen+';\n' +
+    'var HASHOY='+(data.hoy?'true':'false')+';\n' +
+    'var HM='+JSON.stringify((data.hoy&&data.hoy.metrics)||[])+',HA='+JSON.stringify((data.hoy&&data.hoy.dailyActions)||[])+',HT='+JSON.stringify((data.hoy&&data.hoy.tips)||[])+';\n' +
     'function sv(){try{localStorage.setItem(SK,JSON.stringify(ST));}catch(e){}}\n' +
-    'function lv(){try{var s=localStorage.getItem(SK);if(s){Object.assign(ST,JSON.parse(s));return true;}}catch(e){}return false;}\n' +
+    'function lv(){try{var s=localStorage.getItem(SK);if(s){Object.assign(ST,JSON.parse(s));if(!ST.log)ST.log={};return true;}}catch(e){}return false;}\n' +
+    // FECHA / RACHA (ciclo diario)
+    'function tISO(d){d=d||new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}\n' +
+    'function dayIdx(){return ST.start?Math.max(0,Math.floor((Date.now()-new Date(ST.start).getTime())/864e5)):0;}\n' +
+    'function streak(){var s=0,d=new Date();if(!ST.log[tISO(d)])d.setDate(d.getDate()-1);while(ST.log[tISO(d)]){s++;d.setDate(d.getDate()-1);}return s;}\n' +
     // ONBOARDING
     'function onbNext(){\n' +
     '  var fid=OBI[ob];var el=document.getElementById("oi-"+fid);var v=(el?el.value:"").trim();\n' +
@@ -447,7 +516,7 @@ function buildPremiumApp(data, year) {
     '  document.getElementById("ahdr").style.display="flex";\n' +
     '  document.getElementById("nav").style.display="block";\n' +
     '  var u=document.getElementById("ahdr-u");if(u)u.textContent=ST.name||"";\n' +
-    '  refreshD();\n' +
+    '  refreshD();refreshHoy();refreshReg();\n' +
     '}\n' +
     // MODULE NAV
     'function showM(m){\n' +
@@ -456,6 +525,8 @@ function buildPremiumApp(data, year) {
     '  var mod=document.getElementById("mod-"+m);if(mod)mod.classList.add("on");\n' +
     '  var nb=document.getElementById("nb-"+m);if(nb)nb.classList.add("on");\n' +
     '  if(m==="dashboard")refreshD();\n' +
+    '  if(m==="hoy")refreshHoy();\n' +
+    '  if(m==="registro")refreshReg();\n' +
     '}\n' +
     // DASHBOARD
     'function refreshD(){\n' +
@@ -478,7 +549,8 @@ function buildPremiumApp(data, year) {
     '  }\n' +
     '  var naEl=document.getElementById("natxt");\n' +
     '  if(naEl){var ni=Math.min(Math.floor(pct/Math.max(1,100/(NAS.length-1))),NAS.length-1);naEl.textContent=NAS[ni]||NAS[0];}\n' +
-    '  chkLogros(done,pct);\n' +
+    '  if(HASHOY){var se=document.getElementById("ds-streak");if(se)se.textContent=streak();var sb=document.getElementById("ds-best");if(sb)sb.textContent=Math.max(ST.bestStreak||0,streak());}\n' +
+    '  if(!HASHOY)chkLogros(done,pct);\n' +
     '}\n' +
     // CHECKLIST
     'function togPh(pi){\n' +
@@ -513,6 +585,70 @@ function buildPremiumApp(data, year) {
     '    c.classList.toggle("locked",lk);\n' +
     '    var m=c.querySelector(".clock-msg");if(m)m.style.display=lk?"block":"none";\n' +
     '  });\n' +
+    '}\n' +
+    // HOY (ciclo diario)
+    'function refreshHoy(){\n' +
+    '  if(!HASHOY)return;\n' +
+    '  var dEl=document.getElementById("hoy-date");if(dEl)dEl.textContent=new Date().toLocaleDateString("'+lang+'",{weekday:"long",day:"numeric",month:"long"});\n' +
+    '  var di=dayIdx();\n' +
+    '  var a=document.getElementById("hoy-action");if(a&&HA.length)a.textContent=HA[di%HA.length];\n' +
+    '  var t=document.getElementById("hoy-tip");if(t&&HT.length)t.textContent=HT[di%HT.length];\n' +
+    '  var e=ST.log[tISO()]||{};\n' +
+    '  HM.forEach(function(m){var s=document.getElementById("hm-"+m.id);var v=document.getElementById("hmv-"+m.id);var val=e[m.id]!==undefined?e[m.id]:(m.min!==undefined?m.min:0);if(s)s.value=val;if(v)v.textContent=val;});\n' +
+    '  var db=document.getElementById("hoy-done-btn");if(db)db.classList.toggle("done",!!e.actionDone);\n' +
+    '}\n' +
+    'function hoySave(){\n' +
+    '  if(!HASHOY)return;\n' +
+    '  var k=tISO();var e=ST.log[k]||{};\n' +
+    '  HM.forEach(function(m){var s=document.getElementById("hm-"+m.id);if(s)e[m.id]=+s.value;});\n' +
+    '  e.dayIdx=dayIdx();ST.log[k]=e;\n' +
+    '  var st=streak();if(st>(ST.bestStreak||0))ST.bestStreak=st;\n' +
+    '  sv();refreshD();refreshReg();chkLogros2();\n' +
+    '  var b=document.getElementById("hoy-save-btn");if(b){b.textContent="✓ Guardado";setTimeout(function(){b.textContent="Guardar mi día";},1500);}\n' +
+    '}\n' +
+    'function hoyDone(){\n' +
+    '  if(!HASHOY)return;\n' +
+    '  var k=tISO();var e=ST.log[k]||{};e.actionDone=!e.actionDone;ST.log[k]=e;sv();refreshHoy();chkLogros2();\n' +
+    '}\n' +
+    // REGISTRO
+    'function avg7(mid,off){\n' +
+    '  var s=0,c=0,d=new Date();d.setDate(d.getDate()-(off||0));\n' +
+    '  for(var i=0;i<7;i++){var e=ST.log[tISO(d)];if(e&&e[mid]!==undefined){s+=e[mid];c++;}d.setDate(d.getDate()-1);}\n' +
+    '  return c?s/c:null;\n' +
+    '}\n' +
+    'function refreshReg(){\n' +
+    '  if(!HASHOY)return;\n' +
+    '  var se=document.getElementById("reg-streak");if(se)se.textContent=streak();\n' +
+    '  var be=document.getElementById("reg-best");if(be)be.textContent=Math.max(ST.bestStreak||0,streak());\n' +
+    '  HM.forEach(function(m){\n' +
+    '    var bars=document.getElementById("regbars-"+m.id);\n' +
+    '    if(bars){\n' +
+    '      var vals=[];\n' +
+    '      for(var i=13;i>=0;i--){var dd=new Date();dd.setDate(dd.getDate()-i);var e=ST.log[tISO(dd)];vals.push({v:(e&&e[m.id]!==undefined)?e[m.id]:null,today:i===0});}\n' +
+    '      var mx=Math.max.apply(null,vals.map(function(x){return x.v||0;}).concat([m.max||10]));\n' +
+    '      var html="";\n' +
+    '      vals.forEach(function(x){var h=x.v!==null?Math.max(4,Math.round(x.v/mx*60)):2;html+=\'<div class="regbar\'+(x.today?" today":"")+\'" style="height:\'+h+\'px" title="\'+(x.v!==null?x.v:"—")+\'"></div>\';});\n' +
+    '      bars.innerHTML=html;\n' +
+    '    }\n' +
+    '    var now=avg7(m.id,0),prev=avg7(m.id,7);\n' +
+    '    var el=document.getElementById("regsum-"+m.id);\n' +
+    '    if(el){\n' +
+    '      if(now===null)el.textContent="";\n' +
+    '      else if(prev===null)el.textContent="promedio: "+now.toFixed(1);\n' +
+    '      else{var diff=now-prev;var good=m.goodDirection==="down"?diff<0:diff>0;el.innerHTML=(good?\'<span style="color:var(--green)">▲ mejorando</span> \':\'<span style="color:var(--red)">▼ atención</span> \')+Math.abs(diff).toFixed(1)+" pts vs semana pasada";}\n' +
+    '    }\n' +
+    '  });\n' +
+    '}\n' +
+    'function chkLogros2(){\n' +
+    '  function ul(id){if(!id||ST.logros.indexOf(id)>-1)return;ST.logros.push(id);sv();var e=document.getElementById("bc-"+id);if(e){e.classList.add("ul");var lk=e.querySelector(".blocked");if(lk)lk.style.display="none";}}\n' +
+    '  var entries=Object.keys(ST.log||{}).length;\n' +
+    '  var st=streak();\n' +
+    '  if(LID[0]&&entries>=1)ul(LID[0]);\n' +
+    '  if(LID[1]&&st>=3)ul(LID[1]);\n' +
+    '  if(LID[2]&&st>=7)ul(LID[2]);\n' +
+    '  if(LID[3]){var improved=HM.some(function(m){var now=avg7(m.id,0),prev=avg7(m.id,7);if(now===null||prev===null)return false;var diff=now-prev;return m.goodDirection==="down"?diff<-0.3:diff>0.3;});if(improved)ul(LID[3]);}\n' +
+    '  if(LID[4]&&entries>=30)ul(LID[4]);\n' +
+    '  (ST.logros||[]).forEach(function(id){var e=document.getElementById("bc-"+id);if(e){e.classList.add("ul");var lk=e.querySelector(".blocked");if(lk)lk.style.display="none";}});\n' +
     '}\n' +
     // QUIZ
     'var QA=[];\n' +
@@ -582,7 +718,7 @@ function buildPremiumApp(data, year) {
     css+
     '</head>\n<body>\n'+
     onbHtml+appHdrHtml+
-    dashMod+chkMod+simMod+compMod+quizMod+planMod+glosMod+logrosMod+
+    dashMod+hoyMod+chkMod+simMod+compMod+quizMod+planMod+glosMod+regMod+logrosMod+
     navHtml+js+
     '\n</body>\n</html>';
 }

@@ -3145,8 +3145,9 @@ app.post('/api/generate-premium-app', async function(req, res) {
     var langCode     = lang.slice(0,2).toLowerCase();
 
     // Compact single-line schema minimizes prompt tokens
-    var schema = '{"appTitle":"","appTagline":"","accentColor":"#6c5ce7","lang":"'+langCode+'","modules":["dashboard","checklist","plan","glosario","logros"],' +
+    var schema = '{"appTitle":"","appTagline":"","accentColor":"#6c5ce7","lang":"'+langCode+'","modules":["hoy","dashboard","checklist","plan","glosario","logros"],' +
       '"onboarding":{"fields":[{"id":"name","label":"","type":"text","placeholder":""},{"id":"q1","label":"","type":"select","options":["","","",""]},{"id":"q2","label":"","type":"select","options":["","","",""]},{"id":"q3","label":"","type":"select","options":["","",""]}]},' +
+      '"hoy":{"title":"","metrics":[{"id":"m1","label":"","emoji":"","min":0,"max":10,"goodDirection":"up|down"},{"id":"m2","label":"","emoji":"","min":0,"max":10,"goodDirection":"up|down"},{"id":"m3","label":"","emoji":"","min":0,"max":10,"goodDirection":"up|down"}],"dailyActions":["30 strings — acciones diarias progresivas"],"tips":["30 strings — tips expertos, uno por día"]},' +
       '"dashboard":{"title":"","greeting":"¡Hola, [name]! 👋","nextActionLabel":"","nextActions":["","",""],"steps":["","","",""]},' +
       '"checklist":{"title":"","subtitle":"","phases":[{"title":"","tasks":[{"text":""},{"text":""},{"text":""},{"text":""}]},{"title":"","tasks":[{"text":""},{"text":""},{"text":""}]},{"title":"","tasks":[{"text":""},{"text":""},{"text":""}]}]},' +
       '"simulator":{"title":"","metricName":"","sliders":[{"label":"","weight":35,"defaultValue":50},{"label":"","weight":30,"defaultValue":50},{"label":"","weight":20,"defaultValue":50},{"label":"","weight":15,"defaultValue":50}],"zones":[{"min":0,"max":40,"label":"","color":"#e17055"},{"min":41,"max":69,"label":"","color":"#fdcb6e"},{"min":70,"max":89,"label":"","color":"#74b9ff"},{"min":90,"max":100,"label":"","color":"#00b894"}]},' +
@@ -3161,8 +3162,14 @@ app.post('/api/generate-premium-app', async function(req, res) {
       'Language: ' + lang + '. Market: ' + countryName + '.\n' +
       (context ? 'Author requirements: ' + context + '\n' : '') +
       (appConcept ? 'APP CONCEPT (mandatory direction from the market analysis — build THIS app): ' + appConcept + '\n' : '') +
-      'Choose 4-5 modules that best fit the ebook topic. Always include "dashboard" and "logros" in "modules".\n' +
+      'Always include "hoy", "dashboard" and "logros" in "modules", plus 2-3 more that best fit the ebook topic.\n' +
       'Accent color guide: finance/money=#f9ca24  health/fitness=#00b894  career/work=#6c5ce7  marketing=#e17055  other=#00cec9\n' +
+      '\nTHE DAILY LOOP IS THE PRODUCT — highest priority:\n' +
+      '- This app must be something the buyer opens EVERY MORNING. If module "hoy" is weak, the whole product fails.\n' +
+      '- hoy.metrics = the 2-3 numbers an expert in this exact topic would have the reader track daily (each with goodDirection: "down" if improving means decreasing, e.g. hot flashes; "up" if increasing, e.g. sleep quality). Scale 0-10 unless the topic demands otherwise.\n' +
+      '- hoy.dailyActions = EXACTLY 30 progressive daily actions implementing the ebook method: day 1 the easiest win → day 30 mastery. Each doable in ≤15 minutes, each physically concrete (what/how much/how long), each specific to THIS ebook content — never "reflexiona sobre tus metas".\n' +
+      '- hoy.tips = EXACTLY 30 expert micro-lessons (1-2 sentences each), one per day, from the ebook knowledge. Zero motivational filler.\n' +
+      '- The reader must SEE their own numbers improving week over week — that visible progress is what they paid for.\n' +
       '\nQUALITY BAR — no exceptions:\n' +
       '- Every text must be SPECIFIC to the ebook content received: real steps from its chapters, its terminology, its examples. ZERO generic filler like "Define tus metas" or "Mantente motivado".\n' +
       '- checklist tasks = concrete actions the reader can physically do today, taken from the ebook method, in logical order.\n' +
@@ -3177,7 +3184,7 @@ app.post('/api/generate-premium-app', async function(req, res) {
       ? 'Create the premium companion app for this ebook. Choose the 2-3 best additional modules for this specific topic. Fill ALL fields with specific, expert content tailored to this ebook.\n\nEbook data:\n' + ebookContext
       : 'Create the premium companion app for the topic: "' + (topic||'general') + '"' + (ebookContext ? '\n\nEbook:\n' + ebookContext : '');
 
-    var result = await claudeCall(sys, userMsg, 6000, true, 'claude-haiku-4-5-20251001');
+    var result = await claudeCall(sys, userMsg, 8000, true, 'claude-sonnet-4-6');
     var raw = (result.text||'').trim();
     // Strip markdown fences
     raw = raw.replace(/^```[\w]*\s*/i,'').replace(/\s*```$/i,'').trim();
