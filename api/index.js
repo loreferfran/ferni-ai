@@ -1061,7 +1061,9 @@ app.post('/api/validate-niche', async function(req, res) {
   }
 });
 
-function buildEbookSystem(countryName, regs) {
+function buildEbookSystem(countryName, regs, outputLanguage) {
+  outputLanguage = outputLanguage || 'Español';
+  var isSpanish = outputLanguage === 'Español';
   return 'You are a Premium Ebook Creative Director, Market Psychologist, Editorial Designer, and Digital Product Architect.' +
     ' Your job is to create a sellable premium PDF ebook adapted to the niche, audience, emotional context, and commercial objective.' +
     ' This ebook must NOT use a generic design.' +
@@ -1082,30 +1084,31 @@ function buildEbookSystem(countryName, regs) {
     ' PAIS DESTINO (solo para contexto de ejemplos y precios): ' + countryName + '. EDITORIAL: Ferni Guides.' +
     ' USA TU CONOCIMIENTO EXPERTO REAL con datos verificables DE ' + countryName + '.' +
 
-    '\n\n=== BLOQUE DE INSTRUCCION ABSOLUTA — IDIOMA DEL EBOOK (FASE 1) ===' +
-    '\nEste ebook de Fase 1 debe estar escrito EXCLUSIVAMENTE en español castellano.' +
+    '\n\n=== BLOQUE DE INSTRUCCION ABSOLUTA — IDIOMA DEL EBOOK' + (isSpanish ? ' (FASE 1)' : '') + ' ===' +
+    '\nEste ebook debe estar escrito EXCLUSIVAMENTE en ' + outputLanguage + '.' +
     '\nEsta regla NO tiene excepciones.' +
     '\n\nIMPORTANTE — Lee esto con atencion:' +
     '\n- Las busquedas web pueden realizarse en cualquier idioma (ingles, frances, aleman, etc.)' +
     '\n- El pais investigado puede ser cualquier pais (Francia, Alemania, Italia, etc.)' +
     '\n- Los resultados de busqueda pueden aparecer en otros idiomas' +
     '\n- NADA de lo anterior afecta el idioma del ebook' +
-    '\n\nEl ebook se entrega SIEMPRE en español, independientemente de:' +
+    '\n\nEl ebook se entrega SIEMPRE en ' + outputLanguage + ', independientemente de:' +
     '\n❌ Que pais fue buscado' +
     '\n❌ En que idioma estan las fuentes consultadas' +
     '\n❌ Como se llama el pais en su propio idioma' +
-    '\n   (NO escribas "Germany", "Deutschland", "France", "Italia" en italiano —' +
-    '\n   SIEMPRE escribe el nombre en español: "Alemania", "Francia", "Italia", etc.)' +
-    '\n❌ Ninguna palabra, titulo, subtitulo, oracion o termino puede aparecer en otro idioma' +
+    '\n   (el nombre del pais destino se escribe SIEMPRE en ' + outputLanguage + ')' +
+    '\n❌ Ninguna palabra, titulo, subtitulo, oracion o termino puede aparecer en un idioma distinto a ' + outputLanguage +
     '\n\nChecklist OBLIGATORIO antes de entregar el ebook:' +
-    '\n✅ ¿Todos los titulos estan en español? → Si no: reescribirlos' +
-    '\n✅ ¿Todos los subtitulos estan en español? → Si no: reescribirlos' +
-    '\n✅ ¿El cuerpo del texto esta 100% en español? → Si no: reescribirlo' +
-    '\n✅ ¿Todos los nombres de paises y ciudades estan escritos en español? → Si no: corregirlos' +
-    '\n✅ ¿Hay alguna palabra en frances, aleman, ingles u otro idioma? → Si la hay: eliminarla' +
-    '\n\nLa traduccion al idioma local del pais investigado ocurrira SOLO en Fase 2,' +
-    '\ndespues de que el usuario haya revisado, corregido y aprobado explicitamente el ebook en español.' +
-    '\nHasta recibir esa aprobacion, NO traduzcas, mezcles ni insertes ninguna palabra de otro idioma bajo ninguna circunstancia.' +
+    '\n✅ ¿Todos los titulos estan en ' + outputLanguage + '? → Si no: reescribirlos' +
+    '\n✅ ¿Todos los subtitulos estan en ' + outputLanguage + '? → Si no: reescribirlos' +
+    '\n✅ ¿El cuerpo del texto esta 100% en ' + outputLanguage + '? → Si no: reescribirlo' +
+    '\n✅ ¿Todos los nombres de paises y ciudades estan escritos en ' + outputLanguage + '? → Si no: corregirlos' +
+    '\n✅ ¿Hay alguna palabra en un idioma distinto a ' + outputLanguage + '? → Si la hay: eliminarla' +
+    (isSpanish
+      ? '\n\nLa traduccion al idioma local del pais investigado ocurrira SOLO en Fase 2,' +
+        '\ndespues de que el usuario haya revisado, corregido y aprobado explicitamente el ebook en español.' +
+        '\nHasta recibir esa aprobacion, NO traduzcas, mezcles ni insertes ninguna palabra de otro idioma bajo ninguna circunstancia.'
+      : '') +
     '\n=== FIN BLOQUE IDIOMA ===' +
     '\n\nFILTRO OBLIGATORIO DE VERIFICACION DE HECHOS (aplicar INTERNAMENTE antes de escribir cada estadistica, dato o cifra):' +
     ' Antes de incluir cualquier estadistica, porcentaje, cifra o dato numerico, aplica este filtro de tres preguntas:' +
@@ -1156,7 +1159,9 @@ function buildEbookSystem(countryName, regs) {
     ' - ' + regs.forbidden;
 }
 
-function buildEbookContext(o, author, countryName, regs) {
+function buildEbookContext(o, author, countryName, regs, outputLanguage) {
+  outputLanguage = outputLanguage || 'Español';
+  var isSpanish = outputLanguage === 'Español';
   return 'PROBLEMA QUE RESUELVE: ' + (o.problema || o.problem || '') +
     '\nNECESIDAD ESPECIFICA DEL LECTOR: ' + (o.necesidad || o.need || '') +
     '\nTIPO DE DEMANDA: ' + (o.tipoDemanda || 'aprendizaje') +
@@ -1170,12 +1175,12 @@ function buildEbookContext(o, author, countryName, regs) {
     '\nAUTOR: ' + author +
     '\nPAIS: ' + countryName +
     '\nMONEDA: ' + regs.currency +
-    '\nIDIOMA DE ESCRITURA: ESPAÑOL CASTELLANO — FASE 1. REGLA ABSOLUTA SIN EXCEPCIONES:' +
-    '\n  - Todo titulo, subtitulo, parrafo, lista, tabla y nota: en ESPAÑOL.' +
-    '\n  - El nombre del pais destino: SIEMPRE en español ("Alemania" no "Germany"/"Deutschland", "Francia" no "France", "Italia" no "Italy").' +
+    '\nIDIOMA DE ESCRITURA: ' + outputLanguage.toUpperCase() + (isSpanish ? ' — FASE 1' : '') + '. REGLA ABSOLUTA SIN EXCEPCIONES:' +
+    '\n  - Todo titulo, subtitulo, parrafo, lista, tabla y nota: en ' + outputLanguage + '.' +
+    '\n  - El nombre del pais destino: SIEMPRE en ' + outputLanguage + '.' +
     '\n  - Las busquedas y fuentes pueden estar en otro idioma — eso NO afecta el idioma del ebook.' +
-    '\n  - CERO palabras en frances, aleman, ingles u otro idioma en el ebook.' +
-    '\n  - La traduccion al idioma local ocurre en Fase 2, SOLO despues de aprobacion del usuario.' +
+    '\n  - CERO palabras en un idioma distinto a ' + outputLanguage + ' en el ebook.' +
+    (isSpanish ? '\n  - La traduccion al idioma local ocurre en Fase 2, SOLO despues de aprobacion del usuario.' : '') +
     '\n\nADAPTACION LOCAL OBLIGATORIA:' +
     '\n- TODOS los precios deben estar en ' + regs.currency + ' con equivalencia a otras monedas si aplica' +
     '\n- Las medidas deben ser del sistema usado en ' + countryName + ' (metrico si Europa, imperial si USA/UK)' +
@@ -1287,7 +1292,8 @@ app.post('/api/generate-chapter', async function(req, res) {
   var numChapters = Math.min(Math.max(parseInt(req.body.numChapters) || 4, 4), 8);
   var countryName = getCountryName(o.pais || o.country || 'France');
   var regs = getRegs(countryName);
-  var ctx = buildEbookContext(o, author, countryName, regs);
+  var outputLanguage = (req.body.language || '').trim() || 'Español';
+  var ctx = buildEbookContext(o, author, countryName, regs, outputLanguage);
   if (serperContext) {
     ctx += '\n\nDATOS WEB DE REFERENCIA (usar cifras reales citando la fuente):\n' + serperContext;
   }
@@ -1308,13 +1314,13 @@ app.post('/api/generate-chapter', async function(req, res) {
   if (isRewrite) {
     ctx += '\n\nFORMATO OBLIGATORIO: PROHIBIDO usar caracteres ASCII de dibujo de cuadros (╔═╗ ║ ╚═╝ ┌─┐ │ └─┘ ┬ ┴ ┼). Para cajas de destacado usa el tag [HIGHLIGHT BOX: texto]. Para tablas usa [TABLE: titulo|col1|col2|dato1|dato2]. Para listas usa guión (-).';
   }
-  var sys = buildEbookSystem(countryName, regs);
+  var sys = buildEbookSystem(countryName, regs, outputLanguage);
   var year = new Date().getFullYear();
 
   var defsRule = ebookDefs
     ? ' DICCIONARIO OBLIGATORIO — usa EXACTAMENTE estos nombres en todo el capitulo, NUNCA los cambies ni inventes alternativas: ' + JSON.stringify(ebookDefs) + '.'
     : '';
-  var espInstruction = 'TODO en ESPANOL CASTELLANO. El pais se llama en espanol (Alemania no Germany, Francia no France).' +
+  var espInstruction = 'TODO en ' + outputLanguage.toUpperCase() + '. El nombre del pais destino se escribe SIEMPRE en ' + outputLanguage + '.' +
     ' REGLAS DE PRECIOS Y PRODUCTOS: (1) NUNCA uses precios exactos — usa siempre rangos: "entre X y Y ' + regs.currency + '" o "desde X ' + regs.currency + '". (2) Cuando menciones donde conseguir un producto, da SIEMPRE 2 o 3 opciones de lugares (tiendas, farmacias, supermercados, online) propias de ' + countryName + ', no solo uno.' +
     ' ESTADISTICAS Y DATOS: cuando uses porcentajes o cifras estadisticas escribe SIEMPRE "aproximadamente" antes del numero (ej: "aproximadamente el 60% de las personas..."). NUNCA presentes estadisticas como datos exactos certificados.' +
     defsRule +
@@ -1358,7 +1364,7 @@ app.post('/api/generate-chapter', async function(req, res) {
         'PRIMERA PARTE YA ESCRITA (NO repetir ni resumir — continua exactamente donde se corto):\n"""\n' + previousContent.slice(-3000) + '\n"""\n\n' +
         'Escribe SOLO la continuacion del contenido. Texto en formato Markdown: subtitulos en negrita (**Titulo**), listas con -, datos concretos. SIN JSON. SIN repetir lo anterior.\n\n' +
         'INSTRUCCIONES PARA ESTA SEGUNDA PARTE:\n' + userInstructions;
-      var sys2 = buildEbookSystem(countryName, regs);
+      var sys2 = buildEbookSystem(countryName, regs, outputLanguage);
       var contText = await claudeCall(sys2, ctx + '\n\n' + contPrompt, 8000);
       contText = contText.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '').trim();
       return res.json({ success: true, continuation: contText });
@@ -1498,8 +1504,10 @@ app.post('/api/patch-chapter', async function(req, res) {
     if (!instruction) return res.status(400).json({ success: false, error: 'Instrucción vacía' });
     var countryName = getCountryName(o.pais || o.country || 'France');
     var regs = getRegs(countryName);
+    var outputLanguage = (req.body.language || '').trim() || 'Español';
     var defsRule = ebookDefs ? ' NOMBRES FIJOS DEL EBOOK — no los cambies: ' + JSON.stringify(ebookDefs) + '.' : '';
-    var sys = buildEbookSystem(countryName, regs);
+    var langRule = ' El capítulo está escrito en ' + outputLanguage + ' — la corrección y TODO el JSON devuelto deben quedar en ' + outputLanguage + ', sin mezclar otro idioma.';
+    var sys = buildEbookSystem(countryName, regs, outputLanguage);
     var chJson = JSON.stringify(chapterData, null, 2);
     // Para correcciones pequeñas (solo texto, no contenido largo), extraer solo el campo relevante
     var isSimplePatch = /signo|símbolo|£|€|\$|precio|reemplaz|cambi/i.test(instruction) && !/reescrib|regenera|amplia|expande/i.test(instruction);
@@ -1510,14 +1518,14 @@ app.post('/api/patch-chapter', async function(req, res) {
         'CORRECCIÓN: ' + instruction + '\n\n' +
         'REGLAS:\n- Solo modifica lo que la corrección pide. NO cambies nada más.\n' +
         '- Devuelve el JSON COMPLETO con la corrección aplicada.\n' +
-        '- Sin markdown, sin explicaciones. Solo el JSON. Empieza con { y termina con }.\n' + defsRule + '\n\n' +
+        '- Sin markdown, sin explicaciones. Solo el JSON. Empieza con { y termina con }.\n' + defsRule + langRule + '\n\n' +
         'CAPÍTULO:\n' + chJson;
     } else {
       prompt = 'Tienes el Capítulo ' + chapterNumber + ' de un ebook. Aplica EXACTAMENTE esta corrección y NADA MÁS:\n\n' +
         'CORRECCIÓN: ' + instruction + '\n\n' +
         'REGLAS ESTRICTAS:\n- Aplica SOLO el cambio indicado. NO reescribas ni mejores nada más.\n' +
         '- Mantén TODO: contenido, estructura, ejemplos, tablas, formato, emojis, exactamente igual.\n' +
-        '- Modifica únicamente lo que la corrección pide explícitamente.\n' + defsRule + '\n\n' +
+        '- Modifica únicamente lo que la corrección pide explícitamente.\n' + defsRule + langRule + '\n\n' +
         'CAPÍTULO ACTUAL:\n' + chJson + '\n\n' +
         'Devuelve el mismo JSON con solo la corrección aplicada. Sin markdown. Empieza con { y termina con }.';
     }

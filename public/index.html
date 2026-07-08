@@ -450,7 +450,7 @@ select option { background: #ffffff; color: #232336; }
                 <option value="Italian">🇮🇹 Italiano</option>
                 <option value="German">🇩🇪 Alemán</option>
                 <option value="Portuguese">🇧🇷 Portugués</option>
-                <option value="Spanish">🇪🇸 Español</option>
+                <option value="Español">🇪🇸 Español</option>
                 <option value="Dutch">🇳🇱 Holandés</option>
                 <option value="Polish">🇵🇱 Polaco</option>
                 <option value="Swedish">🇸🇪 Sueco</option>
@@ -2073,17 +2073,18 @@ async function _pipeVerify(){
 
 async function _pipeTranslate(){
   var cfg=PIPE.cfg, o=S.selOpp;
-  if(cfg.lang==='Español'){
-    // Sin traducción: el borrador español ES el ebook final
+  if(S.ebookLang===cfg.lang){
+    // El ebook ya se generó directo en el idioma pedido — no hay nada que traducir
     S.finalEbook=S.ebookData;
-    S.approvedLang='Español';
-    var countryName=getCountryNameFront(o.pais||o.country||'España');
-    S.pdfHtml=buildFinalPdfHtml(S.finalEbook,o,'Español',countryName,S.coverUrl,S.chapterImages);
+    S.approvedLang=cfg.lang;
+    var countryNameDirect=getCountryNameFront(o.pais||o.country||'España');
+    S.pdfHtml=buildFinalPdfHtml(S.finalEbook,o,cfg.lang,countryNameDirect,S.coverUrl,S.chapterImages);
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     try{ rebuildRewriteBtns((S.finalEbook.chapters||[]).length); }catch(e){}
-    return 'español (sin traducir)';
+    return cfg.lang+' (generado directo)';
   }
   if(S.finalEbook && S.approvedLang===cfg.lang){ return 'ya existía en '+cfg.lang; }
+  // Idiomas distintos: el ebook se generó en S.ebookLang y se pide cfg.lang — traducir de verdad (caso legítimo: ebook viejo en otro idioma que ahora se pide en uno nuevo)
   // Reusar el flujo real de aprobación/traducción (reanudable por capítulo)
   var ls=document.getElementById('eb-lang-sel'); if(ls) ls.value=cfg.lang;
   var mi=document.getElementById('eb-market-inp'); if(mi) mi.value=cfg.market;
@@ -3369,7 +3370,7 @@ function _registerImportedEbook(){
   });
   var opp = { titulo:ebookTitle, tituloEbook:ebookTitle, nicho:'importado', pais:_impMeta.market, country:_impMeta.market, idioma:_impMeta.lang, source:'import' };
   var ebookData = { title:ebookTitle, subtitle:'', tagline:'', author:S.author||'Ferni Guides', chapters:chs, intro:'', conclusion:'', actionPlan:'', resources:'', disclaimer:'', source:'import', lang:_impMeta.lang };
-  S.selOpp = opp; S.ebookData = ebookData; S.ebookOppSig = _oppSig(opp); S.lang = _impMeta.lang; S.country = _impMeta.market;
+  S.selOpp = opp; S.ebookData = ebookData; S.ebookOppSig = _oppSig(opp); S.ebookLang = _impMeta.lang; S.lang = _impMeta.lang; S.country = _impMeta.market;
   S.hmKit = null; S.maKit = null; S.coverUrl = null;
   S.numChapters = chs.length;
   S.chapterImages = new Array(chs.length).fill(null);
@@ -3539,7 +3540,9 @@ async function runEbookSteps(startFrom){
   S.ebookUserInstructions = userInstructions;
   var nc = S.numChapters || parseNumChapters(userInstructions) || 4;
   S.numChapters = nc;
-  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc, topicInstructions: S.directTopicInstructions || '', nicheReport: _nicheReportSummary() };
+  // Idioma de generación: el de la Línea de producción si viene de ahí, si no el del selector de la tab Ebook (si ya se eligió), si no Español por defecto
+  var language = (PIPE.cfg && PIPE.cfg.lang) || (document.getElementById('eb-lang-sel')||{}).value || 'Español';
+  const payload = { opportunity: o, author: S.author, userInstructions: userInstructions, numChapters: nc, topicInstructions: S.directTopicInstructions || '', nicheReport: _nicheReportSummary(), language: language };
   const loadEl = document.getElementById('eb-load-txt');
   const abort = new AbortController();
   S.ebookAbort = abort;
@@ -3604,6 +3607,7 @@ async function runEbookSteps(startFrom){
     };
     S.ebookData = ebook;
     S.ebookOppSig = _oppSig(o);
+    S.ebookLang = language;
     S.ebookAbort = null;
     S.ebookParts = {}; // limpiar partes — ebook completo guardado en S.ebookData
 
@@ -3612,19 +3616,19 @@ async function runEbookSteps(startFrom){
     var numChapters = (ebook.chapters||[]).length;
     var visual = isVisualNiche(o);
     S.chapterImages = new Array(visual ? numChapters+2 : numChapters).fill(null);
-    S.pdfHtml = buildFinalPdfHtml(ebook, o, 'Español', countryName, S.coverUrl, S.chapterImages);
+    S.pdfHtml = buildFinalPdfHtml(ebook, o, language, countryName, S.coverUrl, S.chapterImages);
     if(S.currentHistId) saveEbookToHist(S.currentHistId, ebook);
 
     hide('eb-loading'); hide('eb-empty'); show('eb-content');
     var _ca2 = document.getElementById('chat-area-ebook'); if(_ca2) _ca2.style.display='';
     var langSel = document.getElementById('eb-lang-sel');
-    if(langSel && o.language) langSel.value = o.language;
+    if(langSel) langSel.value = language;
     var marketInp = document.getElementById('eb-market-inp');
     if(marketInp && !marketInp.value) marketInp.value = o.targetMarket || o.pais || o.country || '';
     var preview = document.getElementById('eb-draft-preview');
     if(preview) preview.srcdoc = S.pdfHtml;
     renderImgSlots(ebook);
-    addMsg('chat-ebook','📄 PDF listo en español — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista elige el idioma abajo y presiona ✅ APROBAR.','ferni');
+    addMsg('chat-ebook','📄 PDF listo en '+language+' — revísalo arriba. Si quieres cambios escríbelos aquí y presiona "Aplicar corrección". Cuando estés lista presiona ✅ APROBAR.','ferni');
     // CAPA 3: verificación automática de hechos antes de que el usuario pueda aprobar
     runVerification(ebook, S.ebookIsModule1);
 
@@ -4017,6 +4021,7 @@ function saveFullDataToHist(histId){
   if(idx>=0){
     var nc = (S.ebookData && S.ebookData.chapters ? S.ebookData.chapters.length : 0) || S.numChapters || 0;
     if(S.ebookData){ S.history[idx].ebook=S.ebookData; if(nc) S.history[idx].numChapters=nc; }
+    if(S.ebookLang) S.history[idx].ebookLang=S.ebookLang;
     if(S.finalEbook) S.history[idx].finalEbook=S.finalEbook;
     if(S.pdfHtml) S.history[idx].pdfHtml=S.pdfHtml;
     if(S.hmKit) S.history[idx].hmKit=S.hmKit;
@@ -4047,12 +4052,13 @@ function saveFullDataToHist(histId){
 function renderDraft(o,eb){
   S.author='Ferni Guides';
   var countryName = getCountryNameFront(o.pais||o.country||'France');
-  S.pdfHtml = buildFinalPdfHtml(eb, o, 'Español', countryName, S.coverUrl, S.chapterImages||[]);
+  var draftLang = S.ebookLang || 'Español';
+  S.pdfHtml = buildFinalPdfHtml(eb, o, draftLang, countryName, S.coverUrl, S.chapterImages||[]);
   var preview = document.getElementById('eb-draft-preview');
   if(preview) preview.srcdoc = S.pdfHtml;
-  // Pre-seleccionar idioma del país en el selector
+  // Pre-seleccionar el idioma real del borrador en el selector
   var langSel = document.getElementById('eb-lang-sel');
-  if(langSel && o.language) langSel.value = o.language;
+  if(langSel) langSel.value = draftLang;
   // Pre-rellenar mercado con el país del ebook
   var marketInp = document.getElementById('eb-market-inp');
   if(marketInp && !marketInp.value) marketInp.value = o.targetMarket || o.pais || o.country || '';
@@ -4066,6 +4072,20 @@ async function approveEbook(){
   var selEl = document.getElementById('eb-lang-sel');
   var lang = selEl ? selEl.value : '';
   if(!lang){ alert('Elige el idioma destino antes de aprobar.'); return; }
+
+  // El ebook ya se generó directo en el idioma pedido — no hay nada que traducir
+  if(S.ebookLang===lang){
+    S.finalEbook=S.ebookData;
+    S.approvedLang=lang;
+    var countryNameDirect=getCountryNameFront(o.pais||o.country||'España');
+    S.pdfHtml=buildFinalPdfHtml(S.finalEbook,o,lang,countryNameDirect,S.coverUrl,S.chapterImages);
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    hide('eb-content'); hide('eb-loading'); show('eb-approved');
+    var badgeDirect=document.getElementById('eb-approved-badge'); if(badgeDirect) badgeDirect.textContent='✓ '+lang;
+    var previewDirect=document.getElementById('eb-final-preview'); if(previewDirect) previewDirect.srcdoc=S.pdfHtml;
+    try{ rebuildRewriteBtns((S.finalEbook.chapters||[]).length); }catch(e){}
+    return;
+  }
 
   var marketEl = document.getElementById('eb-market-inp');
   var targetMarket = (marketEl && marketEl.value.trim()) || o.targetMarket || o.pais || o.country || '';
@@ -5027,7 +5047,8 @@ async function runChPatch(){
       : ebook.chapters[n-1];
     var r = await fetch('/api/patch-chapter', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
       opportunity: o, chapterNumber: isDisclaimer ? 'disclaimer' : isConclusion ? 'conclusion' : isIntro ? 'intro' : n,
-      chapterData: chapterData, instruction: instruction, ebookDefs: S.ebookDefs || null
+      chapterData: chapterData, instruction: instruction, ebookDefs: S.ebookDefs || null,
+      language: S.approvedLang || S.ebookLang || 'Español'
     })});
     var d = await r.json();
     if(!d.success) throw new Error(d.error || 'Error en corrección');
@@ -6727,7 +6748,7 @@ function loadHistData(e){
   }
   if(e.ebook){ S.ebookData=e.ebook; }
   if(e.finalEbook){ S.finalEbook=e.finalEbook; }
-  if(e.ebook || e.finalEbook){ S.ebookOppSig = _oppSig(opp); }
+  if(e.ebook || e.finalEbook){ S.ebookOppSig = _oppSig(opp); S.ebookLang = e.ebookLang || 'Español'; }
   if(e.pdfHtml){ S.pdfHtml=e.pdfHtml; }
   if(e.hmKit){ S.hmKit=e.hmKit; }
   if(e.coverUrl){ S.coverUrl=e.coverUrl; }
