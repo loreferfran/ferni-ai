@@ -2127,6 +2127,7 @@ async function _pipeTranslate(){
     // El ebook ya se generó directo en el idioma pedido — no hay nada que traducir
     S.finalEbook=S.ebookData;
     S.approvedLang=cfg.lang;
+    if(cfg.market){ o.pais=cfg.market; o.country=cfg.market; } o.idioma=cfg.lang; o.language=cfg.lang;
     var countryNameDirect=getCountryNameFront(o.pais||o.country||'España');
     S.pdfHtml=buildFinalPdfHtml(S.finalEbook,o,cfg.lang,countryNameDirect,S.coverUrl,S.chapterImages);
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
@@ -2142,6 +2143,7 @@ async function _pipeTranslate(){
   if(!S.finalEbook || S.approvedLang!==cfg.lang){
     throw new Error('La traducción no terminó — reintenta (continúa desde el capítulo que falló)');
   }
+  if(cfg.market){ o.pais=cfg.market; o.country=cfg.market; } o.idioma=cfg.lang; o.language=cfg.lang;
   return cfg.lang;
 }
 
@@ -2269,10 +2271,86 @@ function _pipeRenderHub(){
       (failed.length?' — <span style="color:#e17055;">'+failed.length+' pieza(s) fallaron, reintenta arriba</span>':' — todas las piezas generadas')+'</div>'+
     '</div>'+
     '<div style="display:flex;flex-direction:column;gap:8px;">'+cards.join('')+'</div>'+
-    '<button class="btn btn-p" style="width:100%;margin-top:12px;font-size:14px;padding:12px;" onclick="pipeZipAll()">⬇ DESCARGAR TODO (ZIP)</button>';
+    '<button class="btn btn-p" style="width:100%;margin-top:12px;font-size:14px;padding:12px;" onclick="pipeZipAll()">⬇ DESCARGAR TODO (ZIP)</button>'+
+    '<button class="btn btn-s" style="width:100%;margin-top:8px;font-size:13px;padding:11px;" onclick="expandToMarket()">🌍 Expandir a otro mercado</button>';
   hub.style.display='block';
   _wizSet(5);
   hub.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── EXPANSIÓN A NUEVO MERCADO ──────────────────────────────────────────
+// Clona el producto aprobado en una entrada de historial NUEVA (la original queda intacta) y deja
+// lista la Línea de producción para ese clon: el ebook ya aprobado será el origen de la traducción real
+// (_pipeTranslate ya sabe traducir cuando S.ebookLang difiere del idioma pedido); bonus/app/skill/meta
+// se regeneran desde cero en el idioma nuevo (más simple y fiable que traducir su JSON/HTML a mano, y ya
+// usan el mismo endpoint multi-idioma que el resto del pipeline).
+async function expandToMarket(){
+  var srcEb = S.finalEbook || S.ebookData;
+  if(!srcEb || !S.selOpp){ alert('Genera y aprueba un producto primero.'); return; }
+  if(PIPE.running){ alert('Espera a que termine el pipeline actual.'); return; }
+
+  var oldHistId = S.currentHistId;
+  var newHistId = 'exp_'+Date.now();
+
+  // Qué piezas tenía el producto original — App/Skill solo viven en memoria (no se guardan en el historial),
+  // por eso se leen de PIPE.cfg (la config de la última corrida) con fallback al estado actual en memoria.
+  var lastCfg = PIPE.cfg || {};
+  var hadBonus = lastCfg.bonus!==undefined ? lastCfg.bonus : !!(S.extrasData && S.extrasData.length);
+  var hadApp   = lastCfg.app!==undefined   ? lastCfg.app   : !!S_crApp;
+  var hadSkill = lastCfg.skill!==undefined ? lastCfg.skill : !!S_crSkill;
+  var hadMeta  = lastCfg.meta!==undefined  ? lastCfg.meta  : !!S.maKit;
+  var hadEpub  = lastCfg.epub!==undefined  ? lastCfg.epub  : true;
+
+  // Clonar la oportunidad — mismo problema/título → misma firma _oppSig, así el paso "Ebook" del pipeline
+  // reutiliza el borrador clonado en vez de regenerarlo (solo hay que TRADUCIRLO, no reescribirlo).
+  var newOpp = Object.assign({}, S.selOpp);
+
+  // Copiar imágenes del ebook (portada + capítulos) al nuevo histId — son ilustraciones sin texto,
+  // válidas en cualquier idioma. Las imágenes de Hotmart/Meta (con texto quemado) no se copian: no se
+  // persisten en IndexedDB y el kit se regenera desde cero, así que simplemente habrá que generarlas de nuevo.
+  var coverUrl = S.coverUrl, chapterImages = (S.chapterImages||[]).slice();
+  if(coverUrl) idbSet('img_'+newHistId+'_cover', coverUrl);
+  chapterImages.forEach(function(url,i){ if(url) idbSet('img_'+newHistId+'_ch'+i, url); });
+
+  // Estado del clon: el ebook fuente a traducir es el YA APROBADO/revisado, no el borrador original
+  // (si en su momento hubo una traducción previa, lo que Lorena aprobó es lo que se debe expandir).
+  S.currentHistId = newHistId;
+  S.selOpp = newOpp;
+  S.ebookData = JSON.parse(JSON.stringify(srcEb));
+  S.ebookOppSig = _oppSig(newOpp);
+  S.ebookLang = S.approvedLang || S.ebookLang || 'Español';
+  S.finalEbook = null; S.approvedLang = null; S.pdfHtml = null;
+  S.translationProgress = null;
+  S.numChapters = (S.ebookData.chapters||[]).length;
+  S.extrasData = null; S.extrasLang = null; S.extrasMarketing = null;
+  S.hmKit = null; S.maKit = null;
+  S_crApp = null; S_crSkill = null; window._crAppTopic = null; window._crSkillTopic = null;
+  S.coverUrl = coverUrl; S.chapterImages = chapterImages;
+  S.nicheReportApproved = true; // el clon ya viene de un producto aprobado — no repetir el checkpoint del informe de nicho
+
+  var origTitle = srcEb.title || '';
+  var newEntry = {
+    id:newHistId, date:new Date().toLocaleDateString('es-CL'), time:new Date().toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}),
+    country:newOpp.pais||newOpp.country||'', niche:'Expansión de mercado — '+origTitle, flag:'🌍', count:1, topScore:0,
+    opps:[newOpp], selOpp:newOpp, ebook:S.ebookData, ebookLang:S.ebookLang, expandedFrom:oldHistId,
+    pipelineSource:S.pipelineSource||'analysis', nicheReport:S.nicheReport||null, nicheReportApproved:true
+  };
+  S.history.unshift(newEntry);
+  try{ localStorage.setItem('ferni_pro', JSON.stringify(S.history.slice(0,30))); localStorage.setItem('ferni_active_id', newHistId); }catch(e){}
+
+  var mainTab = document.querySelector('.tab[onclick*="showTab(\'search\'"]') || document.querySelectorAll('.tab')[0];
+  showTab('search', mainTab);
+  _pipeShowConfig();
+  // Reafirmar checkboxes según lo que tenía el producto original (_pipeShowConfig ya restauró preferencias globales encima)
+  var ckBonus=document.getElementById('pipe-ck-bonus'); if(ckBonus) ckBonus.checked=hadBonus;
+  var ckApp=document.getElementById('pipe-ck-app'); if(ckApp) ckApp.checked=hadApp;
+  var ckSkill=document.getElementById('pipe-ck-skill'); if(ckSkill) ckSkill.checked=hadSkill;
+  var ckMeta=document.getElementById('pipe-ck-meta'); if(ckMeta) ckMeta.checked=hadMeta;
+  var ckEpub=document.getElementById('pipe-ck-epub'); if(ckEpub) ckEpub.checked=hadEpub;
+  var mk=document.getElementById('pipe-market'); if(mk) mk.value=''; // forzar que se escriba el mercado destino, no heredar el original
+  _wizSet(3);
+  addMsg('chat-search','🌍 Producto clonado para expandir a un nuevo mercado — tu producto original sigue intacto en el Historial. Elige el idioma y escribe el país/mercado destino abajo, y presiona "GENERAR PRODUCTO COMPLETO": el ebook ya aprobado se traducirá (no se reescribe) y el resto se regenera en ese idioma.','ferni');
+  setTimeout(function(){ var box=document.getElementById('pipe-box'); if(box) box.scrollIntoView({behavior:'smooth',block:'start'}); }, 100);
 }
 
 function _pipeOpenHtml(html){
