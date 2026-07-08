@@ -918,6 +918,63 @@ app.post('/api/ebook-score', async function(req, res) {
   }
 });
 
+// Feature Análisis de brechas — cruza los pain points detectados en el mercado (oportunidad + ICP del
+// informe de nicho) contra el contenido real del ebook. Un pain point solo cuenta como cubierto si hay
+// una sección que lo trata DIRECTAMENTE con solución accionable, no si se menciona de pasada.
+app.post('/api/gap-analysis', async function(req, res) {
+  try {
+    var painPoints = req.body.painPoints || [];
+    var ebook = req.body.ebook || {};
+    var language = req.body.language || 'Español';
+    if (!painPoints.length) return res.status(400).json({ success: false, error: 'Sin pain points para cruzar' });
+    var sys = 'Eres un analista de producto senior, especialista en ' + language + '. Cruzas CADA pain point del mercado contra el contenido real de un ebook.' +
+      '\n\nREGLA DE COBERTURA (crítica): un pain point está "cubierto" SOLO si hay una sección del ebook que lo trata DIRECTAMENTE con una solución accionable — mencionarlo de pasada, o que quede implícito en el tema general del capítulo, NO cuenta como cubierto.' +
+      '\nSé exigente: es mejor marcar un pain point como no cubierto y que Lorena decida si vale la pena agregar la sección, que dar una cobertura inflada que no refleje la realidad.' +
+      '\n\nPara cada pain point NO cubierto, indica el número de capítulo EXISTENTE más afín temáticamente donde tendría más sentido agregar una sección nueva sobre ese pain point (no inventes capítulos nuevos).' +
+      '\n\nResponde SOLO JSON: {"cobertura":0-100,"cubiertos":[{"painPoint":"","capitulo":numero}],' +
+      '"noCubiertos":[{"painPoint":"","porQueImporta":"(máx 25 palabras, por qué a un comprador le importaría esto)","capituloSugerido":numero_del_capitulo_mas_afin}]}';
+    var chaptersTxt = (ebook.chapters || []).map(function(ch, i) {
+      return 'CAPÍTULO ' + (i + 1) + ' — ' + (ch.title || '') + ':\n' + (ch.resumen || '');
+    }).join('\n\n');
+    var userMsg = 'EBOOK: ' + (ebook.title || '') + '\n\nCAPÍTULOS:\n' + chaptersTxt +
+      '\n\nPAIN POINTS DETECTADOS EN EL MERCADO (cruzar cada uno contra el contenido):\n' +
+      painPoints.map(function(p) { return '- ' + p; }).join('\n');
+    var txt = await claudeCall(sys, userMsg, 2500);
+    var gap = extractJSON(txt);
+    if (!gap) throw new Error('No se pudo procesar el análisis de brechas');
+    res.json({ success: true, gap: gap });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Genera UNA sección nueva enfocada en un pain point específico, lista para anexar al capítulo sugerido —
+// mismo formato que el resto de un capítulo (párrafos + pasos accionables, subtítulo propio en Markdown ##).
+app.post('/api/gap-section', async function(req, res) {
+  try {
+    var painPoint = req.body.painPoint || '';
+    var o = req.body.opportunity || {};
+    var chapterTitle = req.body.chapterTitle || '';
+    var chapterSummary = req.body.chapterSummary || '';
+    var language = req.body.language || 'Español';
+    var userInstructions = (req.body.userInstructions || '').trim();
+    var sys = 'Eres el mismo escritor experto que redactó este ebook. Escribes en ' + language + '.' +
+      ' PROHIBIDO primera persona. Tono experto cercano, denso, con datos concretos y pasos accionables — mismo estilo editorial que el resto del ebook.' +
+      ' Formato: usa ## para el subtítulo de la sección, viñetas con • cuando listes pasos o puntos, nada de relleno motivacional.';
+    var userMsg = 'Vas a agregar una sección NUEVA al capítulo "' + chapterTitle + '" de este ebook (resumen del capítulo para que la sección encaje con el tono y no repita lo ya dicho:\n' + chapterSummary + ').' +
+      '\n\nLa sección debe resolver DIRECTAMENTE este pain point que hoy el ebook no cubre: "' + painPoint + '"' +
+      '\nContexto del producto: ' + (o.problema || o.problem || '') + ' | Promesa: ' + (o.promesaEbook || o.ebookPromise || '') +
+      (userInstructions ? '\n\nInstrucciones adicionales: ' + userInstructions : '') +
+      '\n\nEscribe 400-700 palabras, con solución accionable (pasos concretos, no solo teoría). Responde SOLO JSON: {"sectionTitle":"subtítulo de la sección, sin el ##","content":"el cuerpo de la sección en Markdown simple (##, viñetas •)"}';
+    var txt = await claudeCall(sys, userMsg, 2500);
+    var section = extractJSON(txt);
+    if (!section) throw new Error('No se pudo generar la sección');
+    res.json({ success: true, section: section });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/chat', async function(req, res) {
   try {
     var sys = 'Eres FERNI, AI experta en market intelligence y creacion de productos digitales vendibles para Europa y USA. Contexto: ' + req.body.context + '. Responde SIEMPRE en espanol, conciso y accionable. Maximo 3 parrafos.';

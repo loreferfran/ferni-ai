@@ -563,8 +563,10 @@ select option { background: #ffffff; color: #232336; }
             <div id="eb-verify-alert" style="display:none;margin-bottom:12px;"></div>
             <!-- Score de calidad comercial — panel adicional, no reemplaza la verificación de hechos de arriba -->
             <div style="margin-bottom:12px;">
-              <button class="btn btn-s" id="eb-score-btn" onclick="runEbookScoreManual()">📊 Score de calidad</button>
+              <button class="btn btn-s" id="eb-score-btn" onclick="runEbookScoreManual('eb-score-detail')">📊 Score de calidad</button>
+              <button class="btn btn-s" id="eb-gap-btn" onclick="runGapAnalysis('eb-gap-detail')">🧩 Análisis de brechas</button>
               <div id="eb-score-detail" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
+              <div id="eb-gap-detail" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
             </div>
           </div><!-- /eb-content -->
 
@@ -579,7 +581,11 @@ select option { background: #ffffff; color: #232336; }
                 <button class="btn btn-s" style="font-size:13px;" onclick="dlAllImages()">💾 Descargar imágenes</button>
                 <button class="btn btn-s" style="font-size:13px;background:rgba(0,120,0,0.15);border-color:rgba(0,180,0,0.4);color:#00b894;" onclick="downloadCoverComposed()">🖼️ Descargar portada</button>
                 <button class="btn btn-p" id="eb-approved-pipeline-btn" style="display:none;" onclick="goToPipelineFromEbook()">🏭 Continuar en la Línea de producción</button>
+                <button class="btn btn-s" onclick="runEbookScoreManual('eb-score-detail-fin')">📊 Score de calidad</button>
+                <button class="btn btn-s" onclick="runGapAnalysis('eb-gap-detail-fin')">🧩 Análisis de brechas</button>
               </div>
+              <div id="eb-score-detail-fin" style="display:none;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
+              <div id="eb-gap-detail-fin" style="display:none;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;"></div>
 
             <!-- Panel corrección por capítulo en vista final -->
             <div style="background:rgba(0,184,148,0.07);border:1px solid rgba(0,184,148,0.3);border-radius:10px;padding:12px;">
@@ -2125,7 +2131,7 @@ async function _pipeEbook(){
     S.ebookData=null; S.finalEbook=null; S.approvedLang=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[];
     S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
     S.extrasData=null; S.extrasLang=null; S.extrasMarketing=null; S.hmKit=null; S.maKit=null;
-    S_crApp=null; S_crSkill=null; S.ebookScore=null;
+    S_crApp=null; S_crSkill=null; S.ebookScore=null; S.gapAnalysis=null;
   }
   S.ebookIsModule1 = true;
   // runEbookSteps actualiza la UI del tab Ebook (oculto) y setea S.ebookData al terminar
@@ -2496,7 +2502,7 @@ async function expandToMarket(){
   S.translationProgress = null;
   S.numChapters = (S.ebookData.chapters||[]).length;
   S.extrasData = null; S.extrasLang = null; S.extrasMarketing = null;
-  S.hmKit = null; S.maKit = null; S.ebookScore = null;
+  S.hmKit = null; S.maKit = null; S.ebookScore = null; S.gapAnalysis = null;
   S_crApp = null; S_crSkill = null; window._crAppTopic = null; window._crSkillTopic = null;
   S.coverUrl = coverUrl; S.chapterImages = chapterImages;
   S.nicheReportApproved = true; // el clon ya viene de un producto aprobado — no repetir el checkpoint del informe de nicho
@@ -2535,11 +2541,12 @@ function _scoreBar(label,val){
     '<div style="height:8px;border-radius:4px;background:var(--bg2);overflow:hidden;"><div style="height:100%;width:'+v+'%;background:'+_scoreBarColor(v)+';"></div></div>'+
   '</div>';
 }
-// El score queda desactualizado apenas se corrige un capítulo o se regenera el ebook — se limpia y hay que reevaluar
+// El score y el análisis de brechas quedan desactualizados apenas se corrige un capítulo o se regenera el ebook — se limpian y hay que reevaluar
 function _invalidateEbookScore(){
-  S.ebookScore=null;
-  var d1=document.getElementById('eb-score-detail'); if(d1){ d1.style.display='none'; d1.innerHTML=''; }
-  var d2=document.getElementById('ebook-score-detail'); if(d2){ d2.style.display='none'; d2.innerHTML=''; }
+  S.ebookScore=null; S.gapAnalysis=null;
+  ['eb-score-detail','ebook-score-detail','eb-gap-detail','eb-score-detail-fin','eb-gap-detail-fin'].forEach(function(id){
+    var el=document.getElementById(id); if(el){ el.style.display='none'; el.innerHTML=''; }
+  });
 }
 function copySuggestion(i){
   var s=S.ebookScore && S.ebookScore.sugerencias && S.ebookScore.sugerencias[i];
@@ -2572,8 +2579,9 @@ function toggleEbookScoreDetail(){
   if(el.style.display==='none'||!el.innerHTML.trim()){ renderEbookScore(S.ebookScore,'ebook-score-detail'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
   else{ el.style.display='none'; }
 }
-// Botón manual en la tab Ebook — genera/reevalúa bajo demanda (útil para ebooks de Importar/Directo que no pasan por el pipeline)
-async function runEbookScoreManual(){
+// Botón manual en la tab Ebook (borrador y aprobado) — genera/reevalúa bajo demanda (útil para ebooks de Importar/Directo que no pasan por el pipeline)
+async function runEbookScoreManual(containerId){
+  containerId = containerId || 'eb-score-detail';
   var eb=S.finalEbook||S.ebookData;
   if(!eb){ alert('Genera el ebook primero.'); return; }
   var btn=document.getElementById('eb-score-btn');
@@ -2590,11 +2598,110 @@ async function runEbookScoreManual(){
     if(!d.success) throw new Error(d.error||'Error evaluando el ebook');
     S.ebookScore=d.score;
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
-    renderEbookScore(d.score,'eb-score-detail');
+    renderEbookScore(d.score,containerId);
   }catch(e){
     alert('Error: '+e.message);
   }finally{
     if(btn){ btn.disabled=false; btn.textContent='📊 Score de calidad'; }
+  }
+}
+
+// ── ANÁLISIS DE BRECHAS (GAP ANALYSIS) ──────────────────────────────────
+// Cruza los pain points que el MERCADO dijo que le duelen (oportunidad + ICP del informe de nicho) contra
+// lo que el ebook realmente cubre. A diferencia del score, esto SÍ puede mutar un ebook ya aprobado —
+// por eso "+ Añadir sección" invalida PDF final/EPUB/traducción en vez de dejarlos desactualizados en silencio.
+function _buildGapPainPoints(){
+  var o=S.selOpp||{};
+  var nr=S.nicheReport||{};
+  var icp=nr.icp||{};
+  var mp=nr.microProblema||{};
+  var raw=[];
+  if(o.dolorODeseo) raw.push(o.dolorODeseo);
+  if(o.problema||o.problem) raw.push(o.problema||o.problem);
+  (o.clusterKeywords||[]).forEach(function(k){ if(k) raw.push(k); });
+  if(icp.problemaCentral) raw.push(icp.problemaCentral);
+  (icp.doloresSecundarios||[]).forEach(function(d){ if(d) raw.push(d); });
+  (icp.objeciones||[]).forEach(function(d){ if(d) raw.push(d); });
+  (mp.busquedasReales||[]).forEach(function(d){ if(d) raw.push(d); });
+  if(mp.descripcion) raw.push(mp.descripcion);
+  var seen={}, out=[];
+  raw.forEach(function(p){
+    var k=String(p||'').trim().toLowerCase();
+    if(k && !seen[k]){ seen[k]=true; out.push(String(p).trim()); }
+  });
+  return out;
+}
+
+async function runGapAnalysis(containerId){
+  containerId = containerId || 'eb-gap-detail';
+  var eb=S.finalEbook||S.ebookData;
+  if(!eb){ alert('Genera el ebook primero.'); return; }
+  var painPoints=_buildGapPainPoints();
+  if(!painPoints.length){ alert('No hay suficiente información del análisis o del informe de nicho para cruzar pain points. Genera primero el informe de nicho de esta oportunidad.'); return; }
+  var btn=document.getElementById('eb-gap-btn');
+  if(btn){ btn.disabled=true; btn.textContent='🧩 Analizando...'; }
+  try{
+    var ebSummary={ title:eb.title, chapters:(eb.chapters||[]).map(function(ch){ return { title:(ch&&ch.title)||'', resumen:((ch&&ch.content)||'').slice(0,400) }; }) };
+    var resp=await fetch('/api/gap-analysis',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({painPoints:painPoints, ebook:ebSummary, language:S.approvedLang||S.ebookLang||'Español'})});
+    var d=await resp.json();
+    if(!d.success) throw new Error(d.error||'Error en el análisis de brechas');
+    S.gapAnalysis=d.gap;
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    renderGapAnalysis(d.gap, containerId);
+  }catch(e){
+    alert('Error: '+e.message);
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='🧩 Análisis de brechas'; }
+  }
+}
+
+function renderGapAnalysis(gap, containerId){
+  var el=document.getElementById(containerId); if(!el||!gap) return;
+  var cov=Math.max(0,Math.min(100,gap.cobertura||0));
+  var noCub=(gap.noCubiertos||[]).map(function(x,i){
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">'+
+      '<div style="font-size:12px;color:var(--text);font-weight:700;">'+_escHtml(x.painPoint||'')+'</div>'+
+      '<div style="font-size:12px;color:var(--text2);margin:4px 0;">'+_escHtml(x.porQueImporta||'')+'</div>'+
+      '<button class="btn btn-teal" style="font-size:11px;padding:6px 12px;" onclick="addGapSection('+i+',\''+containerId+'\')">+ Añadir sección'+(x.capituloSugerido?' (Cap. '+x.capituloSugerido+')':'')+'</button>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=
+    '<div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px;">🧩 Análisis de brechas</div>'+
+    _scoreBar('Cobertura de pain points', cov)+
+    (noCub
+      ? '<div style="font-size:12px;font-weight:700;color:var(--text);margin-top:10px;margin-bottom:4px;">Pain points no cubiertos</div>'+noCub
+      : '<div style="font-size:12px;color:#00b894;margin-top:8px;">✅ Todos los pain points detectados están cubiertos.</div>');
+  el.style.display='block';
+}
+
+async function addGapSection(i, containerId){
+  var gap=S.gapAnalysis; if(!gap) return;
+  var item=(gap.noCubiertos||[])[i]; if(!item) return;
+  var eb=S.finalEbook||S.ebookData; if(!eb || !eb.chapters || !eb.chapters.length){ alert('No se pudo determinar el capítulo destino.'); return; }
+  var chIdx = (item.capituloSugerido && eb.chapters[item.capituloSugerido-1]) ? item.capituloSugerido-1 : 0;
+  var currentLang = S.approvedLang || S.ebookLang || 'Español';
+  var wasApproved = !!S.finalEbook;
+  try{
+    var resp=await fetch('/api/gap-section',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({painPoint:item.painPoint, opportunity:S.selOpp||{}, chapterTitle:eb.chapters[chIdx].title||'', chapterSummary:(eb.chapters[chIdx].content||'').slice(0,600), language:currentLang})});
+    var d=await resp.json();
+    if(!d.success) throw new Error(d.error||'Error generando la sección');
+    eb.chapters[chIdx].content = (eb.chapters[chIdx].content||'') + '\n\n## '+d.section.sectionTitle+'\n\n'+d.section.content;
+
+    // El contenido mutado pasa a ser el borrador vigente, en el idioma en que estaba aprobado — el PDF
+    // final/EPUB/traducción anteriores YA NO reflejan esta sección nueva, por eso se invalidan sin excepción.
+    S.ebookData = eb;
+    S.ebookLang = currentLang;
+    S.finalEbook = null; S.approvedLang = null; S.pdfHtml = null;
+    _invalidateEbookScore();
+    if(S.currentHistId) saveEbookToHist(S.currentHistId, eb);
+    hide('eb-approved'); show('eb-content');
+    renderDraft(S.selOpp||{}, eb);
+    addMsg('chat-ebook','🧩 Sección añadida al capítulo '+(chIdx+1)+' ("'+_escHtml(eb.chapters[chIdx].title||'')+'"). '+(wasApproved?'El PDF final, EPUB y traducción quedaron desactualizados — vuelve a aprobar para regenerarlos.':'Vuelve a generar el PDF para incluirla.'),'ferni');
+    runGapAnalysis('eb-gap-detail');
+  }catch(e){
+    alert('Error: '+e.message);
   }
 }
 
@@ -4003,7 +4110,7 @@ async function runEbookSteps(startFrom){
     S.ebookData = ebook;
     S.ebookOppSig = _oppSig(o);
     S.ebookLang = language;
-    S.ebookScore = null;
+    S.ebookScore = null; S.gapAnalysis = null;
     S.ebookAbort = null;
     S.ebookParts = {}; // limpiar partes — ebook completo guardado en S.ebookData
 
@@ -4435,6 +4542,7 @@ function saveFullDataToHist(histId){
     if(S.lovableCheckout) S.history[idx].lovableCheckout=S.lovableCheckout;
     if(S.lovableVideo) S.history[idx].lovableVideo=S.lovableVideo;
     if(S.ebookScore) S.history[idx].ebookScore=S.ebookScore;
+    if(S.gapAnalysis) S.history[idx].gapAnalysis=S.gapAnalysis;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -7150,6 +7258,7 @@ function loadHistData(e){
   S.lovableCheckout = e.lovableCheckout || '';
   S.lovableVideo = e.lovableVideo || '';
   S.ebookScore = e.ebookScore || null;
+  S.gapAnalysis = e.gapAnalysis || null;
   S._nicheReportOppIdx = null;
   _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
