@@ -853,6 +853,30 @@ app.post('/api/search', async function(req, res) {
   }
 });
 
+// Feature Lovable — genera SOLO las piezas de copy de venta que falten (headline/bullets/descripcion y/o
+// faqs/garantia/cta) cuando el producto no tiene informe de nicho o kit Hotmart aprobados. El frontend ya
+// arma casi todo el prompt de Lovable sin gastar créditos; esto es el fallback para los huecos.
+app.post('/api/lovable-gaps', async function(req, res) {
+  try {
+    var o = req.body.opportunity || {};
+    var ebook = req.body.ebook || {};
+    var language = req.body.language || 'Español';
+    var sys = 'Eres copywriter senior de marketing de respuesta directa para infoproductos. Genera SOLO piezas de copy de venta — nada de explicaciones, nada de texto fuera del JSON.' +
+      ' Idioma: ' + language + '. Denso, persuasivo, cero relleno.';
+    var userMsg = 'PRODUCTO: ' + (ebook.title || '') + ' | Subtítulo: ' + (ebook.subtitle || '') + ' | Tagline: ' + (ebook.tagline || '') +
+      ' | Promesa: ' + (o.promesaEbook || o.ebookPromise || '') + ' | Problema que resuelve: ' + (o.problema || o.problem || '') +
+      ' | Dolor/deseo: ' + (o.dolorODeseo || '') + (ebook.intro ? '\nIntro del ebook: ' + ebook.intro : '') +
+      '\n\nGenera JSON con: {"headline":"promesa PTE, max 15 palabras","subheadline":"max 20 palabras",' +
+      '"bullets":["3-5 beneficios concretos, verbo + resultado"],"descripcionVenta":"150-200 palabras: hook, problema, solucion, beneficios, cta",' +
+      '"faqs":[{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}],"guarantee":"texto de garantia de 7-30 dias","cta":"texto corto de boton, max 4 palabras"}';
+    var txt = await claudeCall(sys, userMsg, 1200);
+    var data = extractJSON(txt);
+    res.json({ success: true, copy: data });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/chat', async function(req, res) {
   try {
     var sys = 'Eres FERNI, AI experta en market intelligence y creacion de productos digitales vendibles para Europa y USA. Contexto: ' + req.body.context + '. Responde SIEMPRE en espanol, conciso y accionable. Maximo 3 parrafos.';

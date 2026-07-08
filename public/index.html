@@ -390,6 +390,24 @@ select option { background: #ffffff; color: #232336; }
               </div>
               <div id="pipe-progress" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:10px;"></div>
               <div id="pipe-hub" style="display:none;margin-top:10px;"></div>
+
+              <!-- Página de Ventas — prompt para Lovable, ensamblado desde el copy ya generado -->
+              <div id="lovable-section" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:10px;">
+                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;">🌐 Página de Ventas — prompt para Lovable</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                  <input id="lv-checkout" type="text" placeholder="Link de checkout — Hotmart, Stripe, Gumroad... (obligatorio)" oninput="S.lovableCheckout=this.value;_syncLovableOpenBtn();" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                  <input id="lv-video" type="text" placeholder="Link de video promocional (opcional)" oninput="S.lovableVideo=this.value;" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
+                </div>
+                <button class="btn btn-teal" id="lv-generate-btn" onclick="generateLovablePrompt()">✦ Generar prompt</button>
+                <div id="lv-output" style="display:none;margin-top:12px;">
+                  <textarea id="lv-prompt-out" rows="10" oninput="_updateLovableCounter();_syncLovableOpenBtn();" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+                  <div id="lv-counter" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+                  <div class="btn-row" style="margin-top:8px;">
+                    <button class="btn btn-s" onclick="copyLovablePrompt()">📋 Copiar Prompt</button>
+                    <button class="btn btn-p" id="lv-open-btn" onclick="openInLovable()">🚀 Abrir en Lovable</button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div id="eb-user-instructions-box" style="margin:16px 0 4px;display:none;">
@@ -1329,7 +1347,7 @@ select option { background: #ffffff; color: #232336; }
 </div>
 
 <script>
-const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null, extrasMarketing:null, pipelineSource:'analysis' };
+const S = { mode:'trends', selOpp:null, results:null, country:'', niche:'', lang:'', author:'Ferni Guides', history:[], ebookData:null, finalEbook:null, fmt:'word', hmKit:null, maKit:null, claudeKey:'', openaiKey:'', pdfHtml:null, ebookImages:null, currentHistId:null, coverUrl:null, chapterImages:[], translatedEbook:null, translatedLang:null, translatedPdfHtml:null, approvedLang:null, extrasData:null, extrasLang:null, extrasMarketing:null, pipelineSource:'analysis', lovableCheckout:'', lovableVideo:'' };
 try { S.history = JSON.parse(localStorage.getItem('ferni_pro')||'[]'); } catch(e) {}
 // Firma de identidad de una oportunidad — el ebook en memoria solo se reutiliza si su firma coincide con la oportunidad seleccionada
 function _oppSig(o){ if(!o) return null; return (((o.problema||o.problem||'')+'|'+(o.tituloEbook||o.ebookTitle||'')).toLowerCase().trim()) || null; }
@@ -2276,6 +2294,128 @@ function _pipeRenderHub(){
   hub.style.display='block';
   _wizSet(5);
   hub.scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  var lvSection=document.getElementById('lovable-section');
+  if(lvSection){
+    lvSection.style.display='block';
+    var lvCk=document.getElementById('lv-checkout'); if(lvCk) lvCk.value=S.lovableCheckout||'';
+    var lvVd=document.getElementById('lv-video'); if(lvVd) lvVd.value=S.lovableVideo||'';
+    _syncLovableOpenBtn();
+  }
+}
+
+// ── PÁGINA DE VENTAS (LOVABLE) ──────────────────────────────────────────
+// Ensambla el prompt desde el copy YA generado (informe de nicho + kit Hotmart si existe) — sin gastar
+// créditos nuevos en el camino feliz. Solo si falta copy de venta (nicheReport y/o hmKit ausentes, el caso
+// más común hoy porque la tab Hotmart quedó oculta) se pide a Claude SOLO las piezas que faltan.
+async function generateLovablePrompt(){
+  var eb = S.finalEbook||S.ebookData;
+  if(!eb){ alert('Genera el ebook primero.'); return; }
+  var o = S.selOpp||{};
+  var nr = S.nicheReport||null;
+  var hv = (nr && nr.hojaVenta) || {};
+  var hm = S.hmKit||null;
+  var btn=document.getElementById('lv-generate-btn');
+  btn.disabled=true; btn.textContent='✦ Generando...';
+  try{
+    var gaps=null;
+    var needGaps = !hv.headline || !hm;
+    if(needGaps){
+      var ebSummary={ title:eb.title, subtitle:eb.subtitle, tagline:eb.tagline, intro:(eb.intro||'').slice(0,600) };
+      var r=await fetch('/api/lovable-gaps',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({opportunity:o, ebook:ebSummary, language:S.approvedLang||S.ebookLang||'Español'})});
+      var d=await r.json();
+      if(d.success) gaps=d.copy;
+    }
+    var prompt=buildLovablePrompt(eb,o,nr,hm,gaps,S.lovableCheckout||'',S.lovableVideo||'');
+    document.getElementById('lv-prompt-out').value=prompt;
+    document.getElementById('lv-output').style.display='block';
+    _updateLovableCounter();
+    _syncLovableOpenBtn();
+    if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+  }catch(e){
+    alert('Error generando el prompt: '+e.message);
+  }finally{
+    btn.disabled=false; btn.textContent='✦ Generar prompt';
+  }
+}
+
+function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
+  var hv=(nr && nr.hojaVenta)||{};
+  var headline = hv.headline || (gaps&&gaps.headline) || eb.tagline || eb.title || '';
+  var subheadline = hv.subheadline || (gaps&&gaps.subheadline) || eb.subtitle || '';
+  var bullets = (hv.bullets&&hv.bullets.length) ? hv.bullets : ((gaps&&gaps.bullets)||[]);
+  var descripcionVenta = hv.descripcionVenta || (gaps&&gaps.descripcionVenta) || '';
+  var faqs = (hm&&hm.faqs&&hm.faqs.length) ? hm.faqs : ((gaps&&gaps.faqs)||[]);
+  var guarantee = (hm&&hm.guarantee_text) || (gaps&&gaps.guarantee) || '';
+  var cta = (hm&&hm.cta) || (gaps&&gaps.cta) || 'Quiero mi copia';
+  var price = (PIPE.cfg&&PIPE.cfg.price) || S.maPrice || (nr&&nr.productoRecomendado&&nr.productoRecomendado.precioSugerido) || '';
+  var palette = (typeof _ebookImagePalette==='function') ? _ebookImagePalette(o) : '';
+  var dolor = (nr&&nr.dolor)||'';
+  var causaRaiz = (nr&&nr.causaRaiz)||'';
+  var solucion = (nr&&nr.solucion)||'';
+
+  var incluye=['📕 Ebook: '+(eb.title||'')+' ('+((eb.chapters||[]).length)+' capítulos)'];
+  if(S.extrasData && S.extrasData.length) incluye.push('🎁 Bonus Pack: '+S.extrasData.map(function(x){return x.title;}).join(', '));
+  if(typeof S_crApp!=='undefined' && S_crApp && window._crAppTopic) incluye.push('📱 App interactiva: '+window._crAppTopic);
+  if(typeof S_crSkill!=='undefined' && S_crSkill && window._crSkillTopic) incluye.push('⚡ Skill Pack: '+window._crSkillTopic);
+
+  var L=[];
+  L.push('Crea una landing page de ventas de alta conversión. Stack: React + TypeScript + Tailwind CSS.');
+  L.push('');
+  L.push('REGLA CRÍTICA: El contenido ya está optimizado para conversión. Tu trabajo es SOLO diseñar y estructurar visualmente, NO reescribir el copy. Usa los textos EXACTAMENTE como se entregan.');
+  L.push('');
+  L.push('=== IDENTIDAD VISUAL ===');
+  L.push('Paleta: '+(palette||'colores acordes al nicho del producto')+' | Mood: premium, editorial, confiable, orientado a conversión.');
+  L.push('');
+  L.push('=== HERO ===');
+  L.push('Headline: '+headline);
+  if(subheadline) L.push('Subheadline: '+subheadline);
+  L.push('CTA: '+cta+' → '+(checkout||'{{CHECKOUT}}'));
+  if(video) L.push('Video promocional embebido en el hero: '+video);
+  if(dolor){ L.push(''); L.push('=== PROBLEMA ==='); L.push(dolor+(causaRaiz?(' '+causaRaiz):'')); }
+  if(solucion||descripcionVenta){ L.push(''); L.push('=== SOLUCIÓN ==='); if(solucion) L.push(solucion); if(descripcionVenta) L.push(descripcionVenta); }
+  L.push('');
+  L.push('=== QUÉ INCLUYE ===');
+  incluye.forEach(function(i){ L.push('- '+i); });
+  if(bullets.length){ L.push(''); L.push('=== BENEFICIOS ==='); bullets.forEach(function(b){ L.push('- '+b); }); }
+  if(price){ L.push(''); L.push('=== PRECIO ==='); L.push(String(price)); }
+  if(guarantee){ L.push(''); L.push('=== GARANTÍA ==='); L.push(guarantee); }
+  if(faqs.length){ L.push(''); L.push('=== FAQ ==='); faqs.forEach(function(f){ L.push('P: '+(f.q||f.question||'')); L.push('R: '+(f.a||f.answer||'')); }); }
+  L.push('');
+  L.push('=== CTA FINAL ===');
+  L.push('Botón grande a: '+(checkout||'{{CHECKOUT}}')+' — repite este link en TODOS los botones CTA de la página.');
+  return L.join('\n');
+}
+
+function _updateLovableCounter(){
+  var ta=document.getElementById('lv-prompt-out'); if(!ta) return;
+  var len=ta.value.length;
+  var urlLen=encodeURIComponent(ta.value).length+30;
+  var pct=Math.round(urlLen/50000*100);
+  var c=document.getElementById('lv-counter'); if(c) c.textContent=len+' caracteres — '+pct+'% del límite de Lovable (50.000)';
+}
+
+function _syncLovableOpenBtn(){
+  var btn=document.getElementById('lv-open-btn'); if(!btn) return;
+  var hasCheckout=!!(S.lovableCheckout&&S.lovableCheckout.trim());
+  var ta=document.getElementById('lv-prompt-out');
+  var tooLong = !!(ta && ta.value && (encodeURIComponent(ta.value).length+30)>50000);
+  btn.disabled = !hasCheckout || tooLong;
+  btn.title = !hasCheckout ? 'Configura el link de checkout para continuar' : tooLong ? 'Prompt muy largo para abrir por URL — usa Copiar Prompt' : '';
+}
+
+function copyLovablePrompt(){
+  var ta=document.getElementById('lv-prompt-out'); if(!ta||!ta.value) return;
+  navigator.clipboard.writeText(ta.value).then(function(){ alert('Prompt copiado al portapapeles.'); }).catch(function(){ ta.select(); document.execCommand('copy'); alert('Prompt copiado al portapapeles.'); });
+}
+
+function openInLovable(){
+  var ta=document.getElementById('lv-prompt-out'); if(!ta||!ta.value) return;
+  if(!S.lovableCheckout||!S.lovableCheckout.trim()){ alert('Configura el link de checkout para continuar'); return; }
+  var encoded=encodeURIComponent(ta.value);
+  if(encoded.length+30>50000){ alert('El prompt es muy largo para abrir por URL. Usa "Copiar Prompt" y pégalo directamente en Lovable.'); return; }
+  window.open('https://lovable.dev/?prompt='+encoded, '_blank');
 }
 
 // ── EXPANSIÓN A NUEVO MERCADO ──────────────────────────────────────────
@@ -4186,6 +4326,8 @@ function saveFullDataToHist(histId){
     if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
     if(S.nicheValidation) S.history[idx].nicheValidation=S.nicheValidation;
     if(S.pipelineSource) S.history[idx].pipelineSource=S.pipelineSource;
+    if(S.lovableCheckout) S.history[idx].lovableCheckout=S.lovableCheckout;
+    if(S.lovableVideo) S.history[idx].lovableVideo=S.lovableVideo;
     if(S.approvedLang) S.history[idx].approvedLang=S.approvedLang; // idioma REAL del ebook aprobado (h.language es el idioma de búsqueda)
     if(S.coverUrl) S.history[idx].coverUrl=S.coverUrl;
     if(S.chapterImages && S.chapterImages.some(function(x){return x;})) S.history[idx].chapterImages=S.chapterImages;
@@ -6893,6 +7035,8 @@ function loadHistData(e){
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
   S.nicheValidation = e.nicheValidation || null;
   S.pipelineSource = e.pipelineSource || 'analysis';
+  S.lovableCheckout = e.lovableCheckout || '';
+  S.lovableVideo = e.lovableVideo || '';
   S._nicheReportOppIdx = null;
   _wizSet(S.nicheReportApproved ? 3 : 1);
   if(opp){
