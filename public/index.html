@@ -1686,7 +1686,7 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
   var nicheRoute=niche+(subNiche?' → '+subNiche:'')+(microNiche?' → '+microNiche:'');
   document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${nicheRoute} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
   document.getElementById('sr-count').textContent=opps.length+' oportunidades';
-  const avg=Math.round(opps.reduce((a,b)=>a+(b.monetizationScore||0),0)/opps.length);
+  const avg=Math.round(opps.reduce((a,b)=>a+(b.scoreMonetizacion||b.monetizationScore||0),0)/opps.length);
   const hi=opps.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
   document.getElementById('sr-stats').innerHTML=`
     <div class="stat"><div class="stat-n" style="color:#a29bfe">${opps.length}</div><div class="stat-l">Oportunidades</div></div>
