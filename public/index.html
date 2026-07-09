@@ -1392,6 +1392,10 @@ select option { background: #ffffff; color: #232336; }
           <div class="row-hd"><div class="sec-lbl">🕵️ Espía de competencia — anuncios reales de Meta</div></div>
           <div class="hint" style="margin-bottom:14px;">Ve qué están anunciando AHORA tus competidores: copys, targeting real y ángulos. Cobertura: países UE (transparencia DSA).</div>
           <div class="fg">
+            <div class="fl">Cargar keyword desde un producto ya analizado (opcional)</div>
+            <select id="spy-load-sel" onchange="loadSpyFromHist(this.value)"></select>
+          </div>
+          <div class="fg">
             <div class="fl">País</div>
             <select id="spy-country"></select>
           </div>
@@ -1543,7 +1547,7 @@ function showTab(id,el){
     if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
     else { populateMetaSel(); showMaBonusInfo(); }
   }
-  if(id==='espia') populateSpyCountrySel();
+  if(id==='espia'){ populateSpyCountrySel(); populateSpyLoadSel(); }
 }
 
 function populateSpyCountrySel(){
@@ -1551,6 +1555,41 @@ function populateSpyCountrySel(){
   if(!sel||!src||sel.options.length) return;
   sel.innerHTML=src.innerHTML;
   if(src.value) sel.value=src.value;
+}
+
+// Poblar selector "cargar keyword desde un producto ya analizado" — cualquier oportunidad
+// con análisis (no hace falta ebook terminado, la keyword sale de la oportunidad misma)
+function populateSpyLoadSel(){
+  var sel=document.getElementById('spy-load-sel');
+  if(!sel) return;
+  sel.innerHTML='<option value="">— Escribir manualmente —</option>';
+  if(S.selOpp){
+    var opt=document.createElement('option');
+    opt.value='current';
+    opt.textContent='🎯 '+(S.selOpp.tituloEbook||S.selOpp.ebookTitle||S.selOpp.problema||S.selOpp.problem||'Oportunidad actual')+' — '+(S.selOpp.pais||S.selOpp.country||'');
+    sel.appendChild(opt);
+  }
+  (S.history||[]).forEach(function(h){
+    var o=h.selOpp||(h.opps&&h.opps[0]);
+    if(!o) return;
+    var opt=document.createElement('option');
+    opt.value='hist_'+h.id;
+    opt.textContent='🎯 '+(o.tituloEbook||o.ebookTitle||o.problema||o.problem||'Oportunidad')+' — '+(o.pais||o.country||'');
+    sel.appendChild(opt);
+  });
+}
+function loadSpyFromHist(val){
+  var o=null;
+  if(val==='current') o=S.selOpp;
+  else if(val && val.indexOf('hist_')===0){
+    var h=(S.history||[]).find(function(x){ return String(x.id)===val.replace('hist_',''); });
+    o=h && (h.selOpp||(h.opps&&h.opps[0]));
+  }
+  if(!o) return;
+  var kw=(o.clusterKeywords&&o.clusterKeywords[0])||o.busquedaExacta||o.tituloEbook||o.ebookTitle||o.problema||o.problem||'';
+  var kwInp=document.getElementById('spy-kw'); if(kwInp) kwInp.value=kw;
+  var countrySel=document.getElementById('spy-country');
+  if(countrySel && (o.pais||o.country)) countrySel.value=o.pais||o.country;
 }
 
 async function spyRun(){
