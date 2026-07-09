@@ -230,6 +230,7 @@ select option { background: #ffffff; color: #232336; }
       <button class="tab" onclick="showTab('import',this)">📥 Importar</button>
       <button class="tab" onclick="showTab('crear',this)" style="display:none;">📱 Crear</button>
       <button class="tab" onclick="showTab('hist',this)">🕐 Historial</button>
+      <button class="tab" onclick="showTab('espia',this)">🕵️ Espía</button>
       <div style="position:relative;display:inline-block;">
         <button class="tab" onclick="var m=document.getElementById('adv-menu');m.style.display=m.style.display==='none'?'block':'none';">⚙ Avanzado</button>
         <div id="adv-menu" style="display:none;position:absolute;right:0;top:100%;z-index:300;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:170px;box-shadow:0 6px 24px rgba(0,0,0,0.15);">
@@ -1385,6 +1386,24 @@ select option { background: #ffffff; color: #232336; }
         </div>
       </div>
 
+      <!-- ESPÍA DE COMPETENCIA (Meta Ads Library) -->
+      <div id="panel-espia" class="panel">
+        <div class="panel-scroll">
+          <div class="row-hd"><div class="sec-lbl">🕵️ Espía de competencia — anuncios reales de Meta</div></div>
+          <div class="hint" style="margin-bottom:14px;">Ve qué están anunciando AHORA tus competidores: copys, targeting real y ángulos. Cobertura: países UE (transparencia DSA).</div>
+          <div class="fg">
+            <div class="fl">País</div>
+            <select id="spy-country"></select>
+          </div>
+          <div class="fg">
+            <div class="fl">Keyword o competidor</div>
+            <input type="text" id="spy-kw" placeholder="ej: Wechseljahre ohne Hormone, o el nombre de una página" />
+          </div>
+          <button class="btn btn-p" id="spy-btn" onclick="spyRun()" style="margin-top:6px;">🔍 Espiar anuncios</button>
+          <div id="spy-out" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1524,6 +1543,62 @@ function showTab(id,el){
     if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
     else { populateMetaSel(); showMaBonusInfo(); }
   }
+  if(id==='espia') populateSpyCountrySel();
+}
+
+function populateSpyCountrySel(){
+  var sel=document.getElementById('spy-country'); var src=document.getElementById('sel-country');
+  if(!sel||!src||sel.options.length) return;
+  sel.innerHTML=src.innerHTML;
+  if(src.value) sel.value=src.value;
+}
+
+async function spyRun(){
+  var kw=document.getElementById('spy-kw').value.trim();
+  var country=document.getElementById('spy-country').value;
+  var out=document.getElementById('spy-out'); var btn=document.getElementById('spy-btn');
+  if(!kw){ alert('Escribe una keyword o competidor.'); return; }
+  if(!country){ alert('Selecciona un país.'); return; }
+  btn.disabled=true; btn.textContent='🔍 Espiando...';
+  out.innerHTML='<div style="text-align:center;padding:24px;"><div class="spinner"></div><div style="font-size:13px;margin-top:10px;color:var(--text);">Consultando la Ad Library de Meta…</div></div>';
+  try{
+    var r=await fetch('/api/spy-ads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:kw,country:country})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'Error');
+    renderSpy(d.spy);
+  }catch(e){ out.innerHTML='<div style="background:rgba(225,112,85,0.1);border:1px solid #e17055;border-radius:10px;padding:12px;font-size:13px;color:#e17055;">⚠️ '+_escHtml(e.message)+'</div>'; }
+  finally{ btn.disabled=false; btn.textContent='🔍 Espiar anuncios'; }
+}
+function renderSpy(sp){
+  var esc=function(s){return _escHtml(String(s||''));};
+  var an=sp.analisis||null; var rub=sp.rubrica||{}; var dg=sp.demografia||{};
+  var head='<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;">'+
+    '<div style="font-size:15px;font-weight:800;color:'+(rub.color||'var(--text)')+';">'+esc(rub.label||'')+'</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-top:4px;">'+sp.totalAds+' anuncios activos para "'+esc(sp.keyword)+'" en '+esc(sp.pais)+
+    ((dg.generoTop||dg.edadTop)?' · targeting dominante: '+esc(dg.generoTop)+' '+esc(dg.edadTop):'')+'</div>'+
+    (an?('<div style="margin-top:10px;font-size:12px;">'+
+      (an.angulosDominantes?'<b>📐 Ángulos:</b> '+esc(an.angulosDominantes.join(' · '))+'<br>':'')+
+      (an.formatosOferta?'<b>📦 Formatos:</b> '+esc(an.formatosOferta.join(' · '))+'<br>':'')+
+      (an.huecoDetectado?'<div style="margin-top:6px;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(108,92,231,0.06);"><b>💡 Hueco para ti:</b> '+esc(an.huecoDetectado)+'</div>':'')+
+    '</div>'):'')+
+    '<div style="margin-top:10px;"><button class="btn btn-s" onclick="spyToCreate()">✦ Usar este nicho en Crear Producto</button></div>'+
+  '</div>';
+  var cards=(sp.ads||[]).map(function(a){
+    return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b style="font-size:13px;">'+esc(a.page)+'</b>'+
+      '<a href="https://www.facebook.com/ads/library/?id='+encodeURIComponent(a.id)+'" target="_blank" style="font-size:11px;color:var(--accent);">Ver en Ad Library ↗</a></div>'+
+      (a.title?'<div style="font-size:12px;font-weight:700;margin-top:4px;">'+esc(a.title)+'</div>':'')+
+      (a.body?'<div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.6;">'+esc(a.body)+'</div>':'')+
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px;">'+(a.gender?esc(a.gender)+' · ':'')+(a.ages?esc(a.ages)+' · ':'')+(a.since?'desde '+esc(a.since.slice(0,10)):'')+(a.reach?' · alcance UE '+a.reach:'')+'</div>'+
+    '</div>';
+  }).join('');
+  document.getElementById('spy-out').innerHTML=head+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">'+cards+'</div>';
+}
+function spyToCreate(){
+  var kw=document.getElementById('spy-kw').value.trim();
+  var ni=document.getElementById('inp-niche');
+  if(ni){ ni.value=kw; ni.dispatchEvent(new Event('input')); }
+  showTab('search',_tabBtn('search'));
 }
 
 function restoreEbookTab(){
@@ -1936,7 +2011,7 @@ function renderNicheReport(r){
         '<br><b>Lo que nadie hace:</b> '+esc(ac.loQueNadieHace)+
         ((ac.planDiferenciacion&&ac.planDiferenciacion.length)?'<br><b>Plan de diferenciación:</b><ol style="margin:4px 0 0;padding-left:20px;">'+ac.planDiferenciacion.map(function(x){return '<li style="margin-bottom:4px;">'+esc(x)+'</li>';}).join('')+'</ol>':'')+
         '<div style="margin-top:8px;padding:8px 12px;border-left:3px solid var(--accent);background:rgba(108,92,231,0.06);font-weight:700;color:var(--text);">🎯 '+esc(ac.posicionamiento)+'</div>'):'')+
-      sec('🕵️ Validación manual en Meta Ads', esc(r.validacionManualMeta))+
+      '<div id="nr-meta-check">'+sec('🕵️ Validación en Meta Ads','<div style="color:var(--muted);font-size:12px;">⏳ Consultando anuncios reales en la Ad Library de Meta…</div>')+'</div>'+
       sec('📦 Producto recomendado',
         '<b>'+esc(pr.titulo)+'</b> ('+esc(pr.tipo)+')<br>'+esc(pr.promesa)+
         '<br><b>Precio sugerido:</b> '+esc(pr.precioSugerido)+
@@ -1955,6 +2030,49 @@ function renderNicheReport(r){
   document.getElementById('nr-content').style.display='block';
   document.getElementById('nr-actions').style.display='block';
   _nrGate();
+  runMetaAdsCheck();
+}
+
+// Validación automática en Meta Ads — reemplaza la instrucción manual por un veredicto con evidencia real
+async function runMetaAdsCheck(){
+  var box=document.getElementById('nr-meta-check'); if(!box||!S.selOpp||!S.nicheReport) return;
+  if(S.metaCheck && S.metaCheck._sig===_oppSig(S.selOpp)){ renderMetaCheck(S.metaCheck); return; }
+  try{
+    var r=await fetch('/api/meta-ads-check',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({opportunity:S.selOpp, report:S.nicheReport, country:(S.selOpp.pais||S.selOpp.country)||S.country})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'error');
+    d.check._sig=_oppSig(S.selOpp);
+    S.metaCheck=d.check; _sessSave(); if(S.currentHistId) saveFullDataToHist(S.currentHistId);
+    renderMetaCheck(d.check);
+  }catch(e){ renderMetaCheck({status:'api_error', errorDetalle:e.message}); }
+}
+function renderMetaCheck(c){
+  var box=document.getElementById('nr-meta-check'); if(!box) return;
+  var esc=function(s){return _escHtml(String(s||''));};
+  var manual=(S.nicheReport&&S.nicheReport.validacionManualMeta)||'';
+  var inner='';
+  if(c.status==='ok'){
+    var rub=c.rubrica||{}; var an=c.analisis||null; var dg=c.demografia||{};
+    inner='<div style="font-size:14px;font-weight:800;color:'+(rub.color||'var(--text)')+';margin-bottom:6px;">'+esc(rub.label||'')+' ('+c.totalAds+' anuncios · '+esc((c.keywords||[]).join(', '))+')</div>'+
+      ((dg.generoTop||dg.edadTop)?'<div style="font-size:12px;margin-bottom:4px;"><b>🎯 Demográfico real:</b> '+esc(dg.generoTop)+' '+esc(dg.edadTop)+' <span style="color:var(--muted);">('+esc(dg.fuente)+')</span></div>':'')+
+      (c.topAnunciantes&&c.topAnunciantes.length?'<div style="font-size:12px;margin-bottom:4px;"><b>🏢 Quién anuncia:</b> '+esc(c.topAnunciantes.join(' · '))+'</div>':'')+
+      (an?(
+        (an.angulosDominantes&&an.angulosDominantes.length?'<div style="font-size:12px;margin-bottom:4px;"><b>📐 Ángulos dominantes:</b> '+esc(an.angulosDominantes.join(' · '))+'</div>':'')+
+        (an.ejemploCopyGanador?'<div style="font-size:12px;margin-bottom:4px;font-style:italic;color:var(--text2);">"'+esc(an.ejemploCopyGanador)+'"</div>':'')+
+        (an.huecoDetectado?'<div style="font-size:12px;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(108,92,231,0.06);"><b>💡 Hueco:</b> '+esc(an.huecoDetectado)+'</div>':'')
+      ):'');
+  } else if(c.status==='no_coverage'){
+    inner='<div style="font-size:12px;color:var(--text2);">ℹ️ La Ad Library API de Meta solo expone anuncios comerciales en países de la UE — para '+esc(c.pais||'')+' la validación sigue siendo manual:</div><div style="font-size:12px;margin-top:6px;">'+esc(manual)+'</div>';
+  } else if(c.status==='no_token'){
+    inner='<div style="font-size:12px;color:#b8860b;">⚙️ Falta configurar META_ACCESS_TOKEN en Vercel (Settings → Environment Variables). Mientras tanto, validación manual:</div><div style="font-size:12px;margin-top:6px;">'+esc(manual)+'</div>';
+  } else if(c.status==='no_permission'){
+    inner='<div style="font-size:12px;color:#e17055;">🔒 Meta rechazó el token ('+esc(c.errorDetalle||'')+'). Plan B: entra a developers.facebook.com/tools/explorer, elige la app FERNI AI, genera un token de usuario, y reemplaza META_ACCESS_TOKEN en Vercel. Mientras tanto, validación manual:</div><div style="font-size:12px;margin-top:6px;">'+esc(manual)+'</div>';
+  } else {
+    inner='<div style="font-size:12px;color:var(--muted);">⚠️ No se pudo consultar Meta ('+esc(c.errorDetalle||'sin detalle')+'). Validación manual: '+esc(manual)+'</div>';
+  }
+  inner+='<div style="margin-top:8px;"><button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="S.metaCheck=null;runMetaAdsCheck()">↻ Reconsultar</button></div>';
+  box.innerHTML='<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">🕵️ Validación en Meta Ads — anuncios reales</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+inner+'</div></div>';
 }
 
 // Gate de aprobación: con advertencias pendientes no se aprueba sin validar primero
@@ -2011,7 +2129,7 @@ async function validateNicheWarnings(){
   try{
     var o=S.selOpp;
     var r=await fetch('/api/validate-niche',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({report:S.nicheReport, opportunity:o,
+      body:JSON.stringify({report:S.nicheReport, opportunity:o, metaCheck:S.metaCheck||null,
         country:(o&&(o.pais||o.country))||S.country, language:(o&&(o.idioma||o.language))||S.lang})});
     var d=await r.json();
     if(!d.success) throw new Error(d.error||'Error validando el informe');
@@ -4751,6 +4869,7 @@ function saveFullDataToHist(histId){
     if(S.nicheReport) S.history[idx].nicheReport=S.nicheReport;
     if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
     if(S.nicheValidation) S.history[idx].nicheValidation=S.nicheValidation;
+    if(S.metaCheck) S.history[idx].metaCheck=S.metaCheck;
     if(S.pipelineSource) S.history[idx].pipelineSource=S.pipelineSource;
     if(S.lovableCheckout) S.history[idx].lovableCheckout=S.lovableCheckout;
     if(S.lovableVideo) S.history[idx].lovableVideo=S.lovableVideo;
@@ -7484,6 +7603,7 @@ function loadHistData(e){
   S.nicheReport = e.nicheReport || null;
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
   S.nicheValidation = e.nicheValidation || null;
+  S.metaCheck = e.metaCheck || null;
   S.pipelineSource = e.pipelineSource || 'analysis';
   S.lovableCheckout = e.lovableCheckout || '';
   S.lovableVideo = e.lovableVideo || '';

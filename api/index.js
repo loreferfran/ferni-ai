@@ -15,6 +15,12 @@ const SERPER_KEY = process.env.SERPER_API_KEY;
 const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
 const DATAFORSEO_LOGIN = process.env.DATAFORSEO_LOGIN;
 const DATAFORSEO_PASSWORD = process.env.DATAFORSEO_PASSWORD;
+const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
+const META_API_VERSION = 'v23.0';
+// Solo países UE exponen TODOS los anuncios (comerciales incluidos) en la Ad Library API (reglamento DSA).
+// null = sin cobertura comercial → fallback manual honesto.
+const META_ISO2 = { France:'FR', Germany:'DE', Italy:'IT', Spain:'ES', Portugal:'PT', Netherlands:'NL', Belgium:'BE', Sweden:'SE', Austria:'AT', Poland:'PL', 'United Kingdom':null, Switzerland:null, USA:null, Canada:null, Japan:null, 'South Korea':null, India:null, China:null, Singapore:null, Thailand:null, 'South Africa':null, Nigeria:null, Kenya:null, UAE:null, Australia:null, 'New Zealand':null, Mexico:null, Colombia:null, Argentina:null, Chile:null, Peru:null, Uruguay:null, Ecuador:null, Brazil:null, LatAm:null };
+var _metaCache = {}; // { key: { t: timestamp, data } } — TTL 6h, cache por instancia serverless
 
 const REGS = {
   France: { legal: 'RGPD, Loi Hamon garantie 14 jours, Directive UE 2011/83', healthDisclaimer: 'Ce guide est fourni a titre informatif uniquement et ne remplace pas lavis dun professionnel de sante.', guarantee: 'Garantie satisfait ou rembourse 14 jours', dataProtection: 'Donnees protegees conformement au RGPD.', forbidden: 'Pas de promesses de resultats garantis en sante.', language: 'French', currency: 'EUR' },
@@ -484,6 +490,53 @@ async function serperSearch(query, hl) {
     }
   } catch (e) {}
   return [];
+}
+
+// Ad Library API de Meta — cobertura comercial solo en paises UE (reglamento DSA)
+async function metaAdsSearch(terms, iso2) {
+  var seen = {}, ads = [], errors = [];
+  var fields = 'id,page_name,ad_creative_bodies,ad_creative_link_titles,target_ages,target_gender,eu_total_reach,ad_delivery_start_time';
+  for (var i = 0; i < Math.min(terms.length, 3); i++) {
+    try {
+      var url = 'https://graph.facebook.com/' + META_API_VERSION + '/ads_archive' +
+        '?search_terms=' + encodeURIComponent(terms[i]) +
+        '&search_type=KEYWORD_UNORDERED' +
+        '&ad_type=ALL&ad_active_status=ACTIVE' +
+        '&ad_reached_countries=' + encodeURIComponent(JSON.stringify([iso2])) +
+        '&fields=' + fields + '&limit=100' +
+        '&access_token=' + encodeURIComponent(META_ACCESS_TOKEN);
+      var r = await fetch(url);
+      var d = await r.json();
+      if (d.error) { errors.push(d.error); continue; }
+      (d.data || []).forEach(function(ad) { if (ad && ad.id && !seen[ad.id]) { seen[ad.id] = 1; ads.push(ad); } });
+    } catch (e) { errors.push({ message: e.message }); }
+  }
+  return { ads: ads, totalAds: ads.length, errors: errors };
+}
+function metaRubrica(n) {
+  if (n >= 91) return { nivel: 'escalada', label: '🔥 91+ anuncios activos — oferta escalada, mercado caliente y demanda probada', color: '#00b894' };
+  if (n >= 31) return { nivel: 'validada', label: '✅ 31-90 anuncios activos — oferta validada: hay anunciantes pagando por este mercado', color: '#00b894' };
+  if (n >= 16) return { nivel: 'precaucion', label: '⚠️ 16-30 anuncios activos — señal moderada, validar el ángulo antes de escalar', color: '#fdcb6e' };
+  return { nivel: 'debil', label: '❌ 0-15 anuncios activos — señal débil: casi nadie paga por anunciar esto aquí', color: '#e17055' };
+}
+async function metaAdsSynthesize(ads, contexto) {
+  var bodies = ads.slice(0, 20).map(function(a) { return ((a.ad_creative_bodies || [])[0] || '').slice(0, 300); }).filter(Boolean);
+  if (!bodies.length) return null;
+  var sys = 'Eres analista de Meta Ads para infoproductos. Recibes textos REALES de anuncios activos. Responde SOLO JSON: ' +
+    '{"angulosDominantes":["3-5 angulos, max 12 palabras c/u"],"demografiaImplicita":"a quien le hablan los copys (max 15 palabras)",' +
+    '"formatosOferta":["ebook/curso/app/reto/suplemento/etc detectados"],"ejemploCopyGanador":"el copy mas persuasivo citado textual, recortado a 40 palabras",' +
+    '"huecoDetectado":"que angulo NADIE esta usando y este producto puede explotar (max 25 palabras)"}. Basate SOLO en los textos recibidos, no inventes.';
+  var msg = 'CONTEXTO DEL PRODUCTO: ' + contexto + '\n\nTEXTOS DE ANUNCIOS ACTIVOS:\n' + bodies.map(function(b, i) { return (i + 1) + '. ' + b; }).join('\n');
+  try { return extractJSON(await claudeCall(sys, msg, 1200)); } catch (e) { return null; }
+}
+function metaDemografia(ads) {
+  var g = {}, a = {};
+  ads.forEach(function(ad) {
+    (ad.target_gender ? [ad.target_gender] : []).forEach(function(x) { g[x] = (g[x] || 0) + 1; });
+    (ad.target_ages || []).forEach(function(x) { a[x] = (a[x] || 0) + 1; });
+  });
+  function top(o) { return Object.keys(o).sort(function(x, y) { return o[y] - o[x]; })[0] || ''; }
+  return { generoTop: top(g), edadTop: top(a), fuente: 'targeting declarado por los anunciantes en Meta (transparencia UE/DSA)' };
 }
 
 // Busqueda Google Trends via Serper - MEJORADA PARA TENDENCIAS REALES
@@ -1205,6 +1258,58 @@ app.post('/api/niche-report', async function(req, res) {
   }
 });
 
+// ── VALIDACIÓN AUTOMÁTICA EN META ADS — reemplaza la instrucción manual "busca esto tú misma en
+// facebook.com/ads/library" por una consulta real a la Ad Library API. Cobertura solo países UE
+// (reglamento DSA obliga a exponer TODOS los anuncios, no solo político/electoral, con targeting real).
+app.post('/api/meta-ads-check', async function(req, res) {
+  try {
+    var o = req.body.opportunity || {}, report = req.body.report || {};
+    var countryName = getCountryName(req.body.country || o.pais || 'España');
+    if (!META_ACCESS_TOKEN) return res.json({ success: true, check: { status: 'no_token', pais: countryName } });
+    var iso2 = META_ISO2[countryName];
+    if (!iso2) return res.json({ success: true, check: { status: 'no_coverage', pais: countryName } });
+    var terms = [o.busquedaExacta, (o.clusterKeywords || [])[0], report.jerarquiaNicho && report.jerarquiaNicho.microNicho]
+      .filter(Boolean).filter(function(x, i, arr) { return arr.indexOf(x) === i; }).slice(0, 3);
+    if (!terms.length) return res.json({ success: true, check: { status: 'no_results', pais: countryName, keywords: [] } });
+    var ck = iso2 + '|' + terms.join('|');
+    if (_metaCache[ck] && Date.now() - _metaCache[ck].t < 6 * 3600 * 1000) return res.json({ success: true, check: _metaCache[ck].data, cached: true });
+    var sr = await metaAdsSearch(terms, iso2);
+    if (!sr.ads.length && sr.errors.length) {
+      var err = sr.errors[0] || {};
+      var perm = err.code === 190 || err.code === 10 || /permission|OAuth|access/i.test(err.message || '');
+      return res.json({ success: true, check: { status: perm ? 'no_permission' : 'api_error', pais: countryName, errorDetalle: (err.message || '').slice(0, 200) } });
+    }
+    var rub = metaRubrica(sr.totalAds);
+    var pageCount = {}; sr.ads.forEach(function(a) { if (a.page_name) pageCount[a.page_name] = (pageCount[a.page_name] || 0) + 1; });
+    var topAnunciantes = Object.keys(pageCount).sort(function(x, y) { return pageCount[y] - pageCount[x]; }).slice(0, 5);
+    var contexto = 'Producto: ' + (o.tituloEbook || '') + ' | Problema: ' + (o.problema || '') + ' | País: ' + countryName + ' | Keywords: ' + terms.join(', ');
+    var analisis = sr.totalAds > 0 ? await metaAdsSynthesize(sr.ads, contexto) : null;
+    var check = { status: 'ok', pais: countryName, keywords: terms, totalAds: sr.totalAds, rubrica: rub, demografia: metaDemografia(sr.ads), topAnunciantes: topAnunciantes, analisis: analisis };
+    _metaCache[ck] = { t: Date.now(), data: check };
+    res.json({ success: true, check: check });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ── ESPÍA DE COMPETENCIA — busca anuncios reales activos de una keyword/competidor (tab propia) ──
+app.post('/api/spy-ads', async function(req, res) {
+  try {
+    if (!META_ACCESS_TOKEN) return res.json({ success: false, error: 'Configura META_ACCESS_TOKEN en Vercel primero.' });
+    var keyword = (req.body.keyword || '').trim();
+    var countryName = getCountryName(req.body.country || 'España');
+    var iso2 = META_ISO2[countryName];
+    if (!keyword) return res.json({ success: false, error: 'Escribe una keyword o nombre de competidor.' });
+    if (!iso2) return res.json({ success: false, error: 'La Ad Library API solo expone anuncios comerciales en países de la UE — ' + countryName + ' no tiene cobertura. Usa facebook.com/ads/library manualmente para este país.' });
+    var sr = await metaAdsSearch([keyword], iso2);
+    if (!sr.ads.length && sr.errors.length) return res.json({ success: false, error: 'Meta: ' + ((sr.errors[0] || {}).message || 'error de API').slice(0, 200) });
+    var rub = metaRubrica(sr.totalAds);
+    var analisis = sr.totalAds > 0 ? await metaAdsSynthesize(sr.ads, 'Espionaje de competencia. Keyword: ' + keyword + ' | País: ' + countryName) : null;
+    var list = sr.ads.slice(0, 60).map(function(a) {
+      return { id: a.id, page: a.page_name || '', body: ((a.ad_creative_bodies || [])[0] || '').slice(0, 500), title: ((a.ad_creative_link_titles || [])[0] || ''), ages: (a.target_ages || []).join('-'), gender: a.target_gender || '', since: a.ad_delivery_start_time || '', reach: a.eu_total_reach || 0 };
+    });
+    res.json({ success: true, spy: { keyword: keyword, pais: countryName, totalAds: sr.totalAds, rubrica: rub, demografia: metaDemografia(sr.ads), analisis: analisis, ads: list } });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ── VALIDAR ADVERTENCIAS — investigación dirigida a resolver las dudas puntuales del informe de nicho ──
 // Reemplaza a "Ajustar"/"Regenerar": no repite la investigación completa ni reescribe a ciegas,
 // convierte cada advertencia en consultas ejecutables, las corre, y cruza el resultado con el informe
@@ -1254,6 +1359,14 @@ app.post('/api/validate-niche', async function(req, res) {
     var evidenceBlock = queries.map(function(q, i){
       return '=== ' + (q.proposito || q.tipo).toUpperCase() + ' (' + q.tipo + ') ===\n' + fmtEv(results[i]);
     }).join('\n\n') || '(sin consultas ejecutadas)';
+
+    var mc = req.body.metaCheck;
+    if (mc && mc.status === 'ok') {
+      evidenceBlock += '\n\n=== ANUNCIOS REALES ACTIVOS EN META (Ad Library, ' + (mc.pais || '') + ') ===\n' +
+        '- Total anuncios activos para el cluster: ' + mc.totalAds + ' → ' + ((mc.rubrica || {}).label || '') +
+        (mc.demografia && mc.demografia.generoTop ? '\n- Targeting real dominante: ' + mc.demografia.generoTop + ' ' + (mc.demografia.edadTop || '') : '') +
+        (mc.analisis && mc.analisis.angulosDominantes ? '\n- Angulos que ya se anuncian: ' + mc.analisis.angulosDominantes.join(', ') : '');
+    }
 
     // Paso 3 — cruzar informe original + evidencia nueva → veredicto final binario
     var vSys = 'Eres el mismo analista senior que escribió este informe de nicho. Llega evidencia NUEVA dirigida a resolver tus advertencias.' +
