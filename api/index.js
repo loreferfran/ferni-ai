@@ -15,11 +15,22 @@ const SERPER_KEY = process.env.SERPER_API_KEY;
 const CLAUDE_KEY = process.env.CLAUDE_API_KEY;
 const DATAFORSEO_LOGIN = process.env.DATAFORSEO_LOGIN;
 const DATAFORSEO_PASSWORD = process.env.DATAFORSEO_PASSWORD;
-const META_ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
+// .trim() + sin comillas envolventes: un salto de línea o espacio pegado en Vercel corrompe la firma del token (error 190)
+const META_ACCESS_TOKEN = (process.env.META_ACCESS_TOKEN || '').trim().replace(/^["']+|["']+$/g, '') || null;
 const META_API_VERSION = 'v23.0';
 // Solo países UE exponen TODOS los anuncios (comerciales incluidos) en la Ad Library API (reglamento DSA).
 // null = sin cobertura comercial → fallback manual honesto.
 const META_ISO2 = { France:'FR', Germany:'DE', Italy:'IT', Spain:'ES', Portugal:'PT', Netherlands:'NL', Belgium:'BE', Sweden:'SE', Austria:'AT', Poland:'PL', 'United Kingdom':null, Switzerland:null, USA:null, Canada:null, Japan:null, 'South Korea':null, India:null, China:null, Singapore:null, Thailand:null, 'South Africa':null, Nigeria:null, Kenya:null, UAE:null, Australia:null, 'New Zealand':null, Mexico:null, Colombia:null, Argentina:null, Chile:null, Peru:null, Uruguay:null, Ecuador:null, Brazil:null, LatAm:null };
+// Dominios locales de Amazon — usado por serperAmazon() y por el Radar de Infoproductos (market-scan)
+const AMAZON_DOMAINS = {
+  France: 'amazon.fr', Germany: 'amazon.de', Italy: 'amazon.it', Spain: 'amazon.es',
+  'United Kingdom': 'amazon.co.uk', USA: 'amazon.com', Canada: 'amazon.ca',
+  Netherlands: 'amazon.nl', Belgium: 'amazon.com.be', Sweden: 'amazon.se', Poland: 'amazon.pl',
+  Mexico: 'amazon.com.mx', Brazil: 'amazon.com.br',
+  Japan: 'amazon.co.jp', India: 'amazon.in', Singapore: 'amazon.sg', UAE: 'amazon.ae',
+  Australia: 'amazon.com.au'
+  // Países sin Amazon local (Colombia, Argentina, Chile, Perú, etc.) → amazon.com (envía a LatAm)
+};
 var _metaCache = {}; // { key: { t: timestamp, data } } — TTL 6h, cache por instancia serverless
 
 const REGS = {
@@ -633,15 +644,7 @@ async function serperYoutube(topic, country) {
 
 // Busqueda Amazon bestsellers via Serper
 async function serperAmazon(topic, country, currency) {
-  const amazonDomain = {
-    France: 'amazon.fr', Germany: 'amazon.de', Italy: 'amazon.it', Spain: 'amazon.es',
-    'United Kingdom': 'amazon.co.uk', USA: 'amazon.com', Canada: 'amazon.ca',
-    Netherlands: 'amazon.nl', Belgium: 'amazon.com.be', Sweden: 'amazon.se', Poland: 'amazon.pl',
-    Mexico: 'amazon.com.mx', Brazil: 'amazon.com.br',
-    Japan: 'amazon.co.jp', India: 'amazon.in', Singapore: 'amazon.sg', UAE: 'amazon.ae',
-    Australia: 'amazon.com.au'
-    // Países sin Amazon local (Colombia, Argentina, Chile, Perú, etc.) → amazon.com (envía a LatAm)
-  }[country] || 'amazon.com';
+  const amazonDomain = AMAZON_DOMAINS[country] || 'amazon.com';
   try {
     const r = await fetch('https://google.serper.dev/shopping', {
       method: 'POST',
@@ -1325,6 +1328,27 @@ app.post('/api/meta-ads-check', async function(req, res) {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// Diagnóstico del token de Meta — reporta el error exacto de la API sin exponer el token completo
+app.get('/api/meta-diag', async function(req, res) {
+  var raw = process.env.META_ACCESS_TOKEN || '';
+  var out = {
+    tokenPresent: !!META_ACCESS_TOKEN,
+    tokenLen: (META_ACCESS_TOKEN || '').length,
+    tokenPreview: META_ACCESS_TOKEN ? META_ACCESS_TOKEN.slice(0, 6) + '…' + META_ACCESS_TOKEN.slice(-4) : null,
+    envTeniaWhitespace: raw !== raw.trim() // true = la causa raíz era el pegado con espacios/saltos de línea
+  };
+  if (!META_ACCESS_TOKEN) return res.json(out);
+  try {
+    var me = await (await fetch('https://graph.facebook.com/' + META_API_VERSION + '/me?access_token=' + encodeURIComponent(META_ACCESS_TOKEN))).json();
+    out.me = me.error ? { ok: false, error: me.error } : { ok: true, id: me.id, name: me.name };
+  } catch (e) { out.me = { ok: false, error: { message: e.message } }; }
+  try {
+    var ads = await (await fetch('https://graph.facebook.com/' + META_API_VERSION + '/ads_archive?search_terms=test&ad_type=ALL&ad_reached_countries=' + encodeURIComponent('["DE"]') + '&limit=1&access_token=' + encodeURIComponent(META_ACCESS_TOKEN))).json();
+    out.adsArchive = ads.error ? { ok: false, error: ads.error } : { ok: true };
+  } catch (e) { out.adsArchive = { ok: false, error: { message: e.message } }; }
+  res.json(out);
+});
+
 // ── ESPÍA DE COMPETENCIA — busca anuncios reales activos de una keyword/competidor (tab propia) ──
 app.post('/api/spy-ads', async function(req, res) {
   try {
@@ -1344,6 +1368,32 @@ app.post('/api/spy-ads', async function(req, res) {
     res.json({ success: true, spy: { keyword: keyword, pais: countryName, totalAds: sr.totalAds, rubrica: rub, demografia: metaDemografia(sr.ads), analisis: analisis, ads: list } });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
+
+// Keywords de volumen masivo garantizado por idioma — sonda para distinguir "canal ciego" de "cero real"
+var PROBE_KW = { German: 'abnehmen', Spanish: 'adelgazar', French: 'maigrir', English: 'weight loss', Italian: 'dimagrire', Portuguese: 'emagrecer', Dutch: 'afvallen', Swedish: 'viktminskning', Polish: 'odchudzanie', Japanese: 'ダイエット' };
+// Términos de intención de compra por idioma — para el proxy de interés cuando DataForSEO está ciego
+var BUY_TERMS = { German: ['kaufen', 'kurs', 'ebook'], Spanish: ['comprar', 'curso', 'ebook'], French: ['acheter', 'cours', 'ebook'], English: ['buy', 'course', 'ebook'], Italian: ['comprare', 'corso', 'ebook'], Portuguese: ['comprar', 'curso', 'ebook'], Dutch: ['kopen', 'cursus', 'ebook'], Swedish: ['köpa', 'kurs', 'ebook'], Polish: ['kupić', 'kurs', 'ebook'] };
+async function probeChannel(tipo, countryName, language, regs, hl) {
+  var kw = PROBE_KW[language] || 'weight loss';
+  try {
+    if (tipo === 'dataforseo') return ((await getDataForSEOVolumes([kw], countryName, language)) || []).length > 0;
+    if (tipo === 'amazon') return ((await serperAmazon(kw, countryName, regs.currency)) || []).length > 0;
+    return ((await serperSearch(kw, hl)) || []).length > 0;
+  } catch (e) { return false; }
+}
+// Búsqueda de productos a la venta en 5 plataformas — usada por la escalada de validate-niche y por /api/market-scan (F3)
+async function marketSiteSearch(keyword, countryName, hl) {
+  var sites = ['site:' + (AMAZON_DOMAINS[countryName] || 'amazon.com'), 'site:udemy.com', 'site:etsy.com', 'site:gumroad.com', 'site:hotmart.com'];
+  var labels = ['Amazon', 'Udemy', 'Etsy', 'Gumroad', 'Hotmart'];
+  var res = await Promise.all(sites.map(function(s) { return serperSearch(keyword + ' ' + s, hl).catch(function() { return []; }); }));
+  var out = [];
+  res.forEach(function(r, i) {
+    (r || []).filter(function(x) { return x.source === 'google' && x.url; }).slice(0, 4).forEach(function(x) {
+      out.push({ plataforma: labels[i], titulo: x.title, snippet: (x.snippet || '').slice(0, 200), url: x.url });
+    });
+  });
+  return out;
+}
 
 // ── VALIDAR ADVERTENCIAS — investigación dirigida a resolver las dudas puntuales del informe de nicho ──
 // Reemplaza a "Ajustar"/"Regenerar": no repite la investigación completa ni reescribe a ciegas,
@@ -1391,9 +1441,46 @@ app.post('/api/validate-niche', async function(req, res) {
         return '- ' + ((r && r.title) || '') + ' :: ' + ((r && r.snippet) || '');
       }).join('\n') || '(sin resultados detectados)';
     }
-    var evidenceBlock = queries.map(function(q, i){
-      return '=== ' + (q.proposito || q.tipo).toUpperCase() + ' (' + q.tipo + ') ===\n' + fmtEv(results[i]);
+    // Etiquetar cada bloque según fiabilidad real: sonda de control cuando el resultado viene vacío
+    var _probeCache = {};
+    async function channelOk(tipo) {
+      if (!(tipo in _probeCache)) _probeCache[tipo] = await probeChannel(tipo, countryName, language, regs, hl);
+      return _probeCache[tipo];
+    }
+    var labeled = [];
+    for (var qi = 0; qi < queries.length; qi++) {
+      var q = queries[qi], items = results[qi] || [];
+      var estado = 'confirmada';
+      if (!items.length) estado = (await channelOk(q.tipo)) ? 'cero-real' : 'sin-datos';
+      labeled.push({ q: q, items: items, estado: estado });
+    }
+    var TAG = {
+      'confirmada': '[DATOS OBTENIDOS]',
+      'cero-real': '[CERO CONFIRMADO — la herramienta funciona (sonda de control OK) y esta consulta devolvió cero: evidencia NEGATIVA real]',
+      'sin-datos': '[SIN COBERTURA — la herramienta está ciega para esta consulta: NO es evidencia de nada]'
+    };
+    var evidenceBlock = labeled.map(function(l) {
+      return '=== ' + (l.q.proposito || l.q.tipo).toUpperCase() + ' (' + l.q.tipo + ') ' + TAG[l.estado] + ' ===\n' + fmtEv(l.items);
     }).join('\n\n') || '(sin consultas ejecutadas)';
+
+    // ESCALADA AUTOMÁTICA: si un canal quedó ciego, la app busca la respuesta por rutas alternativas
+    // en esta misma llamada — NUNCA le devuelve la tarea a la autora.
+    var blindTypes = {};
+    labeled.forEach(function(l) { if (l.estado === 'sin-datos') blindTypes[l.q.tipo] = 1; });
+    if (blindTypes['dataforseo'] || blindTypes['serper']) {
+      var buy = BUY_TERMS[language] || BUY_TERMS['English'];
+      var proxyQueries = [keyword, keyword + ' ' + buy[0], keyword + ' ' + buy[1]];
+      var proxyRes = await Promise.all(proxyQueries.map(function(pq) { return serperSearch(pq, hl).catch(function() { return []; }); }));
+      var totalHits = proxyRes.reduce(function(a, r) { return a + (r || []).length; }, 0);
+      evidenceBlock += '\n\n=== RUTA ALTERNATIVA — PROXY DE INTERES EN GOOGLE (' + language + ') [DATOS OBTENIDOS] ===' +
+        '\n- Resultados totales para la keyword y sus variantes de compra ("' + buy[0] + '", "' + buy[1] + '"): ' + totalHits +
+        '\n' + (proxyRes[0] || []).slice(0, 4).map(function(r) { return '- ' + r.title + ' :: ' + (r.snippet || ''); }).join('\n');
+    }
+    if (blindTypes['amazon']) {
+      var mkt = await marketSiteSearch(keyword, countryName, hl);
+      evidenceBlock += '\n\n=== RUTA ALTERNATIVA — PRODUCTOS YA A LA VENTA EN 5 PLATAFORMAS ' + (mkt.length ? '[DATOS OBTENIDOS]' : '[CERO CONFIRMADO — Google indexa estas plataformas y no hay productos para esta keyword]') + ' ===' +
+        '\n' + (mkt.length ? mkt.slice(0, 8).map(function(m) { return '- [' + m.plataforma + '] ' + m.titulo; }).join('\n') : '(ninguna de las 5 plataformas tiene productos indexados para esta keyword)');
+    }
 
     var mc = req.body.metaCheck;
     if (mc && mc.status === 'ok') {
@@ -1404,15 +1491,19 @@ app.post('/api/validate-niche', async function(req, res) {
     }
 
     // Paso 3 — cruzar informe original + evidencia nueva → veredicto final binario
-    var vSys = 'Eres el mismo analista senior que escribió este informe de nicho. Llega evidencia NUEVA dirigida a resolver tus advertencias.' +
-      '\nCruza el informe original con la evidencia nueva y emite un VEREDICTO FINAL BINARIO.' +
-      '\nReglas: (1) honestidad absoluta — si la evidencia nueva no resuelve una advertencia, márcala resuelta:false y explica exactamente qué falta;' +
-      ' (2) si el volumen de búsqueda real en el idioma del mercado resulta despreciable Y no hay señales de pago locales → DESCARTAR;' +
-      ' (3) la competencia NO es motivo de descarte automático: si hay demanda y el ángulo del producto es diferenciado, la competencia VALIDA el mercado — evalúa hueco vs saturación, no solo presencia;' +
-      ' (4) marca [Estimación] toda extrapolación; prohibido inventar cifras que no estén en la evidencia.' +
+    var vSys = 'Eres el mismo analista senior que escribió este informe de nicho. Llega evidencia NUEVA dirigida a resolver tus advertencias. Cada bloque viene ETIQUETADO según su fiabilidad:' +
+      '\n- [DATOS OBTENIDOS]: evidencia real utilizable.' +
+      '\n- [CERO CONFIRMADO]: la herramienta funciona y devolvió cero — evidencia NEGATIVA legítima.' +
+      '\n- [SIN COBERTURA]: la herramienta está ciega para esa consulta — NO es evidencia de nada (las RUTAS ALTERNATIVAS del final la sustituyen).' +
+      '\nCONTEXTO CLAVE: esta oportunidad YA pasó el estándar ganador del análisis inicial (señal repetida en 2+ fuentes, intención de pago, score ≥75). Tu trabajo es detectar evidencia DESCALIFICANTE — no exigir que se re-demuestre lo ya demostrado. Si no aparece evidencia negativa real, el ganador se mantiene.' +
+      '\nReglas: (1) DESCARTAR SOLO con evidencia negativa REAL: un bloque [CERO CONFIRMADO] en un punto crítico de demanda, o [DATOS OBTENIDOS] que contradiga la oportunidad. PROHIBIDO descartar por bloques [SIN COBERTURA] o por falta de datos;' +
+      ' (2) si las rutas alternativas muestran señal comercial (productos a la venta, resultados con intención de compra, anuncios activos) → la advertencia se considera resuelta por vía alternativa → CREAR;' +
+      ' (3) gradúa la confianza con honestidad: alta = confirmado por 2+ rutas con datos; media = confirmado por proxy/rutas alternativas; baja = evidencia escasa pero SIN contradicción (el estándar ganador inicial se mantiene);' +
+      ' (4) la competencia NO es motivo de descarte: si hay demanda y el ángulo es diferenciado, la competencia VALIDA el mercado — evalúa hueco vs saturación;' +
+      ' (5) marca [Estimación] toda extrapolación; prohibido inventar cifras que no estén en la evidencia.' +
       '\nResponde SOLO JSON: {"veredictoFinal":"CREAR|DESCARTAR","confianza":"alta|media|baja",' +
-      '"resolucionAdvertencias":[{"advertencia":"","queSeEncontro":"(máx 40 palabras)","resuelta":true|false}],' +
-      '"justificacion":"(máx 80 palabras)","recomendaciones":["(máx 3, solo si veredictoFinal es CREAR)"]}';
+      '"resolucionAdvertencias":[{"advertencia":"","queSeEncontro":"(máx 40 palabras — si se resolvió por ruta alternativa, dilo: ej. \'6 productos ya a la venta en Udemy/Etsy\')","estadoEvidencia":"confirmada|cero-real|alternativa","resuelta":true|false}],' +
+      '"justificacion":"(máx 80 palabras)","recomendaciones":["(máx 3: cómo aprovechar lo encontrado — ángulos libres, precio, plataforma)"]}';
     var vMsg = 'INFORME ORIGINAL:\n' + JSON.stringify({ titulo: report.titulo, veredicto: report.veredicto, dolor: report.dolor, anguloVenta: report.anguloVenta, advertencias: advertencias }) +
       '\n\nEVIDENCIA NUEVA (dirigida a resolver las advertencias):\n' + evidenceBlock +
       '\n\nEmite el veredicto final.';

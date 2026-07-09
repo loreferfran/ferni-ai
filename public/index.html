@@ -2111,12 +2111,43 @@ function renderMetaCheck(c){
   } else if(c.status==='no_token'){
     inner='<div style="font-size:12px;color:#b8860b;">⚙️ Falta configurar META_ACCESS_TOKEN en Vercel (Settings → Environment Variables). Mientras tanto, validación manual:</div><div style="font-size:12px;margin-top:6px;">'+esc(manual)+'</div>';
   } else if(c.status==='no_permission'){
-    inner='<div style="font-size:12px;color:#e17055;">🔒 Meta rechazó el token ('+esc(c.errorDetalle||'')+'). Plan B: entra a developers.facebook.com/tools/explorer, elige la app FERNI AI, genera un token de usuario, y reemplaza META_ACCESS_TOKEN en Vercel. Mientras tanto, validación manual:</div><div style="font-size:12px;margin-top:6px;">'+esc(manual)+'</div>';
+    inner='<div style="font-size:12px;color:#e17055;">🔒 Meta rechazó el token ('+esc(c.errorDetalle||'')+'). Usa el botón 🔧 Diagnóstico para ver la causa exacta y el paso a seguir.</div>';
   } else {
     inner='<div style="font-size:12px;color:var(--muted);">⚠️ No se pudo consultar Meta ('+esc(c.errorDetalle||'sin detalle')+'). Validación manual: '+esc(manual)+'</div>';
   }
-  inner+='<div style="margin-top:8px;"><button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="S.metaCheck=null;runMetaAdsCheck()">↻ Reconsultar</button></div>';
+  inner+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="S.metaCheck=null;runMetaAdsCheck()">↻ Reconsultar</button>'+
+    ((c.status==='no_permission'||c.status==='api_error'||c.status==='no_token')?'<button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="runMetaDiag()">🔧 Diagnóstico</button>':'')+'</div>'+
+    '<div id="nr-meta-diag" style="margin-top:6px;"></div>';
   box.innerHTML='<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">🕵️ Validación en Meta Ads — anuncios reales</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+inner+'</div></div>';
+}
+
+async function runMetaDiag(){
+  var box=document.getElementById('nr-meta-diag'); if(!box) return;
+  box.innerHTML='<div style="font-size:12px;color:var(--muted);">⏳ Diagnosticando token…</div>';
+  try{
+    var d=await (await fetch('/api/meta-diag')).json();
+    var esc=function(s){return _escHtml(String(s||''));};
+    var lines=[];
+    if(!d.tokenPresent){ lines.push('❌ No hay META_ACCESS_TOKEN configurado en Vercel.'); }
+    else{
+      lines.push('Token cargado: '+esc(d.tokenPreview)+' ('+d.tokenLen+' caracteres)');
+      if(d.envTeniaWhitespace) lines.push('⚠️ El valor en Vercel tenía espacios o saltos de línea al inicio/final — ESA era la causa del rechazo. Ya se limpia automáticamente; prueba "↻ Reconsultar".');
+      if(d.me&&d.me.ok) lines.push('✅ Token válido — sesión de: '+esc(d.me.name||d.me.id));
+      else if(d.me&&d.me.error){
+        var m=(d.me.error.message||'');
+        if(/signature/i.test(m)) lines.push('❌ Token corrupto o mal pegado (error de firma). Genera uno nuevo en developers.facebook.com/tools/explorer y pégalo en Vercel usando el botón de copiar, sin espacios.');
+        else if(/expired|session/i.test(m)) lines.push('⌛ Token vencido (los de Graph Explorer duran 1-2 horas). Genera uno nuevo, o pide la versión de larga duración (60 días).');
+        else lines.push('❌ Meta respondió: '+esc(m));
+      }
+      if(d.me&&d.me.ok&&d.adsArchive&&!d.adsArchive.ok){
+        var am=((d.adsArchive.error||{}).message||'');
+        if(/identity|verif|permission|capab/i.test(am)) lines.push('🪪 El token es válido pero la Ad Library API exige verificación de identidad de tu cuenta: entra a facebook.com/ID, sube tu documento, y espera la aprobación (1-2 días). Luego genera un token nuevo.');
+        else lines.push('❌ ads_archive respondió: '+esc(am));
+      }
+      if(d.me&&d.me.ok&&d.adsArchive&&d.adsArchive.ok) lines.push('✅ Todo OK — el token funciona para la Ad Library. Dale a "↻ Reconsultar".');
+    }
+    box.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;line-height:1.7;">'+lines.join('<br>')+'</div>';
+  }catch(e){ box.innerHTML='<div style="font-size:12px;color:#e17055;">Error del diagnóstico: '+_escHtml(e.message)+'</div>'; }
 }
 
 // Gate de aprobación: con advertencias pendientes no se aprueba sin validar primero
@@ -2196,8 +2227,11 @@ function renderNicheValidation(v){
   var vc=isCrear?'#00b894':'#e17055';
   var confLbl={alta:'Confianza alta',media:'Confianza media',baja:'Confianza baja'}[(v.confianza||'').toLowerCase()]||'';
   var rows=(v.resolucionAdvertencias||[]).map(function(a){
+    var chip='';
+    if(a.estadoEvidencia==='cero-real') chip='<span style="font-size:10px;background:rgba(225,112,85,0.12);color:#e17055;border-radius:8px;padding:1px 7px;margin-left:6px;">cero confirmado</span>';
+    else if(a.estadoEvidencia==='alternativa') chip='<span style="font-size:10px;background:rgba(0,184,148,0.12);color:#00b894;border-radius:8px;padding:1px 7px;margin-left:6px;">resuelta por ruta alternativa</span>';
     return '<div style="padding:8px 0;border-bottom:1px solid var(--border);">'+
-      '<div style="font-size:12px;color:var(--text);"><b>'+(a.resuelta?'✅':'❌')+' '+esc(a.advertencia)+'</b></div>'+
+      '<div style="font-size:12px;color:var(--text);"><b>'+(a.resuelta?'✅':'❌')+' '+esc(a.advertencia)+'</b>'+chip+'</div>'+
       '<div style="font-size:12px;color:var(--text2);margin-top:2px;">'+esc(a.queSeEncontro)+'</div></div>';
   }).join('');
   var recs=(v.recomendaciones&&v.recomendaciones.length)?
