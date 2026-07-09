@@ -2021,11 +2021,16 @@ function renderNicheReport(r){
           '<div>'+(pr.mixProducto.skill&&String(pr.mixProducto.skill.incluir)==='true'?'✅':'➖')+' <b>Skill Pack</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.skill||{}).porQue)+'</span></div>'+
           '<div>'+(pr.mixProducto.epub&&String(pr.mixProducto.epub.incluir)==='true'?'✅':'➖')+' <b>EPUB KDP</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.epub||{}).porQue)+'</span></div>'+
         '</div>':''))+
-      sec('📝 Hoja de venta',
+      sec('📝 Hoja de venta (16 bloques — alimenta la página de ventas Lovable)',
         '<div style="font-size:15px;font-weight:800;color:var(--text);">'+esc(hv.headline)+'</div>'+
         '<div style="font-size:13px;color:var(--text2);margin:4px 0 8px;">'+esc(hv.subheadline)+'</div>'+
-        (hv.bullets&&hv.bullets.length?'<ul style="margin:0 0 8px;padding-left:18px;">'+list(hv.bullets)+'</ul>':'')+
-        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">'+esc(hv.descripcionVenta)+'</div>')+
+        (hv.mecanismoUnico&&hv.mecanismoUnico.nombre?'<div style="margin:6px 0;"><b>⚙️ Mecanismo único:</b> '+esc(hv.mecanismoUnico.nombre)+' — '+esc(hv.mecanismoUnico.explicacion)+'</div>':'')+
+        (hv.transformacion&&hv.transformacion.antes?'<div style="margin:6px 0;"><b>🔄 Antes → Después:</b> '+esc((hv.transformacion.antes||[]).join(' · '))+' <b>→</b> '+esc((hv.transformacion.despues||[]).join(' · '))+'</div>':'')+
+        (hv.precioAnclaje&&hv.precioAnclaje.valorPercibido?'<div style="margin:6px 0;"><b>💰 Anclaje:</b> <s>'+esc(hv.precioAnclaje.valorPercibido)+'</s> → <b>'+esc(hv.precioAnclaje.precioReal)+'</b></div>':'')+
+        (hv.urgencia&&hv.urgencia.texto&&hv.urgencia.tipo!=='ninguna'?'<div style="margin:6px 0;"><b>⏳ Urgencia:</b> '+esc(hv.urgencia.texto)+'</div>':'')+
+        (hv.bullets&&hv.bullets.length?'<ul style="margin:6px 0 8px;padding-left:18px;">'+list(hv.bullets)+'</ul>':'')+
+        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">'+esc(hv.descripcionVenta)+'</div>'+
+        (hv.disclaimer?'<div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic;">'+esc(hv.disclaimer)+'</div>':''))+
     '</div>';
   document.getElementById('nr-content').style.display='block';
   document.getElementById('nr-actions').style.display='block';
@@ -2691,51 +2696,72 @@ async function generateLovablePrompt(suffix){
 }
 
 function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
-  var hv=(nr && nr.hojaVenta)||{};
-  var headline = hv.headline || (gaps&&gaps.headline) || eb.tagline || eb.title || '';
-  var subheadline = hv.subheadline || (gaps&&gaps.subheadline) || eb.subtitle || '';
-  var bullets = (hv.bullets&&hv.bullets.length) ? hv.bullets : ((gaps&&gaps.bullets)||[]);
-  var descripcionVenta = hv.descripcionVenta || (gaps&&gaps.descripcionVenta) || '';
-  var faqs = (hm&&hm.faqs&&hm.faqs.length) ? hm.faqs : ((gaps&&gaps.faqs)||[]);
-  var guarantee = (hm&&hm.guarantee_text) || (gaps&&gaps.guarantee) || '';
-  var cta = (hm&&hm.cta) || (gaps&&gaps.cta) || 'Quiero mi copia';
-  var price = (PIPE.cfg&&PIPE.cfg.price) || S.maPrice || (nr&&nr.productoRecomendado&&nr.productoRecomendado.precioSugerido) || '';
-  var palette = (typeof _ebookImagePalette==='function') ? _ebookImagePalette(o) : '';
-  var dolor = (nr&&nr.dolor)||'';
-  var causaRaiz = (nr&&nr.causaRaiz)||'';
-  var solucion = (nr&&nr.solucion)||'';
-
+  var hv=(nr && nr.hojaVenta)||{}; var g=gaps||{};
+  function pick(a,b,c){ return a||b||c||''; }
+  var headline=pick(hv.headline,g.headline,eb.tagline||eb.title);
+  var subheadline=pick(hv.subheadline,g.subheadline,eb.subtitle);
+  var bullets=(hv.bullets&&hv.bullets.length)?hv.bullets:((g.bullets)||[]);
+  var faqsSrc=(hv.objeciones&&hv.objeciones.length)?hv.objeciones:((g.objeciones)||[]);
+  var faqsLegacy=(hm&&hm.faqs&&hm.faqs.length)?hm.faqs:((g.faqs)||[]);
+  var guarantee=pick(hv.garantia,(hm&&hm.guarantee_text),g.garantia||g.guarantee);
+  var ctaObj=hv.cta||g.cta||{}; var ctaTxt=(typeof ctaObj==='string')?ctaObj:(ctaObj.texto||(hm&&hm.cta)||'Quiero mi copia');
+  var price=(PIPE.cfg&&PIPE.cfg.price)||S.maPrice||(nr&&nr.productoRecomendado&&nr.productoRecomendado.precioSugerido)||'';
+  var pa=hv.precioAnclaje||g.precioAnclaje||null;
+  var palette=(typeof _ebookImagePalette==='function')?_ebookImagePalette(o):'';
+  var dolorAg=pick(hv.dolorAgitado,g.dolorAgitado,(nr&&nr.dolor)||'');
+  var causaRaiz=(nr&&nr.causaRaiz)||'';
+  var mec=hv.mecanismoUnico||g.mecanismoUnico||null;
+  var solucion=(nr&&nr.solucion)||'';
+  var tr=hv.transformacion||g.transformacion||null;
+  var aut=pick(hv.autoridad,g.autoridad,'');
+  var pasos=(hv.comoFunciona&&hv.comoFunciona.length)?hv.comoFunciona:((g.comoFunciona)||[]);
+  var ps=hv.pruebaSocial||g.pruebaSocial||null;
+  var falla=(hv.porQueFallaLoAnterior&&hv.porQueFallaLoAnterior.length)?hv.porQueFallaLoAnterior:((g.porQueFallaLoAnterior)||[]);
+  var urg=hv.urgencia||g.urgencia||null;
+  var disc=pick(hv.disclaimer,g.disclaimer,'');
   var incluye=['📕 Ebook: '+(eb.title||'')+' ('+((eb.chapters||[]).length)+' capítulos)'];
-  if(S.extrasData && S.extrasData.length) incluye.push('🎁 Bonus Pack: '+S.extrasData.map(function(x){return x.title;}).join(', '));
-  if(typeof S_crApp!=='undefined' && S_crApp && window._crAppTopic) incluye.push('📱 App interactiva: '+window._crAppTopic);
-  if(typeof S_crSkill!=='undefined' && S_crSkill && window._crSkillTopic) incluye.push('⚡ Skill Pack: '+window._crSkillTopic);
-
+  if(S.extrasData&&S.extrasData.length) incluye.push('🎁 Bonus Pack: '+S.extrasData.map(function(x){return x.title;}).join(', '));
+  if(typeof S_crApp!=='undefined'&&S_crApp&&window._crAppTopic) incluye.push('📱 App interactiva: '+window._crAppTopic);
+  if(typeof S_crSkill!=='undefined'&&S_crSkill&&window._crSkillTopic) incluye.push('⚡ Skill Pack: '+window._crSkillTopic);
+  var CO=checkout||'{{CHECKOUT}}';
   var L=[];
-  L.push('Crea una landing page de ventas de alta conversión. Stack: React + TypeScript + Tailwind CSS.');
+  L.push('Crea una landing page de ventas de ALTA CONVERSIÓN para un infoproducto. Stack: React + TypeScript + Tailwind CSS. Mobile-first.');
   L.push('');
-  L.push('REGLA CRÍTICA: El contenido ya está optimizado para conversión. Tu trabajo es SOLO diseñar y estructurar visualmente, NO reescribir el copy. Usa los textos EXACTAMENTE como se entregan.');
+  L.push('REGLA CRÍTICA #1: El copy ya está optimizado para conversión por un copywriter senior. Tu trabajo es SOLO diseño y estructura visual. NO reescribas, NO resumas, NO "mejores" ningún texto — úsalos EXACTAMENTE como se entregan.');
+  L.push('REGLA CRÍTICA #2: Respeta el ORDEN de las secciones tal como vienen — es la secuencia psicológica de una carta de ventas (dolor → falla de lo anterior → mecanismo → transformación → prueba → oferta → precio → garantía → objeciones → urgencia → CTA).');
+  L.push('REGLA CRÍTICA #3: Todos los botones CTA de la página apuntan a: '+CO);
   L.push('');
   L.push('=== IDENTIDAD VISUAL ===');
-  L.push('Paleta: '+(palette||'colores acordes al nicho del producto')+' | Mood: premium, editorial, confiable, orientado a conversión.');
+  L.push('Paleta: '+(palette||'colores acordes al nicho')+'. Mood: premium, editorial, confiable. Tipografía: serif elegante para headlines, sans limpia para cuerpo. Espaciado generoso. Botón CTA sticky en móvil.');
   L.push('');
-  L.push('=== HERO ===');
+  L.push('=== 1. HERO ===');
   L.push('Headline: '+headline);
   if(subheadline) L.push('Subheadline: '+subheadline);
-  L.push('CTA: '+cta+' → '+(checkout||'{{CHECKOUT}}'));
-  if(video) L.push('Video promocional embebido en el hero: '+video);
-  if(dolor){ L.push(''); L.push('=== PROBLEMA ==='); L.push(dolor+(causaRaiz?(' '+causaRaiz):'')); }
-  if(solucion||descripcionVenta){ L.push(''); L.push('=== SOLUCIÓN ==='); if(solucion) L.push(solucion); if(descripcionVenta) L.push(descripcionVenta); }
-  if(nr&&nr.analisisCompetencia){ L.push(''); L.push('=== POSICIONAMIENTO vs COMPETENCIA ==='); L.push(nr.analisisCompetencia.posicionamiento||''); if(nr.analisisCompetencia.loQueNadieHace) L.push('Somos los únicos que cubrimos: '+nr.analisisCompetencia.loQueNadieHace); }
-  L.push('');
-  L.push('=== QUÉ INCLUYE ===');
+  L.push('CTA: '+ctaTxt+' → '+CO+(ctaObj.microcopy?(' | Microcopy bajo el botón: '+ctaObj.microcopy):''));
+  if(video) L.push('Video promocional embebido: '+video);
+  if(dolorAg){ L.push(''); L.push('=== 2. EL DOLOR (agitación — fondo de contraste, tono empático) ==='); L.push(dolorAg+(causaRaiz?(' '+causaRaiz):'')); }
+  if(falla.length){ L.push(''); L.push('=== 3. POR QUÉ LO QUE YA INTENTASTE NO FUNCIONÓ (lista con ✗) ==='); falla.forEach(function(x){ L.push('✗ '+x); }); }
+  L.push(''); L.push('=== 4. LA SOLUCIÓN + MECANISMO ÚNICO ===');
+  if(mec&&mec.nombre){ L.push('Nombre del método (destacado visualmente): '+mec.nombre); if(mec.explicacion) L.push(mec.explicacion); }
+  if(solucion) L.push(solucion);
+  if(tr&&tr.antes&&tr.antes.length){ L.push(''); L.push('=== 5. TRANSFORMACIÓN ANTES → DESPUÉS (dos columnas comparadas) ==='); L.push('ANTES: '+tr.antes.join(' | ')); L.push('DESPUÉS: '+(tr.despues||[]).join(' | ')); }
+  if(aut){ L.push(''); L.push('=== 6. POR QUÉ CONFIAR EN ESTE MÉTODO ==='); L.push(aut); }
+  if(pasos.length){ L.push(''); L.push('=== 7. CÓMO FUNCIONA (timeline o pasos numerados) ==='); pasos.forEach(function(p,i){ L.push((i+1)+'. '+p); }); }
+  if(ps){ L.push(''); L.push('=== 8. PRUEBA SOCIAL ==='); if(ps.senalMercado) L.push('Dato real destacado: '+ps.senalMercado); L.push('Sección de testimonios con el placeholder: '+(ps.placeholder||'[TESTIMONIOS REALES — agregar cuando existan]')+' — diseña 3 tarjetas vacías listas para llenar.'); }
+  if(nr&&nr.analisisCompetencia){ L.push(''); L.push('=== 9. POSICIONAMIENTO (por qué este y no otro) ==='); L.push(nr.analisisCompetencia.posicionamiento||''); if(nr.analisisCompetencia.loQueNadieHace) L.push('Lo que nadie más cubre: '+nr.analisisCompetencia.loQueNadieHace); }
+  L.push(''); L.push('=== 10. LA OFERTA — QUÉ INCLUYE (tarjetas con ícono) ===');
   incluye.forEach(function(i){ L.push('- '+i); });
-  if(bullets.length){ L.push(''); L.push('=== BENEFICIOS ==='); bullets.forEach(function(b){ L.push('- '+b); }); }
-  if(price){ L.push(''); L.push('=== PRECIO ==='); L.push(String(price)); }
-  if(guarantee){ L.push(''); L.push('=== GARANTÍA ==='); L.push(guarantee); }
-  if(faqs.length){ L.push(''); L.push('=== FAQ ==='); faqs.forEach(function(f){ L.push('P: '+(f.q||f.question||'')); L.push('R: '+(f.a||f.answer||'')); }); }
-  L.push('');
-  L.push('=== CTA FINAL ===');
-  L.push('Botón grande a: '+(checkout||'{{CHECKOUT}}')+' — repite este link en TODOS los botones CTA de la página.');
+  if(bullets.length){ L.push(''); L.push('=== 11. LO QUE VAS A LOGRAR (bullets con ✓) ==='); bullets.forEach(function(b){ L.push('✓ '+b); }); }
+  L.push(''); L.push('=== 12. PRECIO CON ANCLAJE ===');
+  if(pa&&pa.valorPercibido){ L.push('Valor percibido (tachado): '+pa.valorPercibido); L.push('Precio real (destacado): '+(pa.precioReal||price)); if(pa.justificacion) L.push('Justificación: '+pa.justificacion); }
+  else if(price){ L.push(String(price)); }
+  if(guarantee){ L.push(''); L.push('=== 13. GARANTÍA (sello/badge visual) ==='); L.push(guarantee); }
+  if(faqsSrc.length){ L.push(''); L.push('=== 14. OBJECIONES RESPONDIDAS (acordeón FAQ) ==='); faqsSrc.forEach(function(f){ L.push('P: '+(f.objecion||f.q||f.question||'')); L.push('R: '+(f.respuesta||f.a||f.answer||'')); }); }
+  else if(faqsLegacy.length){ L.push(''); L.push('=== 14. FAQ (acordeón) ==='); faqsLegacy.forEach(function(f){ L.push('P: '+(f.q||f.question||'')); L.push('R: '+(f.a||f.answer||'')); }); }
+  if(urg&&urg.texto&&urg.tipo!=='ninguna'){ L.push(''); L.push('=== 15. URGENCIA (banner discreto, NO countdown falso) ==='); L.push(urg.texto); }
+  L.push(''); L.push('=== 16. CTA FINAL ===');
+  L.push('Botón grande: "'+ctaTxt+'" → '+CO+'. Repite la promesa del headline en una línea encima.');
+  if(disc){ L.push(''); L.push('=== FOOTER — DISCLAIMER LEGAL (letra pequeña) ==='); L.push(disc); }
   return L.join('\n');
 }
 

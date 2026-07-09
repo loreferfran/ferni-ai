@@ -984,14 +984,30 @@ app.post('/api/lovable-gaps', async function(req, res) {
     var ebook = req.body.ebook || {};
     var language = req.body.language || 'Español';
     var sys = 'Eres copywriter senior de marketing de respuesta directa para infoproductos. Genera SOLO piezas de copy de venta — nada de explicaciones, nada de texto fuera del JSON.' +
-      ' Idioma: ' + language + '. Denso, persuasivo, cero relleno.';
+      ' Idioma: ' + language + '. Denso, persuasivo, cero relleno.' +
+      ' Honestidad: autoridad del método (no credenciales inventadas), pruebaSocial nunca inventada (placeholder), urgencia solo honesta o tipo ninguna.';
     var userMsg = 'PRODUCTO: ' + (ebook.title || '') + ' | Subtítulo: ' + (ebook.subtitle || '') + ' | Tagline: ' + (ebook.tagline || '') +
       ' | Promesa: ' + (o.promesaEbook || o.ebookPromise || '') + ' | Problema que resuelve: ' + (o.problema || o.problem || '') +
       ' | Dolor/deseo: ' + (o.dolorODeseo || '') + (ebook.intro ? '\nIntro del ebook: ' + ebook.intro : '') +
-      '\n\nGenera JSON con: {"headline":"promesa PTE, max 15 palabras","subheadline":"max 20 palabras",' +
-      '"bullets":["3-5 beneficios concretos, verbo + resultado"],"descripcionVenta":"150-200 palabras: hook, problema, solucion, beneficios, cta",' +
+      '\n\nGenera JSON con la carta de ventas completa: {' +
+      '"headline":"promesa PTE, max 15 palabras","subheadline":"max 20 palabras",' +
+      '"dolorAgitado":"agitacion del problema en 2a persona, 60-90 palabras",' +
+      '"porQueFallaLoAnterior":["2-4 soluciones que ya intento y por que fallaron, max 20 palabras c/u"],' +
+      '"mecanismoUnico":{"nombre":"nombre propio del metodo","explicacion":"por que funciona, max 40 palabras"},' +
+      '"transformacion":{"antes":["3 viñetas estado actual, max 12 palabras c/u"],"despues":["3 viñetas estado logrado, max 12 palabras c/u"]},' +
+      '"autoridad":"credibilidad del METODO no de la persona, max 35 palabras, prohibido inventar credenciales",' +
+      '"comoFunciona":["3-5 pasos del metodo, max 18 palabras c/u"],' +
+      '"pruebaSocial":{"placeholder":"[TESTIMONIOS REALES — agregar cuando existan clientes]","senalMercado":""},' +
+      '"bullets":["3-5 beneficios concretos, verbo + resultado, max 15 palabras c/u"],' +
+      '"precioAnclaje":{"valorPercibido":"","precioReal":"","justificacion":"max 25 palabras"},' +
+      '"garantia":"texto de garantia de 7-30 dias, max 30 palabras",' +
+      '"objeciones":[{"objecion":"","respuesta":"max 35 palabras"}],' +
+      '"urgencia":{"tipo":"lanzamiento|bonus-limitado|ninguna","texto":"solo si es honesta, si no vacio"},' +
+      '"cta":{"texto":"max 5 palabras","microcopy":"max 12 palabras"},' +
+      '"disclaimer":"descargo legal generico segun el tema, max 40 palabras",' +
+      '"descripcionVenta":"150-200 palabras: hook, problema, solucion, beneficios, cta",' +
       '"faqs":[{"q":"","a":""},{"q":"","a":""},{"q":"","a":""}],"guarantee":"texto de garantia de 7-30 dias","cta":"texto corto de boton, max 4 palabras"}';
-    var txt = await claudeCall(sys, userMsg, 1200);
+    var txt = await claudeCall(sys, userMsg, 2500);
     var data = extractJSON(txt);
     res.json({ success: true, copy: data });
   } catch (e) {
@@ -1156,7 +1172,25 @@ app.post('/api/niche-report', async function(req, res) {
         skill: { incluir: 'true|false', porQue: 'máx 15 palabras' },
         epub:  { incluir: 'true|false', porQue: '¿este tema/mercado compra en Amazon KDP? — máx 15 palabras' }
       } },
-    hojaVenta: { headline: 'promesa PTE: Problema + Temporal + Específica', subheadline: '', bullets: ['3-5 bullets de beneficio concreto'], descripcionVenta: 'texto de venta de 150-200 palabras listo para usar en cualquier plataforma' }
+    hojaVenta: {
+      headline: 'promesa PTE: Problema + Temporal + Específica — máx 15 palabras',
+      subheadline: 'amplifica la promesa con el mecanismo — máx 20 palabras',
+      dolorAgitado: 'agitación del problema en 2a persona: el día a día del dolor, lo que cuesta no resolverlo — 60-90 palabras',
+      porQueFallaLoAnterior: ['2-4 soluciones que el ICP ya intentó y POR QUÉ fallaron (conecta con sus objeciones) — máx 20 palabras c/u'],
+      mecanismoUnico: { nombre: 'nombre propio y memorable del método (ej: "Protocolo 4-Semanas Sin Hormonas")', explicacion: 'por qué funciona cuando lo demás falla — máx 40 palabras' },
+      transformacion: { antes: ['3 viñetas del estado actual del ICP — máx 12 palabras c/u'], despues: ['3 viñetas espejo del estado logrado — máx 12 palabras c/u'] },
+      autoridad: 'credibilidad del MÉTODO, no de la persona: investigación sintetizada, fuentes, sistema estructurado. PROHIBIDO inventar títulos o credenciales del autor — máx 35 palabras',
+      comoFunciona: ['3-5 pasos: qué recibe el comprador y qué hace con ello, en orden — máx 18 palabras c/u'],
+      pruebaSocial: { placeholder: '[TESTIMONIOS REALES — agregar cuando existan clientes]', senalMercado: 'señal de mercado REAL citable de los datos (ej: "48.000 personas buscan esto cada mes en Alemania") — si no hay dato real, cadena vacía' },
+      bullets: ['3-5 bullets de beneficio concreto: verbo + resultado — máx 15 palabras c/u'],
+      precioAnclaje: { valorPercibido: 'valor sumado de las piezas del bundle en ' + regs.currency + ' (honesto, no absurdo)', precioReal: 'en ' + regs.currency, justificacion: 'contra qué se compara (consulta, curso, mensualidad) — máx 25 palabras' },
+      garantia: 'garantía redactada acorde a la ley local (' + regs.guarantee + ') — máx 30 palabras',
+      objeciones: [{ objecion: 'objeción real del ICP — usa icp.objeciones', respuesta: 'respuesta persuasiva pero honesta — máx 35 palabras' }],
+      urgencia: { tipo: 'lanzamiento | bonus-limitado | ninguna', texto: 'SOLO urgencia honesta que la autora pueda cumplir (precio de lanzamiento, bonus por tiempo definido). Si no hay ninguna real: tipo "ninguna" y texto vacío. PROHIBIDO inventar escasez falsa' },
+      cta: { texto: 'texto del botón — máx 5 palabras', microcopy: 'línea bajo el botón que reduce el riesgo (garantía/acceso inmediato) — máx 12 palabras' },
+      disclaimer: 'descargo legal adaptado al nicho y al país: salud → informativo no médico; finanzas → no asesoría; general → resultados varían. Base legal: ' + regs.legal + ' — máx 40 palabras',
+      descripcionVenta: 'texto de venta de 150-200 palabras listo para usar en cualquier plataforma (se mantiene para compatibilidad)'
+    }
   });
 
   var sys = 'Eres un analista senior de mercado de infoproductos y marketing de respuesta directa. Generas INFORMES DE NICHO tipo "hoja de venta" que deciden si un producto se crea o no.' +
@@ -1189,6 +1223,7 @@ app.post('/api/niche-report', async function(req, res) {
     '\n\nPROFUNDIDAD OBLIGATORIA: baja del nicho amplio al micro-problema específico más prometedor según los datos (ejemplo del estándar esperado: no "autos en Francia" sino "cómo reparar la guantera del Hyundai Sedán 2023").' +
     '\n\nCONCISIÓN OBLIGATORIA (crítico — si el JSON se corta, el informe se pierde):' +
     '\n- Ningún campo de texto supera 50 palabras, salvo descripcionVenta (máx 110 palabras) y veredictoJustificacion (máx 70 palabras).' +
+    '\n- HOJA DE VENTA: es una carta de ventas completa de respuesta directa, no un resumen. Respeta el máximo de palabras de CADA campo. Honestidad estructural: autoridad = del método (jamás credenciales inventadas del autor); pruebaSocial.senalMercado = solo datos reales recibidos; urgencia = solo si la autora puede cumplirla, si no tipo "ninguna". objeciones: usa las de icp.objeciones y respóndelas una a una.' +
     '\n- Arrays: máximo 4 elementos cada uno. productosExistentes: máximo 5.' +
     '\n- Escribe denso y directo: cada frase aporta un dato, cero relleno.' +
     '\n\nResponde SOLO con el objeto JSON. Sin markdown, sin texto fuera del JSON. Estructura exacta:\n' + reportSchema;
@@ -1250,7 +1285,7 @@ app.post('/api/niche-report', async function(req, res) {
       '\n\nDATOS DE EVIDENCIA (única fuente válida para citar productos, precios y volúmenes):\n' + evidence +
       '\n\nGenera el informe de nicho completo.';
 
-    var txt = await claudeCall(sys, userMsg, 6000);
+    var txt = await claudeCall(sys, userMsg, 8000);
     res.json({ success: true, report: extractJSON(txt) });
   } catch (e) {
     console.error('niche-report error:', e.message);
