@@ -229,6 +229,30 @@ function translateNiche(niche, language) {
   return niche; // Si no hay traducción, usar tal cual (muchos términos funcionan en inglés)
 }
 
+// Convierte la jerarquía nicho→sub→micro (en el idioma que la escriba la autora) en términos de búsqueda
+// REALES del mercado, en su idioma. Una llamada corta a Claude SOLO cuando hay sub/micro o el diccionario
+// no cubre el nicho — el camino simple (solo nicho conocido) sigue costando cero.
+async function localizeSearchTerms(niche, subNiche, microNiche, country, language) {
+  if (!niche || niche === 'general' || niche === 'salud bienestar') return { principal: niche || '', variantes: [] };
+  var hierarchy = [niche, subNiche, microNiche].filter(function(x) { return x && x.trim(); });
+  var combined = hierarchy.join(' ');
+  var dictHit = translateNiche(niche, language) !== niche; // el diccionario SÍ conocía el nicho
+  if (hierarchy.length <= 1 && dictHit) {
+    return { principal: translateNiche(niche, language), variantes: [] }; // camino actual, costo cero
+  }
+  try {
+    var txt = await claudeCall(
+      'Convierte una jerarquia de nicho de infoproductos en terminos de busqueda REALES en ' + language + ' (como busca en Google la gente de ' + country + ' que SUFRE este problema o quiere comprarlo resuelto — no terminos academicos ni traduccion literal).' +
+      ' El termino principal debe capturar la jerarquia COMPLETA (el tema junto a su enfoque especifico), las variantes cubren angulos distintos del mismo enfoque.' +
+      ' Responde SOLO JSON: {"principal":"termino de 2-5 palabras en ' + language + '","variantes":["2-3 variantes en ' + language + ', max 5 palabras c/u"]}',
+      'JERARQUIA (del tema general al enfoque especifico): ' + hierarchy.join(' → ') + ' | PAIS: ' + country, 300);
+    var loc = extractJSON(txt);
+    if (loc && loc.principal) return { principal: loc.principal, variantes: (loc.variantes || []).slice(0, 3) };
+  } catch (e) { console.error('localizeSearchTerms fallback:', e.message); }
+  // Fallback sin Claude: jerarquía combinada + diccionario (mejor que el término suelto de antes)
+  return { principal: translateNiche(combined, language), variantes: [] };
+}
+
 // DataForSEO — volumen real de búsquedas por país
 const DFS_LOCATION_CODES = {
   'France':2250,'Germany':2276,'Italy':2380,'Spain':2724,'Portugal':2620,
@@ -963,14 +987,23 @@ app.post('/api/search', async function(req, res) {
     var microNiche = (req.body.microNiche || '').trim();
     var language = req.body.language;
     // Término más específico no vacío — acota TODO el embudo (seed keywords, búsquedas, prompt de GPT-4o)
-    var searchTerm = microNiche || subNiche || niche;
-    var seedKws = buildSeedKeywords(searchTerm, language);
+    // FIX PARTE8: la búsqueda real usa la jerarquía COMPLETA localizada al idioma del mercado —
+    // nunca más el término más específico suelto y sin traducir (causa del bug de 0 oportunidades).
+    var loc = await localizeSearchTerms(niche, subNiche, microNiche, country, language);
+    var seedKws = buildSeedKeywords(loc.principal, language).concat(loc.variantes);
     var results = await Promise.all([
-      searchWithSerper(country, searchTerm, language),
+      searchWithSerper(country, loc.principal, language),
       getDataForSEOVolumes(seedKws, country, language)
     ]);
     var serperResults = results[0];
     var dfsVolumes = results[1];
+    // Variantes: búsquedas directas adicionales (máx 3) para cubrir los otros ángulos del enfoque
+    if (loc.variantes.length) {
+      var hlv = serperHl(language);
+      var extra = await Promise.all(loc.variantes.map(function(v) { return serperSearch(v, hlv).catch(function() { return []; }); }));
+      extra.forEach(function(arr) { (arr || []).forEach(function(x) { serperResults.push(x); }); });
+    }
+    console.log('search terms →', JSON.stringify({ principal: loc.principal, variantes: loc.variantes, serper: serperResults.length, dfs: dfsVolumes.length }));
     var opportunities = await analyzeWithGPT4(serperResults, country, niche, language, dfsVolumes, subNiche, microNiche);
     res.json({ success: true, opportunities: opportunities, searchCount: serperResults.length, dfsKeywords: dfsVolumes.length });
   } catch (e) {
