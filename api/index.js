@@ -1018,6 +1018,39 @@ app.post('/api/lovable-gaps', async function(req, res) {
   }
 });
 
+// ── PÁGINA DE VENTA FINAL — el copy REAL en el idioma del mercado, generado desde el borrador
+// aprobado (hojaVenta del informe, en español) + el ebook real. Reemplaza a /api/lovable-gaps
+// en el flujo principal (ese endpoint queda legacy, sin llamadas).
+app.post('/api/sales-page', async function(req, res) {
+  try {
+    var o = req.body.opportunity || {};
+    var nr = req.body.report || {};
+    var eb = req.body.ebook || {};
+    var countryName = getCountryName(req.body.country || o.pais || o.country || 'España');
+    var language = req.body.language || o.idioma || o.language || 'Spanish';
+    var regs = getRegs(countryName);
+    var price = req.body.price || o.precioHotmart || o.hotmartPrice || '';
+    var bundle = req.body.bundle || [];
+    var hvBase = nr.hojaVenta || {};
+    var sys = 'Eres copywriter senior de respuesta directa. Redacta la PÁGINA DE VENTA REAL de un infoproducto, ÍNTEGRAMENTE en ' + language + ' — es el copy final que verá el comprador, no un documento interno. CERO mezcla de idiomas.' +
+      '\nRecibes un BORRADOR aprobado en español: NO lo traduzcas literal — reescríbelo como lo haría un copywriter nativo de ' + language + ' (modismos, ritmo, gatillos culturales del mercado de ' + countryName + '), manteniendo las afirmaciones y promesas del borrador SIN exagerarlas.' +
+      '\nHonestidad estructural: autoridad = del método, jamás credenciales inventadas del autor; pruebaSocial nunca inventada (mantén el placeholder traducido + la señal de mercado real); urgencia SOLO si el borrador la trae, no inventes escasez.' +
+      '\nMarco legal del país: ' + regs.legal + '. Garantía local: ' + regs.guarantee + '. El disclaimer va en ' + language + ' y cumple ese marco.' +
+      '\nResponde SOLO JSON con EXACTAMENTE la misma estructura del borrador: {headline, subheadline, dolorAgitado, porQueFallaLoAnterior[], mecanismoUnico{nombre,explicacion}, transformacion{antes[],despues[]}, autoridad, comoFunciona[], pruebaSocial{placeholder,senalMercado}, bullets[], precioAnclaje{valorPercibido,precioReal,justificacion}, garantia, objeciones[{objecion,respuesta}], urgencia{tipo,texto}, cta{texto,microcopy}, disclaimer, descripcionVenta}. Mismos topes de palabras que el borrador.';
+    var userMsg = 'PRODUCTO REAL (ebook aprobado): "' + (eb.title || '') + '"' + (eb.subtitle ? ' — ' + eb.subtitle : '') +
+      '\nPRECIO REAL: ' + price + ' ' + regs.currency +
+      (bundle.length ? '\nEL BUNDLE INCLUYE: ' + bundle.join(' | ') : '') +
+      (nr.dolor ? '\nDOLOR CENTRAL: ' + nr.dolor : '') +
+      (nr.analisisCompetencia && nr.analisisCompetencia.posicionamiento ? '\nPOSICIONAMIENTO: ' + nr.analisisCompetencia.posicionamiento : '') +
+      '\n\nBORRADOR APROBADO (en español — tu base de conversión):\n' + JSON.stringify(hvBase) +
+      '\n\nRedacta la página de venta final en ' + language + '.';
+    var txt = await claudeCall(sys, userMsg, 3500);
+    var salesPage = extractJSON(txt);
+    if (!salesPage) throw new Error('No se pudo procesar la página de venta');
+    res.json({ success: true, salesPage: salesPage });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // Feature Score de calidad — mide calidad COMERCIAL del ebook (completitud/profundidad/accionabilidad/
 // diferenciación), no errores factuales (eso ya lo hace /api/verify-content en 3 capas — este panel es
 // adicional, no reemplaza nada). Evalúa contra la promesa de venta real: recibe la oportunidad y un
@@ -1199,6 +1232,7 @@ app.post('/api/niche-report', async function(req, res) {
   var sys = 'Eres un analista senior de mercado de infoproductos y marketing de respuesta directa. Generas INFORMES DE NICHO tipo "hoja de venta" que deciden si un producto se crea o no.' +
     '\nPAIS OBJETIVO: ' + countryName + ' (población: ' + pop + '). IDIOMA PRINCIPAL DEL MERCADO: ' + language + '.' +
     '\nEl informe se escribe SIEMPRE en ESPAÑOL (documento interno de decisión). Las búsquedas y nombres de productos citados se mantienen en su idioma original.' +
+    '\nhojaVenta COMPLETA también va en ESPAÑOL — es un BORRADOR interno para que la autora decida; la versión final en el idioma del mercado se redacta después, al aprobar el ebook. PROHIBIDO mezclar idiomas dentro de hojaVenta: los 16 bloques en español, incluidos headline, garantia y disclaimer (cita la base legal local pero redactada en español). Única excepción: mecanismoUnico.nombre puede ser un nombre de marca en el idioma del mercado.' +
     '\n\nREGLA DE ALCANCE DEL MERCADO (crítica — error prohibido):' +
     '\n- El mercado objetivo es TODO ' + countryName + ' en su idioma principal (' + language + '). PROHIBIDO redefinir el mercado a un sub-segmento lingüístico solo porque parte de la evidencia llegó en otro idioma (ej: si el país es Canadá y hay datos en español, el mercado sigue siendo el Canadá anglófono — la evidencia en español es complementaria).' +
     '\n- Si falta evidencia en el idioma principal del país, dilo en advertencias y recomienda validarla — pero NO conviertas el informe en un análisis de otro segmento.' +

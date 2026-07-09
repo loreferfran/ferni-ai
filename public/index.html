@@ -414,6 +414,11 @@ select option { background: #ffffff; color: #232336; }
                   <input id="lv-video" type="text" placeholder="Link de video promocional (opcional)" oninput="S.lovableVideo=this.value;" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                 </div>
                 <button class="btn btn-teal" id="lv-generate-btn" onclick="generateLovablePrompt()">✦ Generar prompt</button>
+                <div id="lv-salespage" style="display:none;margin-top:12px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:4px;">📝 Página de Venta final — <span id="lv-sp-lang"></span> <span style="font-weight:400;color:var(--muted);">(el copy real que verá el comprador; base del prompt de Lovable)</span></div>
+                  <div id="lv-sp-blocks" style="max-height:420px;overflow-y:auto;"></div>
+                  <div class="btn-row" style="margin-top:6px;"><button class="btn btn-s" onclick="copySalesPage()">📋 Copiar página de venta (para Lovable o Claude Code)</button></div>
+                </div>
                 <div id="lv-output" style="display:none;margin-top:12px;">
                   <textarea id="lv-prompt-out" rows="10" oninput="_updateLovableCounter();_syncLovableOpenBtn();" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
                   <div id="lv-counter" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
@@ -607,6 +612,11 @@ select option { background: #ffffff; color: #232336; }
                   <input id="lv-video-fin" type="text" placeholder="Link de video promocional (opcional)" oninput="S.lovableVideo=this.value;" style="flex:1;min-width:220px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;">
                 </div>
                 <button class="btn btn-teal" id="lv-generate-btn-fin" onclick="generateLovablePrompt('-fin')">✦ Generar prompt</button>
+                <div id="lv-salespage-fin" style="display:none;margin-top:12px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:4px;">📝 Página de Venta final — <span id="lv-sp-lang-fin"></span> <span style="font-weight:400;color:var(--muted);">(el copy real que verá el comprador; base del prompt de Lovable)</span></div>
+                  <div id="lv-sp-blocks-fin" style="max-height:420px;overflow-y:auto;"></div>
+                  <div class="btn-row" style="margin-top:6px;"><button class="btn btn-s" onclick="copySalesPage()">📋 Copiar página de venta (para Lovable o Claude Code)</button></div>
+                </div>
                 <div id="lv-output-fin" style="display:none;margin-top:12px;">
                   <textarea id="lv-prompt-out-fin" rows="10" oninput="_updateLovableCounter('-fin');_syncLovableOpenBtn('-fin');" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
                   <div id="lv-counter-fin" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
@@ -1971,7 +1981,7 @@ function _sessSave(){
   try{ sessionStorage.setItem('ferni_sess_v1', JSON.stringify({
     results:S.results||null, srArgs:S._srArgs||null, selOppIdx:(typeof S._nicheReportOppIdx==='number')?S._nicheReportOppIdx:-1,
     nicheReport:S.nicheReport||null, nicheValidation:S.nicheValidation||null, wasApproved:!!S.nicheReportApproved,
-    metaCheck:S.metaCheck||null
+    metaCheck:S.metaCheck||null, hojaVentaFinal:S.hojaVentaFinal||null
   })); }catch(e){}
 }
 function _sessRestore(){
@@ -1983,6 +1993,7 @@ function _sessRestore(){
       selOpp(s.selOppIdx);
       if(s.nicheReport){
         S.nicheReport=s.nicheReport; S.nicheValidation=s.nicheValidation||null; S.metaCheck=s.metaCheck||null;
+        S.hojaVentaFinal=s.hojaVentaFinal||null; S._hvFinalSig=S.hojaVentaFinal?_oppSig(s.results[s.selOppIdx]):null;
         document.getElementById('nr-box').style.display='block';
         renderNicheReport(S.nicheReport);
         if(S.nicheValidation){ document.getElementById('nr-validation').style.display='block'; renderNicheValidation(S.nicheValidation); }
@@ -2060,6 +2071,36 @@ async function genNicheReport(){
   }
 }
 
+// Renderiza los 16 bloques de una hoja de venta (borrador del informe o versión final) — un solo renderer para ambas
+function _hvBlocksHtml(hv){
+  hv = hv || {};
+  var esc = function(s){ return _escHtml(String(s||'')); };
+  function blk(n, t, body){ if(!body) return ''; return '<div style="margin:10px 0;padding:10px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;"><div style="font-size:10px;letter-spacing:1px;color:var(--muted);font-weight:700;margin-bottom:4px;">'+n+'. '+t+'</div><div style="font-size:13px;color:var(--text);line-height:1.65;">'+body+'</div></div>'; }
+  function ul(arr, mark){ return (arr&&arr.length)?'<ul style="margin:0;padding-left:18px;">'+arr.map(function(x){return '<li style="margin-bottom:3px;">'+(mark||'')+esc(x)+'</li>';}).join('')+'</ul>':''; }
+  var tr = hv.transformacion||{};
+  var pa = hv.precioAnclaje||{};
+  var ps = hv.pruebaSocial||{};
+  var cta = hv.cta||{};
+  var urg = hv.urgencia||{};
+  return blk(1,'HEADLINE','<b style="font-size:15px;">'+esc(hv.headline)+'</b>')+
+    blk(2,'SUBHEADLINE',esc(hv.subheadline))+
+    blk(3,'DOLOR (agitación)',esc(hv.dolorAgitado))+
+    blk(4,'POR QUÉ FALLÓ LO ANTERIOR',ul(hv.porQueFallaLoAnterior,'✗ '))+
+    blk(5,'MECANISMO ÚNICO',(hv.mecanismoUnico&&hv.mecanismoUnico.nombre)?('<b>'+esc(hv.mecanismoUnico.nombre)+'</b> — '+esc(hv.mecanismoUnico.explicacion)):'')+
+    blk(6,'TRANSFORMACIÓN ANTES → DESPUÉS',(tr.antes&&tr.antes.length)?('<b>Antes:</b>'+ul(tr.antes)+'<b>Después:</b>'+ul(tr.despues)):'')+
+    blk(7,'AUTORIDAD DEL MÉTODO',esc(hv.autoridad))+
+    blk(8,'CÓMO FUNCIONA',(hv.comoFunciona&&hv.comoFunciona.length)?'<ol style="margin:0;padding-left:18px;">'+hv.comoFunciona.map(function(x){return '<li style="margin-bottom:3px;">'+esc(x)+'</li>';}).join('')+'</ol>':'')+
+    blk(9,'PRUEBA SOCIAL',(ps.senalMercado?('<b>Dato real:</b> '+esc(ps.senalMercado)+'<br>'):'')+(ps.placeholder?('<span style="color:var(--muted);">'+esc(ps.placeholder)+'</span>'):''))+
+    blk(10,'BENEFICIOS',ul(hv.bullets,'✓ '))+
+    blk(11,'PRECIO CON ANCLAJE',pa.valorPercibido?('<s>'+esc(pa.valorPercibido)+'</s> → <b style="font-size:15px;">'+esc(pa.precioReal)+'</b>'+(pa.justificacion?('<br><span style="color:var(--text2);">'+esc(pa.justificacion)+'</span>'):'')):'')+
+    blk(12,'GARANTÍA',esc(hv.garantia))+
+    blk(13,'OBJECIONES RESPONDIDAS',(hv.objeciones&&hv.objeciones.length)?hv.objeciones.map(function(x){return '<div style="margin-bottom:6px;"><b>P:</b> '+esc(x.objecion)+'<br><b>R:</b> '+esc(x.respuesta)+'</div>';}).join(''):'')+
+    blk(14,'URGENCIA',(urg.texto&&urg.tipo!=='ninguna')?esc(urg.texto):'')+
+    blk(15,'CTA',cta.texto?('<b>'+esc(cta.texto)+'</b>'+(cta.microcopy?(' — <span style="color:var(--muted);">'+esc(cta.microcopy)+'</span>'):'')):'')+
+    blk(16,'DISCLAIMER LEGAL','<span style="font-size:11px;color:var(--muted);font-style:italic;">'+esc(hv.disclaimer)+'</span>')+
+    (hv.descripcionVenta?blk('✦','TEXTO DE VENTA UNIVERSAL (150-200 palabras)',esc(hv.descripcionVenta)):'');
+}
+
 function renderNicheReport(r){
   var vColors={CREAR:'#00b894',VALIDAR:'#fdcb6e',DESCARTAR:'#e17055'};
   var v=(r.veredicto||'').toUpperCase().trim();
@@ -2125,16 +2166,7 @@ function renderNicheReport(r){
           '<div>'+(pr.mixProducto.skill&&String(pr.mixProducto.skill.incluir)==='true'?'✅':'➖')+' <b>Skill Pack</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.skill||{}).porQue)+'</span></div>'+
           '<div>'+(pr.mixProducto.epub&&String(pr.mixProducto.epub.incluir)==='true'?'✅':'➖')+' <b>EPUB KDP</b> <span style="color:var(--muted);">'+esc((pr.mixProducto.epub||{}).porQue)+'</span></div>'+
         '</div>':''))+
-      sec('📝 Hoja de venta (16 bloques — alimenta la página de ventas Lovable)',
-        '<div style="font-size:15px;font-weight:800;color:var(--text);">'+esc(hv.headline)+'</div>'+
-        '<div style="font-size:13px;color:var(--text2);margin:4px 0 8px;">'+esc(hv.subheadline)+'</div>'+
-        (hv.mecanismoUnico&&hv.mecanismoUnico.nombre?'<div style="margin:6px 0;"><b>⚙️ Mecanismo único:</b> '+esc(hv.mecanismoUnico.nombre)+' — '+esc(hv.mecanismoUnico.explicacion)+'</div>':'')+
-        (hv.transformacion&&hv.transformacion.antes?'<div style="margin:6px 0;"><b>🔄 Antes → Después:</b> '+esc((hv.transformacion.antes||[]).join(' · '))+' <b>→</b> '+esc((hv.transformacion.despues||[]).join(' · '))+'</div>':'')+
-        (hv.precioAnclaje&&hv.precioAnclaje.valorPercibido?'<div style="margin:6px 0;"><b>💰 Anclaje:</b> <s>'+esc(hv.precioAnclaje.valorPercibido)+'</s> → <b>'+esc(hv.precioAnclaje.precioReal)+'</b></div>':'')+
-        (hv.urgencia&&hv.urgencia.texto&&hv.urgencia.tipo!=='ninguna'?'<div style="margin:6px 0;"><b>⏳ Urgencia:</b> '+esc(hv.urgencia.texto)+'</div>':'')+
-        (hv.bullets&&hv.bullets.length?'<ul style="margin:6px 0 8px;padding-left:18px;">'+list(hv.bullets)+'</ul>':'')+
-        '<div style="font-size:12px;color:var(--text2);line-height:1.7;">'+esc(hv.descripcionVenta)+'</div>'+
-        (hv.disclaimer?'<div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic;">'+esc(hv.disclaimer)+'</div>':''))+
+      sec('📝 Hoja de venta — borrador completo en español (la versión final saldrá en el idioma del mercado al crear la página de venta)', _hvBlocksHtml(hv))+
     '</div>';
   document.getElementById('nr-content').style.display='block';
   document.getElementById('nr-actions').style.display='block';
@@ -2809,18 +2841,23 @@ async function generateLovablePrompt(suffix){
   var btn=document.getElementById('lv-generate-btn'+suffix);
   btn.disabled=true; btn.textContent='✦ Generando...';
   try{
-    var gaps=null;
-    var needGaps = !hv.headline || !hm;
-    if(needGaps){
-      var ebSummary={ title:eb.title, subtitle:eb.subtitle, tagline:eb.tagline, intro:(eb.intro||'').slice(0,600) };
-      var r=await fetch('/api/lovable-gaps',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({opportunity:o, ebook:ebSummary, language:S.approvedLang||S.ebookLang||'Español'})});
+    // Hoja de Venta FINAL en idioma de mercado — se genera una vez por oportunidad y se muestra a Lorena
+    if(!S.hojaVentaFinal || S._hvFinalSig!==_oppSig(S.selOpp)){
+      var ebSummary={ title:eb.title, subtitle:eb.subtitle, tagline:eb.tagline };
+      var bundle=['Ebook: '+(eb.title||'')];
+      if(S.extrasData&&S.extrasData.length) bundle.push('Bonus Pack: '+S.extrasData.map(function(x){return x.title;}).join(', '));
+      var r=await fetch('/api/sales-page',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({opportunity:o, report:nr||{}, ebook:ebSummary, bundle:bundle,
+          country:(o.pais||o.country)||S.country, language:S.approvedLang||S.ebookLang||(o.idioma||o.language)||'Español',
+          price:(PIPE.cfg&&PIPE.cfg.price)||o.precioHotmart||o.hotmartPrice||''})});
       var d=await r.json();
-      if(d.success) gaps=d.copy;
+      if(!d.success) throw new Error(d.error||'Error generando la página de venta');
+      S.hojaVentaFinal=d.salesPage; S._hvFinalSig=_oppSig(S.selOpp);
     }
+    renderSalesPageFinal(suffix);
     var checkoutEl=document.getElementById('lv-checkout'+suffix); if(checkoutEl) S.lovableCheckout=(checkoutEl.value||'').trim();
     var videoEl=document.getElementById('lv-video'+suffix); if(videoEl) S.lovableVideo=(videoEl.value||'').trim();
-    var prompt=buildLovablePrompt(eb,o,nr,hm,gaps,S.lovableCheckout||'',S.lovableVideo||'');
+    var prompt=buildLovablePrompt(eb,o,nr,hm,null,S.lovableCheckout||'',S.lovableVideo||'');
     document.getElementById('lv-prompt-out'+suffix).value=prompt;
     document.getElementById('lv-output'+suffix).style.display='block';
     _updateLovableCounter(suffix);
@@ -2833,8 +2870,40 @@ async function generateLovablePrompt(suffix){
   }
 }
 
+function renderSalesPageFinal(suffix){
+  suffix=suffix||'';
+  var box=document.getElementById('lv-salespage'+suffix); if(!box||!S.hojaVentaFinal) return;
+  var langEl=document.getElementById('lv-sp-lang'+suffix);
+  if(langEl) langEl.textContent=S.approvedLang||S.ebookLang||(S.selOpp&&(S.selOpp.idioma||S.selOpp.language))||'';
+  document.getElementById('lv-sp-blocks'+suffix).innerHTML=_hvBlocksHtml(S.hojaVentaFinal);
+  box.style.display='block';
+}
+function _hvPlainText(hv){
+  hv=hv||{}; var L=[];
+  function add(t,v){ if(v) L.push('== '+t+' ==\n'+v); }
+  add('HEADLINE',hv.headline); add('SUBHEADLINE',hv.subheadline); add('DOLOR',hv.dolorAgitado);
+  add('POR QUÉ FALLÓ LO ANTERIOR',(hv.porQueFallaLoAnterior||[]).map(function(x){return '✗ '+x;}).join('\n'));
+  if(hv.mecanismoUnico&&hv.mecanismoUnico.nombre) add('MECANISMO ÚNICO',hv.mecanismoUnico.nombre+' — '+(hv.mecanismoUnico.explicacion||''));
+  if(hv.transformacion&&hv.transformacion.antes) add('ANTES → DESPUÉS','ANTES: '+(hv.transformacion.antes||[]).join(' | ')+'\nDESPUÉS: '+(hv.transformacion.despues||[]).join(' | '));
+  add('AUTORIDAD',hv.autoridad); add('CÓMO FUNCIONA',(hv.comoFunciona||[]).map(function(x,i){return (i+1)+'. '+x;}).join('\n'));
+  if(hv.pruebaSocial) add('PRUEBA SOCIAL',(hv.pruebaSocial.senalMercado||'')+'\n'+(hv.pruebaSocial.placeholder||''));
+  add('BENEFICIOS',(hv.bullets||[]).map(function(x){return '✓ '+x;}).join('\n'));
+  if(hv.precioAnclaje&&hv.precioAnclaje.valorPercibido) add('PRECIO',(hv.precioAnclaje.valorPercibido||'')+' → '+(hv.precioAnclaje.precioReal||'')+'\n'+(hv.precioAnclaje.justificacion||''));
+  add('GARANTÍA',hv.garantia);
+  add('OBJECIONES',(hv.objeciones||[]).map(function(x){return 'P: '+x.objecion+'\nR: '+x.respuesta;}).join('\n\n'));
+  if(hv.urgencia&&hv.urgencia.texto&&hv.urgencia.tipo!=='ninguna') add('URGENCIA',hv.urgencia.texto);
+  if(hv.cta&&hv.cta.texto) add('CTA',hv.cta.texto+(hv.cta.microcopy?(' — '+hv.cta.microcopy):''));
+  add('DISCLAIMER',hv.disclaimer); add('TEXTO DE VENTA',hv.descripcionVenta);
+  return L.join('\n\n');
+}
+function copySalesPage(){
+  if(!S.hojaVentaFinal) return;
+  var t=_hvPlainText(S.hojaVentaFinal);
+  if(navigator.clipboard) navigator.clipboard.writeText(t).catch(function(){});
+}
+
 function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
-  var hv=(nr && nr.hojaVenta)||{}; var g=gaps||{};
+  var hv=S.hojaVentaFinal||((nr && nr.hojaVenta)||{}); var g=gaps||{};
   function pick(a,b,c){ return a||b||c||''; }
   var headline=pick(hv.headline,g.headline,eb.tagline||eb.title);
   var subheadline=pick(hv.subheadline,g.subheadline,eb.subtitle);
@@ -2865,9 +2934,9 @@ function buildLovablePrompt(eb, o, nr, hm, gaps, checkout, video){
   var L=[];
   L.push('Crea una landing page de ventas de ALTA CONVERSIÓN para un infoproducto. Stack: React + TypeScript + Tailwind CSS. Mobile-first.');
   L.push('');
-  L.push('REGLA CRÍTICA #1: El copy ya está optimizado para conversión por un copywriter senior. Tu trabajo es SOLO diseño y estructura visual. NO reescribas, NO resumas, NO "mejores" ningún texto — úsalos EXACTAMENTE como se entregan.');
-  L.push('REGLA CRÍTICA #2: Respeta el ORDEN de las secciones tal como vienen — es la secuencia psicológica de una carta de ventas (dolor → falla de lo anterior → mecanismo → transformación → prueba → oferta → precio → garantía → objeciones → urgencia → CTA).');
-  L.push('REGLA CRÍTICA #3: Todos los botones CTA de la página apuntan a: '+CO);
+  L.push('REGLA CRÍTICA #1 — LA CARTA ES TU BASE, NO TU JAULA: el copy entregado abajo es la base de conversión escrita por un copywriter senior. Tienes libertad creativa de diseño, estructura visual y pulido de redacción PARA MEJORAR LA CONVERSIÓN, con estos INVARIANTES: (a) todo en el idioma del copy entregado, cero mezcla de idiomas; (b) precio y garantía EXACTOS como se entregan; (c) el mecanismo único conserva su nombre; (d) no exageres ninguna afirmación más allá de lo entregado; (e) respeta el orden psicológico de las secciones (dolor → falla de lo anterior → mecanismo → transformación → prueba → oferta → precio → garantía → objeciones → urgencia → CTA).');
+  L.push('REGLA CRÍTICA #2 — OBJETIVO #1: DETENER EL SCROLL. El hero debe capturar en menos de 2 segundos: headline dominante, contraste fuerte, CTA visible sin scroll en móvil. Cada sección debe ganarse el scroll a la siguiente.');
+  L.push('REGLA CRÍTICA #3 — Todos los botones CTA de la página apuntan a: '+CO);
   L.push('');
   L.push('=== IDENTIDAD VISUAL ===');
   L.push('Paleta: '+(palette||'colores acordes al nicho')+'. Mood: premium, editorial, confiable. Tipografía: serif elegante para headlines, sans limpia para cuerpo. Espaciado generoso. Botón CTA sticky en móvil.');
@@ -5034,6 +5103,7 @@ function saveFullDataToHist(histId){
     if(S.nicheReportApproved) S.history[idx].nicheReportApproved=true;
     if(S.nicheValidation) S.history[idx].nicheValidation=S.nicheValidation;
     if(S.metaCheck) S.history[idx].metaCheck=S.metaCheck;
+    if(S.hojaVentaFinal) S.history[idx].hojaVentaFinal=S.hojaVentaFinal;
     if(S.pipelineSource) S.history[idx].pipelineSource=S.pipelineSource;
     if(S.lovableCheckout) S.history[idx].lovableCheckout=S.lovableCheckout;
     if(S.lovableVideo) S.history[idx].lovableVideo=S.lovableVideo;
@@ -7768,6 +7838,8 @@ function loadHistData(e){
   S.nicheReportApproved = !!e.nicheReportApproved || !!(e.ebook || e.finalEbook);
   S.nicheValidation = e.nicheValidation || null;
   S.metaCheck = e.metaCheck || null;
+  S.hojaVentaFinal = e.hojaVentaFinal || null;
+  S._hvFinalSig = S.hojaVentaFinal ? _oppSig(opp) : null;
   S.pipelineSource = e.pipelineSource || 'analysis';
   S.lovableCheckout = e.lovableCheckout || '';
   S.lovableVideo = e.lovableVideo || '';
