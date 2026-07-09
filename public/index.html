@@ -1405,6 +1405,20 @@ select option { background: #ffffff; color: #232336; }
           </div>
           <button class="btn btn-p" id="spy-btn" onclick="spyRun()" style="margin-top:6px;">🔍 Espiar anuncios</button>
           <div id="spy-out" style="margin-top:16px;"></div>
+
+          <div style="border-top:1px solid var(--border);margin:22px 0 14px;"></div>
+          <div class="row-hd"><div class="sec-lbl">🛒 Radar de infoproductos — qué se vende YA</div></div>
+          <div class="hint" style="margin-bottom:12px;">Busca infoproductos a la venta en Amazon, Udemy, Etsy, Gumroad, Payhip y Hotmart para tu nicho y país — si ya se venden, la necesidad es real y puedes entrar con una versión mejorada.</div>
+          <div class="fg">
+            <div class="fl">Nicho</div>
+            <input type="text" id="scan-niche" placeholder="ej: menopausia" />
+          </div>
+          <div class="fg">
+            <div class="fl">Sub-nicho (opcional)</div>
+            <input type="text" id="scan-sub" placeholder="ej: tratamiento no hormonal" />
+          </div>
+          <button class="btn btn-p" id="scan-btn" onclick="scanRun()" style="margin-top:6px;">🛒 Escanear mercado</button>
+          <div id="scan-out" style="margin-top:16px;"></div>
         </div>
       </div>
 
@@ -1547,7 +1561,11 @@ function showTab(id,el){
     if(S.maKit && S.selOpp){ hide('ma-empty'); hide('ma-loading'); show('ma-content'); renderMeta(S.selOpp, S.maKit); }
     else { populateMetaSel(); showMaBonusInfo(); }
   }
-  if(id==='espia'){ populateSpyCountrySel(); populateSpyLoadSel(); }
+  if(id==='espia'){
+    populateSpyCountrySel(); populateSpyLoadSel();
+    var sn=document.getElementById('scan-niche'); if(sn&&!sn.value) sn.value=(document.getElementById('inp-niche').value||'').trim();
+    var ss=document.getElementById('scan-sub'); if(ss&&!ss.value) ss.value=(document.getElementById('inp-subniche').value||'').trim();
+  }
 }
 
 function populateSpyCountrySel(){
@@ -1638,6 +1656,53 @@ function spyToCreate(){
   var ni=document.getElementById('inp-niche');
   if(ni){ ni.value=kw; ni.dispatchEvent(new Event('input')); }
   showTab('search',_tabBtn('search'));
+}
+
+async function scanRun(){
+  var niche=document.getElementById('scan-niche').value.trim();
+  var sub=document.getElementById('scan-sub').value.trim();
+  var country=document.getElementById('spy-country').value;
+  var out=document.getElementById('scan-out'); var btn=document.getElementById('scan-btn');
+  if(!country){ alert('Selecciona un país (arriba, en el selector del Espía).'); return; }
+  if(!niche){ alert('Escribe un nicho.'); return; }
+  btn.disabled=true; btn.textContent='🛒 Escaneando...';
+  out.innerHTML='<div style="text-align:center;padding:24px;"><div class="spinner"></div><div style="font-size:13px;margin-top:10px;color:var(--text);">Buscando infoproductos a la venta en 6 plataformas…</div></div>';
+  try{
+    var r=await fetch('/api/market-scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({country:country,niche:niche,subNiche:sub})});
+    var d=await r.json();
+    if(!d.success) throw new Error(d.error||'Error');
+    renderScan(d.scan);
+  }catch(e){ out.innerHTML='<div style="background:rgba(225,112,85,0.1);border:1px solid #e17055;border-radius:10px;padding:12px;font-size:13px;color:#e17055;">⚠️ '+_escHtml(e.message)+'</div>'; }
+  finally{ btn.disabled=false; btn.textContent='🛒 Escanear mercado'; }
+}
+function renderScan(sc){
+  var esc=function(s){return _escHtml(String(s||''));};
+  var chips=(sc.plataformas||[]).map(function(p){
+    var ok=p.status==='señal';
+    return '<span style="font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid '+(ok?'#00b894':'var(--border)')+';color:'+(ok?'#00b894':'var(--muted)')+';" title="'+esc(p.nota)+'">'+(ok?'✅ ':'⚠️ ')+esc(p.label)+' ('+p.items.length+')</span>';
+  }).join(' ');
+  var notas=(sc.plataformas||[]).filter(function(p){return p.nota;}).map(function(p){return '<div style="font-size:11px;color:var(--muted);">ℹ️ '+esc(p.nota)+'</div>';}).join('');
+  var sin=sc.sintesis||null;
+  var sinHtml=sin?('<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0;">'+
+    ((sin.tendencias&&sin.tendencias.length)?'<div style="font-size:12px;margin-bottom:6px;"><b>📈 Tendencias detectadas:</b><ul style="margin:4px 0 0;padding-left:18px;">'+sin.tendencias.map(function(t){return '<li style="margin-bottom:3px;">'+esc(t.tema)+' <span style="color:var(--muted);">('+esc((t.plataformas||[]).join(', '))+' — '+esc(t.evidencia)+')</span></li>';}).join('')+'</ul></div>':'')+
+    (sin.rangoPrecios?'<div style="font-size:12px;margin-bottom:4px;"><b>💰 Rango de precios visto:</b> '+esc(sin.rangoPrecios)+'</div>':'')+
+    ((sin.formatosDominantes&&sin.formatosDominantes.length)?'<div style="font-size:12px;margin-bottom:4px;"><b>📦 Formatos dominantes:</b> '+esc(sin.formatosDominantes.join(' · '))+'</div>':'')+
+    ((sin.angulosDominantes&&sin.angulosDominantes.length)?'<div style="font-size:12px;margin-bottom:4px;"><b>📐 Ángulos que ya se usan:</b> '+esc(sin.angulosDominantes.join(' · '))+'</div>':'')+
+    (sin.hueco?'<div style="font-size:12px;margin-top:6px;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(108,92,231,0.06);"><b>💡 Hueco para tu producto mejorado:</b> '+esc(sin.hueco)+'</div>':'')+
+  '</div>'):'<div style="font-size:12px;color:var(--muted);margin:10px 0;">Muy pocos productos encontrados para sintetizar tendencias — puede que este nicho tenga poca oferta indexada (revisa las plataformas una a una abajo).</div>';
+  var cards=(sc.plataformas||[]).map(function(p){
+    return p.items.map(function(it){
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;">'+
+        '<div style="display:flex;justify-content:space-between;gap:8px;"><span style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--accent);">'+esc(p.label).toUpperCase()+'</span>'+
+        '<a href="'+esc(it.url)+'" target="_blank" style="font-size:11px;color:var(--accent);">Ver ↗</a></div>'+
+        '<div style="font-size:12px;font-weight:700;margin-top:4px;">'+esc(it.titulo)+'</div>'+
+        (it.snippet?'<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;">'+esc(it.snippet)+'</div>':'')+
+      '</div>';
+    }).join('');
+  }).join('');
+  document.getElementById('scan-out').innerHTML=
+    '<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'+chips+'</div>'+notas+sinHtml+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">'+cards+'</div>';
 }
 
 function restoreEbookTab(){

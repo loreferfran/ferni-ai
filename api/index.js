@@ -1369,6 +1369,75 @@ app.post('/api/spy-ads', async function(req, res) {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ── RADAR DE INFOPRODUCTOS — qué se vende YA por plataforma, país y nicho (señal pública indexada) ──
+var _scanCache = {};
+app.post('/api/market-scan', async function(req, res) {
+  try {
+    var countryName = getCountryName(req.body.country || 'España');
+    var niche = (req.body.niche || '').trim();
+    var subNiche = (req.body.subNiche || '').trim();
+    if (!niche) return res.json({ success: false, error: 'Escribe un nicho.' });
+    var regs = getRegs(countryName);
+    var language = regs.language;
+    var ck = countryName + '|' + niche + '|' + subNiche;
+    if (_scanCache[ck] && Date.now() - _scanCache[ck].t < 6 * 3600 * 1000) return res.json({ success: true, scan: _scanCache[ck].data, cached: true });
+
+    // Paso 1 — localizar keywords al idioma del mercado (1 llamada corta)
+    var kwTxt = await claudeCall(
+      'Genera 2 keywords de busqueda comercial en ' + language + ' para encontrar infoproductos (ebooks, cursos, guias, plantillas) sobre un nicho. Como busca la gente que COMPRA, no terminos academicos. Responde SOLO JSON: {"keywords":["",""]}',
+      'NICHO: ' + niche + (subNiche ? ' | SUB-NICHO: ' + subNiche : '') + ' | PAIS: ' + countryName, 300);
+    var kws = ((extractJSON(kwTxt) || {}).keywords || [niche + ' ' + subNiche]).filter(Boolean).slice(0, 2);
+    var kw1 = kws[0], kw2 = kws[1] || kws[0];
+
+    // Paso 2 — búsquedas site: por plataforma en paralelo (máx 8 llamadas Serper)
+    var hl = serperHl(language);
+    var PLATFORMS = [
+      { id: 'amazon', label: 'Amazon', q: kw1 + ' site:' + (AMAZON_DOMAINS[countryName] || 'amazon.com') },
+      { id: 'amazon2', label: 'Amazon', q: kw2 + ' ebook site:' + (AMAZON_DOMAINS[countryName] || 'amazon.com') },
+      { id: 'udemy', label: 'Udemy', q: kw1 + ' site:udemy.com' },
+      { id: 'etsy', label: 'Etsy', q: kw1 + ' digital download site:etsy.com' },
+      { id: 'gumroad', label: 'Gumroad', q: kw1 + ' site:gumroad.com' },
+      { id: 'payhip', label: 'Payhip', q: kw1 + ' site:payhip.com' },
+      { id: 'hotmart', label: 'Hotmart', q: kw1 + ' site:hotmart.com' }
+    ];
+    var raw = await Promise.all(PLATFORMS.map(function(p) { return serperSearch(p.q, hl).catch(function() { return []; }); }));
+    var NOTAS = { hotmart: 'Hotmart no expone su ranking de ventas públicamente — esto muestra productos existentes, no los más vendidos.', payhip: 'Payhip expone poca prueba social pública — señal limitada.' };
+    var byPlat = {}, allItems = [];
+    PLATFORMS.forEach(function(p, i) {
+      var key = p.label;
+      if (!byPlat[key]) byPlat[key] = { label: key, items: [], nota: NOTAS[p.id] || '' };
+      (raw[i] || []).filter(function(r) { return r.source === 'google' && r.url; }).slice(0, 8).forEach(function(r) {
+        if (byPlat[key].items.some(function(x) { return x.url === r.url; })) return;
+        var item = { plataforma: key, titulo: r.title, snippet: (r.snippet || '').slice(0, 220), url: r.url };
+        byPlat[key].items.push(item); allItems.push(item);
+      });
+    });
+    var plataformas = Object.keys(byPlat).map(function(k) {
+      var b = byPlat[k];
+      return { label: b.label, status: b.items.length ? 'señal' : 'sin-señal', nota: b.nota, items: b.items.slice(0, 6) };
+    });
+
+    // Paso 3 — síntesis (1 llamada): tendencias, precios, ángulos, hueco — SOLO desde los items reales
+    var sintesis = null;
+    if (allItems.length >= 3) {
+      var sTxt = await claudeCall(
+        'Eres analista de mercado de infoproductos. Recibes productos REALES encontrados a la venta. Responde SOLO JSON: ' +
+        '{"tendencias":[{"tema":"máx 10 palabras","plataformas":["donde aparece"],"evidencia":"máx 15 palabras"}],' +
+        '"rangoPrecios":"si hay precios en los datos, rango; si no, cadena vacía","formatosDominantes":["ebook/curso/plantilla/etc detectados"],' +
+        '"angulosDominantes":["3-5 ángulos de venta que se repiten, máx 12 palabras c/u"],' +
+        '"hueco":"qué NO está cubierto y un producto nuevo puede explotar — máx 30 palabras","destacadosIdx":[índices de los 3-5 productos más fuertes]}' +
+        '. Básate SOLO en los datos recibidos, no inventes productos ni precios. Máximo 4 tendencias.',
+        'NICHO: ' + niche + (subNiche ? ' → ' + subNiche : '') + ' | PAÍS: ' + countryName + '\n\nPRODUCTOS ENCONTRADOS:\n' +
+        allItems.map(function(x, i) { return i + '. [' + x.plataforma + '] ' + x.titulo + ' — ' + x.snippet; }).join('\n'), 2200);
+      sintesis = extractJSON(sTxt);
+      if (sintesis && sintesis.destacadosIdx) sintesis.destacados = sintesis.destacadosIdx.map(function(i) { return allItems[i]; }).filter(Boolean);
+    }
+    var scan = { pais: countryName, nicho: niche, subNicho: subNiche, keywords: kws, plataformas: plataformas, totalItems: allItems.length, sintesis: sintesis };
+    _scanCache[ck] = { t: Date.now(), data: scan };
+    res.json({ success: true, scan: scan });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // Keywords de volumen masivo garantizado por idioma — sonda para distinguir "canal ciego" de "cero real"
 var PROBE_KW = { German: 'abnehmen', Spanish: 'adelgazar', French: 'maigrir', English: 'weight loss', Italian: 'dimagrire', Portuguese: 'emagrecer', Dutch: 'afvallen', Swedish: 'viktminskning', Polish: 'odchudzanie', Japanese: 'ダイエット' };
 // Términos de intención de compra por idioma — para el proxy de interés cuando DataForSEO está ciego
