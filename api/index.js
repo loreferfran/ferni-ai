@@ -656,7 +656,7 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
       '\nNicho amplio: "' + (niche || 'general') + '"' +
       (subNiche ? ' → Sub-nicho: "' + subNiche + '"' : '') +
       (microNiche ? ' → Micro-tema: "' + microNiche + '"' : '') +
-      '\nTODAS las 10 oportunidades deben caer DENTRO del nivel MAS ESPECIFICO indicado: "' + focusTerm + '".' +
+      '\nTODAS las oportunidades devueltas deben caer DENTRO del nivel MAS ESPECIFICO indicado: "' + focusTerm + '".' +
       '\nPROHIBIDO subir al nicho amplio o al sub-nicho cuando el usuario especifico un nivel mas concreto — cada oportunidad debe ser una variacion real DENTRO de "' + focusTerm + '", nunca del tema general.' +
       '\nEjemplo: si el usuario pidio salud → fibromialgia → dolores/tratamiento, las oportunidades deben tratar sobre dolores y tratamiento de fibromialgia especificamente, no sobre "salud" ni sobre fibromialgia en general.';
   }
@@ -664,7 +664,7 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
   var consolidationBlock = '';
   if (subNiche || microNiche) {
     consolidationBlock = '\n\n=== OPORTUNIDAD CONSOLIDADA (elemento 0 del array — OBLIGATORIO evaluar) ===' +
-      '\nCuando el usuario acota con sub-nicho/micro-tema, es habitual que las 10 oportunidades resulten ser el MISMO producto fragmentado por sintoma o aspecto (ej: menopausia sin hormonas → 10 tarjetas: sofocos, insomnio, ansiedad...). La gente BUSCA por sintoma, pero COMPRA el producto que resuelve el conjunto.' +
+      '\nCuando el usuario acota con sub-nicho/micro-tema, es habitual que las oportunidades detectadas resulten ser el MISMO producto fragmentado por sintoma o aspecto (ej: menopausia sin hormonas → sofocos, insomnio, ansiedad...). La gente BUSCA por sintoma, pero COMPRA el producto que resuelve el conjunto.' +
       '\nREGLA: si 3 o mas de tus oportunidades comparten el mismo problema raiz Y el mismo demografico (variando solo el sintoma/aspecto), genera ADEMAS un elemento extra AL INICIO del array (posicion 0) con "esConsolidada":true que represente EL PRODUCTO GANADOR UNICO que cubre los 3-5 sintomas/dolores MAS RECURRENTES de ese grupo (los de mayor volumen y score — el mayor dolor combinado).' +
       '\nEl elemento consolidado lleva TODOS los campos obligatorios de una oportunidad normal (mismo schema), Y ADEMAS:' +
       '\n- "esConsolidada": true' +
@@ -672,8 +672,8 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
       '\n- "volumenCombinado": suma de volumenEstimado de las oportunidades que agrupa' +
       '\n- "oportunidadesFuente": array con los campos "problema" de las oportunidades agrupadas' +
       '\nSu "problema" es el problema paraguas (ej: "Manejo integral no hormonal de los sintomas de la menopausia"). Su "tituloEbook" es el titulo del producto multi-sintoma ganador (ej: "Menopausia sin hormonas: el plan integral contra sofocos, insomnio y ansiedad"). Su "promesaEbook" promete resolver el CONJUNTO. Su "scoreMonetizacion" refleja la demanda combinada (puede superar el score de cualquier tarjeta individual, maximo 100). Sus "clusterKeywords" son la union de las mejores keywords del grupo.' +
-      '\nSi NO existe ese patron (las oportunidades son genuinamente distintas), NO generes el elemento consolidado — devuelve solo las 10 normales.' +
-      '\nLas 10 oportunidades individuales SIEMPRE se devuelven completas despues del consolidado (si existe): el array tiene 11 elementos con consolidado, 10 sin el.';
+      '\nSi NO existe ese patron (las oportunidades son genuinamente distintas), NO generes el elemento consolidado — devuelve solo las oportunidades ganadoras normales.' +
+      '\nLas oportunidades individuales GANADORAS se devuelven completas despues del consolidado (si existe): consolidado primero (posicion 0), luego las individuales que cumplen el estandar.';
   }
 
   const sys = 'Eres un sistema avanzado de inteligencia de mercado y analisis de demanda real. Tu mision: detectar oportunidades REALES de productos digitales basadas en comportamiento de busqueda humano.' +
@@ -751,12 +751,18 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
     '\n✓ Resolucion posible con producto digital: PDF, ebook, guia, checklist, plantilla, mini-curso, pack digital' +
     '\n✓ Potencial de monetizacion realista en ' + country + ' al precio de mercado local' +
 
-    '\n\n=== REGLAS DE INCLUSION ===' +
-    '\nSIEMPRE devuelve las 10 oportunidades individuales ordenadas por scoreMonetizacion descendente (mas el elemento consolidado en posicion 0 si aplica, ver bloque OPORTUNIDAD CONSOLIDADA).' +
-    ' Refleja la diferencia de calidad de señal en el score: señal fuerte = score alto, señal debil = score bajo.' +
-    ' Si los datos son escasos, extrapola razonablemente con patrones de mercados similares e indicalo en porQueEstaOportunidad.' +
+    '\n\n=== REGLAS DE INCLUSION — ESTANDAR GANADOR (sin cupo fijo) ===' +
+    '\nDevuelve SOLO las oportunidades que cumplan TODAS estas condiciones:' +
+    '\n  1. prioridad ALTA y recomendacion CREAR segun tu analisis honesto.' +
+    '\n  2. repeticionFuentes >= 2: la señal aparece en al menos 2 fuentes distintas de los DATOS recibidos.' +
+    '\n  3. scoreMonetizacion >= 75 SIN inflarlo: el score debe salir de señal real presente en los datos.' +
+    '\n  4. Intencion de pago visible en los datos: productos ya vendiendose, CPC > 0, o busquedas transaccionales.' +
+    '\nPROHIBIDO rellenar para completar un numero: si 2 clusters cumplen el estandar, devuelve 2; si 7, devuelve 7. Maximo 10.' +
+    '\nPROHIBIDO usar extrapolacion para INCLUIR una oportunidad. Extrapolar solo esta permitido para completar campos secundarios de una oportunidad que YA cumple el estandar con datos reales — e indicalo en porQueEstaOportunidad.' +
+    '\nSi NINGUN cluster cumple el estandar, devuelve un array vacio []. Esa es la respuesta correcta y honesta.' +
+    '\nOrdena por scoreMonetizacion descendente (mas el elemento consolidado en posicion 0 si aplica, ver bloque OPORTUNIDAD CONSOLIDADA).' +
 
-    '\n\nDevuelve SOLO el JSON array (10 oportunidades, u 11 si generaste el elemento consolidado en posicion 0), sin texto fuera del JSON.' +
+    '\n\nDevuelve SOLO el JSON array (SOLO oportunidades ganadoras: de 0 a 10 elementos, mas el consolidado en posicion 0 si aplica), sin texto fuera del JSON.' +
     ' scoreMonetizacion = viralidad(0-25) + repeticion-multifuente(0-25) + intencion-pago(0-25) + oportunidad-nicho(0-25).' +
     '\n\nCampos obligatorios por oportunidad:' +
     ' problema, problemaEnIdioma (en ' + language + '), busquedaExacta (en ' + language + ' como busca la gente real),' +
@@ -843,11 +849,24 @@ async function analyzeWithGPT4(results, country, niche, language, dfsVolumes, su
     })
   });
   const d = await resp.json();
-  return extractOpportunitiesArray(d.choices[0].message.content);
+  var opportunities = extractOpportunitiesArray(d.choices[0].message.content);
+  // Red de seguridad del ESTANDAR GANADOR: aunque el prompt lo exige, filtramos
+  // deterministicamente lo que no cumple (la consolidada se respeta siempre).
+  var _pre = (opportunities || []).length;
+  opportunities = (opportunities || []).filter(function(o){
+    if (!o) return false;
+    if (o.esConsolidada) return true;
+    var score = o.scoreMonetizacion || o.monetizationScore || 0;
+    var pri = String(o.prioridad || '').toUpperCase();
+    var rec = String(o.recomendacion || '').toUpperCase();
+    return score >= 75 && pri === 'ALTA' && rec.indexOf('CREAR') === 0;
+  });
+  if (_pre !== opportunities.length) console.log('Estandar ganador: filtradas ' + (_pre - opportunities.length) + ' oportunidades debiles de ' + _pre);
+  return opportunities;
 }
 
 // Parser de respaldo para el array de oportunidades de GPT-4o (a diferencia de extractJSON, que asume un
-// objeto {...}, aquí la respuesta es un array [...] de 10 oportunidades). Si GPT-4o corta o corrompe algo
+// objeto {...}, aquí la respuesta es un array [...] de oportunidades ganadoras, tamaño variable). Si GPT-4o corta o corrompe algo
 // a mitad de camino, en vez de fallar la búsqueda completa, se recupera cada oportunidad ya completa antes
 // del punto de error — mejor devolver 6-8 oportunidades válidas que ningún resultado.
 function extractOpportunitiesArray(txt) {

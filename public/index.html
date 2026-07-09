@@ -346,12 +346,14 @@ select option { background: #ffffff; color: #232336; }
               <div id="nr-content" style="display:none;"></div>
               <div id="nr-actions" style="display:none;margin-top:12px;">
                 <div class="btn-row">
-                  <button class="btn btn-p" onclick="approveNicheReport()">✅ Aprobar informe</button>
                   <button class="btn btn-s" id="nr-validate-btn" onclick="validateNicheWarnings()">🔍 Validar advertencias</button>
+                  <button class="btn btn-p" id="nr-approve-btn" onclick="approveNicheReport()">✅ Aprobar informe</button>
+                  <button class="btn btn-s" id="nr-reemit-btn" onclick="genNicheReport()" title="Vuelve a redactar el informe con la MISMA evidencia ya investigada — NO repite la búsqueda del análisis ni gasta ese paso.">↻ Reemitir informe</button>
                 </div>
+                <div id="nr-gate-hint" style="margin-top:8px;font-size:12px;color:var(--muted);"></div>
                 <div id="nr-validation" style="display:none;margin-top:12px;"></div>
               </div>
-              <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — configura abajo tu producto completo, o usa "Generar PDF" para solo el ebook.</div>
+              <div id="nr-approved-badge" style="display:none;margin-top:10px;background:rgba(0,184,148,0.1);border:1px solid #00b894;border-radius:10px;padding:10px 14px;font-size:13px;color:#00b894;font-weight:600;">✅ Informe aprobado — configura abajo tu producto completo, o usa "Generar PDF" para solo el ebook. <a href="javascript:void(0)" onclick="genNicheReport()" style="color:#00b894;text-decoration:underline;font-weight:700;">↻ Reemitir informe</a></div>
             </div>
 
             <!-- LÍNEA DE PRODUCCIÓN — un clic → producto completo → hub de resultado -->
@@ -1423,6 +1425,8 @@ function _oppSig(o){ if(!o) return null; return (((o.problema||o.problem||'')+'|
     }
   } catch(e){}
 })();
+// Restaurar análisis/informe de esta pestaña tras un F5 — nunca repite el paso de búsqueda pagado
+try { _sessRestore(); } catch(e){}
 // Cargar OpenAI key para generacion de imagenes directa
 fetch('/api/config').then(r=>r.json()).then(d=>{ /* config check — las keys viven solo en el servidor */ }).catch(()=>{});
 
@@ -1682,18 +1686,31 @@ function step(i,s){const e=document.getElementById('ls'+i);if(e)e.className='lst
 
 function showResults(opps,country,niche,info,subNiche,microNiche){
   S.results=opps;
+  S._srArgs={country:country,niche:niche,info:info,subNiche:subNiche,microNiche:microNiche};
   hide('sl'); show('sr');
   var nicheRoute=niche+(subNiche?' → '+subNiche:'')+(microNiche?' → '+microNiche:'');
   document.getElementById('sr-meta').textContent=`${info.flag} ${country} · ${nicheRoute} · ${info.lang} · ${new Date().toLocaleString('es-CL')}`;
   var consIdx=opps.findIndex(function(o){ return o && o.esConsolidada; });
   var regular=opps.filter(function(o){ return !(o && o.esConsolidada); });
-  document.getElementById('sr-count').textContent=regular.length+' oportunidades';
+  if(!opps.length){
+    document.getElementById('sr-count').textContent='0 oportunidades';
+    document.getElementById('sr-stats').innerHTML='';
+    document.getElementById('sr-list').innerHTML=
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;text-align:center;">'+
+        '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;">🔍 Ninguna oportunidad cumplió el estándar ganador</div>'+
+        '<div style="font-size:13px;color:var(--text2);line-height:1.7;max-width:520px;margin:0 auto;">El análisis fue honesto: en este nicho/país no se detectó señal suficiente de demanda con intención de pago. Mejor saberlo ahora que después de crear el producto.<br><br><b>Prueba:</b> ampliar el nicho (quita el micro-tema), cambiar de país, o buscar un ángulo distinto del mismo dolor.</div>'+
+        '<div style="margin-top:14px;"><button class="btn btn-p" onclick="resetSearch()">↺ Nueva búsqueda</button></div>'+
+      '</div>';
+    addMsg('chat-search','⚠️ Ninguna oportunidad pasó el estándar ganador en este nicho/país. Te sugiero ampliar el nicho, probar otro país, o cambiar el ángulo.','ferni');
+    _sessSave();
+    return;
+  }
+  document.getElementById('sr-count').textContent=regular.length+' ganadoras';
   const avg=Math.round(regular.reduce((a,b)=>a+(b.scoreMonetizacion||b.monetizationScore||0),0)/(regular.length||1));
-  const hi=regular.filter(o=>(o.scoreMonetizacion||o.monetizationScore||0)>=80).length;
   document.getElementById('sr-stats').innerHTML=`
-    <div class="stat"><div class="stat-n" style="color:#a29bfe">${regular.length}</div><div class="stat-l">Oportunidades</div></div>
+    <div class="stat"><div class="stat-n" style="color:#a29bfe">${regular.length}</div><div class="stat-l">Ganadoras</div></div>
     <div class="stat"><div class="stat-n" style="color:var(--green)">${avg}</div><div class="stat-l">Score prom.</div></div>
-    <div class="stat"><div class="stat-n" style="color:var(--gold)">${hi}</div><div class="stat-l">Prioridad alta</div></div>`;
+    <div class="stat"><div class="stat-n" style="color:var(--gold)">${consIdx>-1?'🎯':'—'}</div><div class="stat-l">Consolidada</div></div>`;
   var heroHtml='';
   if(consIdx>-1){
     var c=opps[consIdx];
@@ -1763,8 +1780,38 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
     var _c=opps[consIdx];
     addMsg('chat-search',`🎯 Detecté que varias oportunidades son el MISMO producto fragmentado por síntoma — te propuse arriba el producto consolidado que cubre los ${(_c.sintomasCubiertos||[]).length} dolores más buscados (${_c.volumenCombinado||_c.volumenEstimado||''} búsquedas/mes combinadas). Puedes seleccionarlo o elegir una individual.`,'ferni');
   } else {
-    addMsg('chat-search',`✅ Encontré ${regular.length} oportunidades en ${country} — nicho ${nicheRoute}. Score máximo: ${Math.max(...regular.map(o=>o.scoreMonetizacion||o.monetizationScore||0))}. Haz clic en una tarjeta para seleccionarla. ¿Tienes alguna pregunta sobre los resultados?`,'ferni');
+    var _msg='✅ '+regular.length+' oportunidades GANADORAS en '+country+' — nicho '+nicheRoute+' (solo se muestran las que pasan el estándar: prioridad alta, señal en 2+ fuentes, intención de pago real). Score máximo: '+Math.max.apply(null,regular.map(function(o){return o.scoreMonetizacion||o.monetizationScore||0;}))+'.';
+    if(regular.length<5) _msg+=' Son menos de 5 porque el análisis no rellena con oportunidades débiles — si quieres más opciones, amplía el nicho o prueba otro país.';
+    addMsg('chat-search',_msg+' Haz clic en una tarjeta para seleccionarla.','ferni');
   }
+  _sessSave();
+}
+
+// ===== Persistencia de sesión (sessionStorage) — sobrevive un F5 sin repetir el análisis pagado =====
+function _sessSave(){
+  try{ sessionStorage.setItem('ferni_sess_v1', JSON.stringify({
+    results:S.results||null, srArgs:S._srArgs||null, selOppIdx:(typeof S._nicheReportOppIdx==='number')?S._nicheReportOppIdx:-1,
+    nicheReport:S.nicheReport||null, nicheValidation:S.nicheValidation||null, wasApproved:!!S.nicheReportApproved,
+    metaCheck:S.metaCheck||null
+  })); }catch(e){}
+}
+function _sessRestore(){
+  try{
+    var raw=sessionStorage.getItem('ferni_sess_v1'); if(!raw) return;
+    var s=JSON.parse(raw); if(!s||!s.results||!s.results.length||!s.srArgs) return;
+    showResults(s.results, s.srArgs.country, s.srArgs.niche, s.srArgs.info, s.srArgs.subNiche, s.srArgs.microNiche);
+    if(s.selOppIdx>-1 && s.results[s.selOppIdx]){
+      selOpp(s.selOppIdx);
+      if(s.nicheReport){
+        S.nicheReport=s.nicheReport; S.nicheValidation=s.nicheValidation||null; S.metaCheck=s.metaCheck||null;
+        document.getElementById('nr-box').style.display='block';
+        renderNicheReport(S.nicheReport);
+        if(S.nicheValidation){ document.getElementById('nr-validation').style.display='block'; renderNicheValidation(S.nicheValidation); }
+        _nrGate();
+        if(s.wasApproved) addMsg('chat-search','ℹ️ Restauré tu análisis e informe de esta sesión (el informe estaba aprobado — vuelve a aprobarlo con un clic para continuar donde ibas).','ferni');
+      }
+    }
+  }catch(e){}
 }
 
 function selOpp(i){
@@ -1788,6 +1835,7 @@ function selOpp(i){
   if(det){det.style.display=det.style.display==='none'?'block':'none';}
   const o=S.selOpp;
   addMsg('chat-search','Seleccionaste: "'+((o.problema||o.problem)||'')+'" — Score '+((o.scoreMonetizacion||o.monetizationScore)||0)+'/100. En '+((o.idioma||o.language)||'')+': "'+((o.problemaEnIdioma||o.busquedaExacta)||'')+'" — Ebook: "'+((o.tituloEbook||o.ebookTitle)||'')+'" — Precio: '+((o.precioHotmart||o.hotmartPrice)||'')+'. Siguiente paso: genera el informe de nicho para validar que la gente PAGA por resolver esto antes de crear el ebook.','ferni');
+  _sessSave();
 }
 
 // ===== INFORME DE NICHO — checkpoint de aprobación =====
@@ -1806,6 +1854,7 @@ function _resetNrUI(){
 async function genNicheReport(){
   var o=S.selOpp; if(!o){ alert('Selecciona primero una oportunidad.'); return; }
   S.nicheReportApproved=false;
+  S.nicheValidation=null; S._nrOverride=false;
   document.getElementById('btn-draft').disabled=true;
   var box=document.getElementById('nr-box'); box.style.display='block';
   document.getElementById('nr-content').style.display='none';
@@ -1825,6 +1874,7 @@ async function genNicheReport(){
     renderNicheReport(d.report);
     _wizSet(2);
     addMsg('chat-search','📋 Informe listo. Veredicto: '+(d.report.veredicto||'—')+'. Revísalo y apruébalo para desbloquear la generación del PDF, o usa "🔍 Validar advertencias" si el veredicto es VALIDAR y quieres profundizar antes de decidir.','ferni');
+    _sessSave();
   }catch(e){
     document.getElementById('nr-loading').style.display='none';
     alert('Error generando el informe: '+e.message);
@@ -1849,9 +1899,8 @@ function renderNicheReport(r){
     '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">'+
         '<div style="font-size:16px;font-weight:800;color:var(--text);">'+esc(r.titulo||'Informe de nicho')+'</div>'+
-        '<span style="background:'+vc+'22;border:1.5px solid '+vc+';color:'+vc+';font-size:12px;font-weight:800;padding:5px 14px;border-radius:20px;letter-spacing:1px;cursor:default;" title="Veredicto del análisis — no es un botón. Si dice VALIDAR, usa el botón Validar advertencias de abajo.">'+esc(v||'—')+'</span>'+
       '</div>'+
-      sec('Veredicto — por qué', esc(r.veredictoJustificacion))+
+      sec('Veredicto: <span style="color:'+vc+';">'+esc(v||'—')+'</span> — por qué', esc(r.veredictoJustificacion))+
       sec('Dolor central', esc(r.dolor))+
       sec('Causa raíz', esc(r.causaRaiz))+
       sec('Solución', esc(r.solucion))+
@@ -1905,10 +1954,39 @@ function renderNicheReport(r){
     '</div>';
   document.getElementById('nr-content').style.display='block';
   document.getElementById('nr-actions').style.display='block';
+  _nrGate();
 }
+
+// Gate de aprobación: con advertencias pendientes no se aprueba sin validar primero
+function _nrGate(){
+  var ap=document.getElementById('nr-approve-btn'), vb=document.getElementById('nr-validate-btn'), hint=document.getElementById('nr-gate-hint');
+  if(!ap||!vb||!hint) return;
+  var adv=(S.nicheReport&&S.nicheReport.evidenciaDemanda&&S.nicheReport.evidenciaDemanda.advertencias)||[];
+  var val=S.nicheValidation;
+  vb.classList.remove('btn-p'); vb.classList.add('btn-s');
+  if(!adv.length){
+    vb.style.display='none'; ap.disabled=false;
+    hint.innerHTML='✅ Sin advertencias — la evidencia es sólida, puedes aprobar directo.'; hint.style.color='#00b894';
+  } else if(S._nrOverride){
+    vb.style.display=''; ap.disabled=false;
+    hint.innerHTML='⚠️ Aprobación bajo tu responsabilidad — la validación profunda recomendó no crear este producto.'; hint.style.color='#e17055';
+  } else if(!val){
+    vb.style.display=''; vb.classList.remove('btn-s'); vb.classList.add('btn-p');
+    ap.disabled=true;
+    hint.innerHTML='⚠️ El informe tiene <b>'+adv.length+' advertencia'+(adv.length>1?'s':'')+'</b> sin resolver — corre "🔍 Validar advertencias" antes de aprobar. Es una investigación dirigida real (DataForSEO + Google + Amazon), no una reescritura.'; hint.style.color='#b8860b';
+  } else if(String(val.veredictoFinal||'').toUpperCase().trim()==='CREAR'){
+    vb.style.display=''; ap.disabled=false;
+    hint.innerHTML='✅ Validación superada — veredicto final CREAR ('+(val.confianza||'')+' confianza). Puedes aprobar.'; hint.style.color='#00b894';
+  } else {
+    vb.style.display=''; ap.disabled=true;
+    hint.innerHTML='⛔ La validación profunda dice <b>DESCARTAR</b> — crear este producto sería gastar tokens en algo que probablemente no venda. Elige otra oportunidad de la lista, o <a href="javascript:void(0)" onclick="_nrOverride()" style="color:#e17055;text-decoration:underline;">aprueba bajo tu responsabilidad</a>.'; hint.style.color='#e17055';
+  }
+}
+function _nrOverride(){ S._nrOverride=true; _nrGate(); }
 
 function approveNicheReport(){
   if(!S.nicheReport){ alert('Genera primero el informe.'); return; }
+  var _apBtn=document.getElementById('nr-approve-btn'); if(_apBtn&&_apBtn.disabled) return;
   S.nicheReportApproved=true;
   if(S.currentHistId) saveFullDataToHist(S.currentHistId);
   document.getElementById('nr-approved-badge').style.display='block';
@@ -1917,6 +1995,7 @@ function approveNicheReport(){
   _wizSet(3);
   addMsg('chat-search','✅ Informe aprobado. Configura tu producto completo en la Línea de Producción (un clic genera todo: ebook + bonus + app + skill + Meta Ads) — o usa "Generar PDF" para solo el ebook.','ferni');
   document.getElementById('pipe-box').scrollIntoView({behavior:'smooth',block:'start'});
+  _sessSave();
 }
 
 // "Validar advertencias" — investigación dirigida a resolver las dudas puntuales del informe (no repite la investigación completa, no reescribe a ciegas)
@@ -1939,6 +2018,8 @@ async function validateNicheWarnings(){
     S.nicheValidation=d.validation;
     if(S.currentHistId) saveFullDataToHist(S.currentHistId);
     renderNicheValidation(d.validation);
+    _nrGate();
+    _sessSave();
   }catch(e){
     panel.innerHTML='<div style="background:rgba(225,112,85,0.1);border:1px solid #e17055;border-radius:10px;padding:12px;font-size:13px;color:#e17055;">⚠️ '+_escHtml(e.message)+'</div>';
   }finally{
