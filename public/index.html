@@ -2010,7 +2010,7 @@ function selOpp(i){
   S.selOpp=S.results[i];
   S.pipelineSource='analysis';
   // Checkpoint: al cambiar de oportunidad se invalida el informe anterior
-  if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; _resetNrUI(); _pipeReset(); }
+  if(S._nicheReportOppIdx !== i){ S.nicheReport=null; S.nicheReportApproved=false; S.numChapters=null; _resetNrUI(); _pipeReset(); }
   S._nicheReportOppIdx = i;
   document.getElementById('btn-report').disabled=false;
   document.getElementById('btn-draft').disabled = !S.nicheReportApproved;
@@ -2613,7 +2613,7 @@ async function _pipeEbook(){
     S.ebookData=null; S.finalEbook=null; S.approvedLang=null; S.pdfHtml=null; S.coverUrl=null; S.chapterImages=[];
     S.ebookParts={}; S.ebookDefs=null; S.ebookOutline=null; S.ebookRetryFrom=null;
     S.extrasData=null; S.extrasLang=null; S.extrasMarketing=null; S.hmKit=null; S.maKit=null;
-    S_crApp=null; S_crSkill=null; S.ebookScore=null; S.gapAnalysis=null;
+    S_crApp=null; S_crSkill=null; S.ebookScore=null; S.gapAnalysis=null; S.numChapters=null;
   }
   S.ebookIsModule1 = true;
   // runEbookSteps actualiza la UI del tab Ebook (oculto) y setea S.ebookData al terminar
