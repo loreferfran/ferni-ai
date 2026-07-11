@@ -208,6 +208,38 @@ select option { background: #ffffff; color: #232336; }
 [style*="rgba(255,255,255,0.07)"], [style*="rgba(255,255,255,0.08)"] { background-color: #fbf8f1 !important; }
 [style*="background:var(--bg2)"], [style*="background: var(--bg2)"] { border-color: #d6ccb6; }
 </style>
+<style id="theme-pro">
+/* ═══ THEME PRO — capa de refinamiento sobre Aurora ═══ */
+:root{ --radius:14px; --radius-sm:10px; --shadow-1:0 1px 3px rgba(43,38,32,.06),0 4px 14px rgba(43,38,32,.05); --shadow-2:0 6px 24px rgba(43,38,32,.10); }
+.fc,.opp-card{ border-radius:var(--radius) !important; box-shadow:var(--shadow-1); border-color:rgba(43,38,32,.08) !important; }
+.opp-card{ transition:transform .15s ease, box-shadow .15s ease; }
+.opp-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow-2); }
+.btn{ border-radius:12px !important; font-weight:700; letter-spacing:.2px; transition:transform .12s ease, box-shadow .12s ease, opacity .12s; }
+.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow-1); }
+.btn:active{ transform:translateY(0); }
+.btn-p{ box-shadow:0 4px 14px rgba(63,109,245,.25); }
+select,input,textarea{ border-radius:10px !important; transition:border-color .15s, box-shadow .15s; }
+select:focus,input:focus,textarea:focus{ border-color:var(--accent) !important; box-shadow:0 0 0 3px rgba(63,109,245,.12); outline:none; }
+.sec-lbl,.fl{ letter-spacing:1.8px; }
+.pill{ border-radius:999px !important; }
+.badge{ border-radius:999px !important; font-weight:700; }
+::-webkit-scrollbar{ width:10px; height:10px; } ::-webkit-scrollbar-thumb{ background:rgba(43,38,32,.18); border-radius:8px; } ::-webkit-scrollbar-track{ background:transparent; }
+.eyebrow-ui{ display:inline-block; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); background:rgba(63,109,245,.08); border-radius:999px; padding:3px 10px; font-weight:800; }
+.spinner{ border-top-color:var(--accent) !important; }
+/* U2 — header + nav como pills */
+.logo-name{ background:linear-gradient(135deg,var(--accent),#8b6fe8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.logo-sub{ letter-spacing:3px; }
+.tab{ border-radius:999px !important; padding:8px 16px !important; }
+.tab.active{ color:#fff; }
+/* U3 — botón EJECUTAR ANÁLISIS siempre visible al fondo del sidebar */
+.sb-scroll{ padding-bottom:78px !important; }
+.sb-foot{ position:sticky; bottom:0; z-index:5; background:linear-gradient(180deg,rgba(232,224,207,0) 0%,var(--sb-foot-bg,#e8e0cf) 35%); box-shadow:0 -6px 14px rgba(43,38,32,.06); }
+/* U6 — estados vacíos/carga */
+.state-title{ font-family:Georgia,serif; font-size:18px; }
+.state-sub{ color:var(--muted); }
+.lstep{ transition:color .25s ease; }
+.lstep.done .ldot{ box-shadow:0 0 0 3px rgba(31,168,122,.15); }
+</style>
 </head>
 <body>
 <div class="app">
@@ -247,7 +279,7 @@ select option { background: #ffffff; color: #232336; }
     <div class="sb">
       <div class="sb-scroll">
         <div class="fg">
-          <div class="fl">País objetivo</div>
+          <div class="fl eyebrow-ui">País objetivo</div>
           <select id="sel-country">
             <option value="">— Seleccionar —</option>
             <optgroup label="🌍 Europa">
@@ -281,14 +313,14 @@ select option { background: #ffffff; color: #232336; }
           </select>
         </div>
         <div class="fg">
-          <div class="fl">Modo</div>
+          <div class="fl eyebrow-ui">Modo</div>
           <div class="mode-row">
             <button class="mbtn active" id="mb-t" onclick="setMode('trends')" type="button">📊 General</button>
             <button class="mbtn" id="mb-n" onclick="setMode('niche')" type="button">🎯 Nicho</button>
           </div>
         </div>
         <div class="fg">
-          <div class="fl">Nicho <span style="color:var(--teal);font-size:9px;">(escribe o elige)</span></div>
+          <div class="fl eyebrow-ui">Nicho <span style="color:var(--teal);font-size:9px;">(escribe o elige)</span></div>
           <input type="text" id="inp-niche" placeholder="ej: salud, ansiedad..." oninput="if(this.value.trim())setMode('niche')" onclick="setMode('niche')" />
           <div class="hint" id="niche-hint">💡 Haz clic y escribe tu nicho</div>
           <input type="text" id="inp-subniche" placeholder="Sub-nicho (opcional) — ej: fibromialgia" style="margin-top:6px;" />
@@ -1896,10 +1928,11 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
     document.getElementById('sr-count').textContent='0 oportunidades';
     document.getElementById('sr-stats').innerHTML='';
     document.getElementById('sr-list').innerHTML=
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;text-align:center;">'+
-        '<div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px;">🔍 Ninguna oportunidad cumplió el estándar ganador</div>'+
-        '<div style="font-size:13px;color:var(--text2);line-height:1.7;max-width:520px;margin:0 auto;">El análisis fue honesto: en este nicho/país no se detectó señal suficiente de demanda con intención de pago. Mejor saberlo ahora que después de crear el producto.<br><br><b>Prueba:</b> ampliar el nicho (quita el micro-tema), cambiar de país, o buscar un ángulo distinto del mismo dolor.</div>'+
-        '<div style="margin-top:14px;"><button class="btn btn-p" onclick="resetSearch()">↺ Nueva búsqueda</button></div>'+
+      '<div class="state-c" style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius,12px);box-shadow:var(--shadow-1);padding:32px 24px;">'+
+        '<div class="big-icon">🔍</div>'+
+        '<div class="state-title">Ninguna oportunidad cumplió el estándar ganador</div>'+
+        '<div class="state-sub">El análisis fue honesto: en este nicho/país no se detectó señal suficiente de demanda con intención de pago. Mejor saberlo ahora que después de crear el producto.<br><br><b>Prueba:</b> ampliar el nicho (quita el micro-tema), cambiar de país, o buscar un ángulo distinto del mismo dolor.</div>'+
+        '<button class="btn btn-p" onclick="resetSearch()">↺ Nueva búsqueda</button>'+
       '</div>';
     addMsg('chat-search','⚠️ Ninguna oportunidad pasó el estándar ganador en este nicho/país. Te sugiero ampliar el nicho, probar otro país, o cambiar el ángulo.','ferni');
     _sessSave();
@@ -1919,7 +1952,7 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
       '<div style="font-size:10px;font-weight:800;letter-spacing:2px;color:var(--accent);margin-bottom:6px;">🎯 PRODUCTO GANADOR CONSOLIDADO — cubre los '+((c.sintomasCubiertos||[]).length)+' dolores más buscados</div>'+
       '<div class="opp-top"><div><div class="opp-prob">'+(c.problema||'')+'</div>'+
       (c.problemaEnIdioma?'<div style="font-size:11px;color:var(--teal);margin-top:3px;font-style:italic;">🌍 '+c.problemaEnIdioma+'</div>':'')+
-      '</div><div class="sbox sh"><div class="sn">'+cs+'</div><div class="sl2">SCORE</div></div></div>'+
+      '</div><div style="border-radius:12px;padding:2px;background:conic-gradient(var(--accent) '+(cs*3.6)+'deg, rgba(43,38,32,.12) 0deg);flex-shrink:0;"><div class="sbox sh"><div class="sn">'+cs+'</div><div class="sl2">SCORE</div></div></div></div>'+
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">'+
         (c.sintomasCubiertos||[]).map(function(s){ return '<span class="pill" style="border-color:var(--accent);color:var(--accent);">'+s+'</span>'; }).join('')+
       '</div>'+
@@ -1944,7 +1977,7 @@ function showResults(opps,country,niche,info,subNiche,microNiche){
           <div class="opp-prob">${o.problema||o.problem}</div>
           ${o.problemaEnIdioma?`<div style="font-size:11px;color:var(--teal);margin-top:3px;font-style:italic;">🌍 ${o.problemaEnIdioma}</div>`:''}
         </div>
-        <div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div>
+        <div style="border-radius:12px;padding:2px;background:conic-gradient(var(--accent) ${s*3.6}deg, rgba(43,38,32,.12) 0deg);flex-shrink:0;"><div class="sbox ${sc}"><div class="sn">${s}</div><div class="sl2">SCORE</div></div></div>
       </div>
       <div class="pills">
         <span class="pill">📍 ${o.pais||o.country}</span>
@@ -2118,7 +2151,7 @@ function renderNicheReport(r){
   var vc=vColors[v]||'#6c5ce7';
   function esc(s){ return _escHtml(String(s||'')); }
   function list(arr){ return (arr||[]).map(function(x){ return '<li style="margin-bottom:4px;">'+esc(x)+'</li>'; }).join(''); }
-  function sec(title,body){ return '<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">'+title+'</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+body+'</div></div>'; }
+  function sec(title,body){ return '<div style="margin-bottom:14px;"><div class="eyebrow-ui" style="margin-bottom:6px;">'+title+'</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+body+'</div></div>'; }
   var icp=r.icp||{}, evd=r.evidenciaDemanda||{}, mp=r.microProblema||{}, pr=r.productoRecomendado||{}, hv=r.hojaVenta||{}, jq=r.jerarquiaNicho||{}, ac=r.analisisCompetencia||null;
   var prodRows=(evd.productosExistentes||[]).map(function(p){
     return '<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.nombre)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);">'+esc(p.plataforma)+'</td><td style="padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap;">'+esc(p.precio)+'</td></tr>';
