@@ -2257,8 +2257,10 @@ function renderMetaCheck(c){
     inner='<div style="font-size:12px;color:var(--muted);">⚠️ No se pudo consultar Meta ('+esc(c.errorDetalle||'sin detalle')+'). Validación manual: '+esc(manual)+'</div>';
   }
   inner+='<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="S.metaCheck=null;runMetaAdsCheck()">↻ Reconsultar</button>'+
-    ((c.status==='no_permission'||c.status==='api_error'||c.status==='no_token')?'<button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="runMetaDiag()">🔧 Diagnóstico</button>':'')+'</div>'+
-    '<div id="nr-meta-diag" style="margin-top:6px;"></div>';
+    ((c.status==='no_permission'||c.status==='api_error'||c.status==='no_token')?'<button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="runMetaDiag()">🔧 Diagnóstico</button>':'')+
+    '<button class="btn btn-s" style="font-size:11px;padding:4px 10px;" onclick="toggleMetaExchange()">🔁 Canjear a 60 días</button></div>'+
+    '<div id="nr-meta-diag" style="margin-top:6px;"></div>'+
+    '<div id="nr-meta-exchange" style="margin-top:6px;"></div>';
   box.innerHTML='<div style="margin-bottom:14px;"><div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">🕵️ Validación en Meta Ads — anuncios reales</div><div style="font-size:13px;color:var(--text);line-height:1.7;">'+inner+'</div></div>';
 }
 
@@ -2289,6 +2291,37 @@ async function runMetaDiag(){
     }
     box.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;line-height:1.7;">'+lines.join('<br>')+'</div>';
   }catch(e){ box.innerHTML='<div style="font-size:12px;color:#e17055;">Error del diagnóstico: '+_escHtml(e.message)+'</div>'; }
+}
+
+// Canjea el token corto de Graph API Explorer (1-2h) por uno de 60 días — el App Secret vive solo en Vercel, nunca en el navegador
+function toggleMetaExchange(){
+  var box=document.getElementById('nr-meta-exchange'); if(!box) return;
+  if(box.dataset.open==='1'){ box.innerHTML=''; box.dataset.open='0'; return; }
+  box.dataset.open='1';
+  box.innerHTML='<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;">'+
+    '<div style="margin-bottom:8px;color:var(--text2);">Pega abajo el token CORTO que acabas de generar en <a href="https://developers.facebook.com/tools/explorer" target="_blank" style="color:var(--accent);">Graph API Explorer</a>. Necesitas tener <code>META_APP_SECRET</code> configurado en Vercel (Configuración → Básica de tu app → Secreto de la aplicación) — se usa solo en el servidor, nunca se envía al navegador.</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+
+      '<input id="meta-exchange-inp" type="text" placeholder="Pega aquí el token corto (EAAxxxxx...)" style="flex:1;min-width:220px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;">'+
+      '<button class="btn btn-p" style="font-size:11px;padding:6px 14px;" onclick="runMetaExchange()">Canjear</button>'+
+    '</div>'+
+    '<div id="meta-exchange-result" style="margin-top:8px;"></div>'+
+  '</div>';
+}
+async function runMetaExchange(){
+  var inp=document.getElementById('meta-exchange-inp');
+  var resBox=document.getElementById('meta-exchange-result');
+  var shortToken=(inp&&inp.value||'').trim();
+  if(!shortToken){ resBox.innerHTML='<div style="color:#e17055;">Pega el token corto primero.</div>'; return; }
+  resBox.innerHTML='<div style="color:var(--muted);">⏳ Canjeando con Meta…</div>';
+  try{
+    var r=await fetch('/api/meta-exchange-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shortToken:shortToken})});
+    var d=await r.json();
+    if(!d.success){ resBox.innerHTML='<div style="color:#e17055;">❌ '+_escHtml(d.error||'error desconocido')+'</div>'; return; }
+    resBox.innerHTML='<div style="color:#00b894;font-weight:700;margin-bottom:6px;">✅ Token nuevo — dura '+(d.expiresInDays||60)+' días</div>'+
+      '<textarea id="meta-exchange-long" readonly style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-family:monospace;" rows="3">'+_escHtml(d.longToken)+'</textarea>'+
+      '<button class="btn btn-s" style="font-size:11px;padding:5px 12px;margin-top:6px;" onclick="navigator.clipboard.writeText(document.getElementById(\'meta-exchange-long\').value);this.textContent=\'✅ Copiado\'">📋 Copiar</button>'+
+      '<div style="margin-top:6px;color:var(--muted);">Pega este valor en Vercel → Settings → Environment Variables → <code>META_ACCESS_TOKEN</code>, guarda y vuelve a hacer deploy.</div>';
+  }catch(e){ resBox.innerHTML='<div style="color:#e17055;">Error: '+_escHtml(e.message)+'</div>'; }
 }
 
 // Gate de aprobación: con advertencias pendientes no se aprueba sin validar primero

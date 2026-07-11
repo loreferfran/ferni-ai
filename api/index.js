@@ -18,6 +18,8 @@ const DATAFORSEO_PASSWORD = process.env.DATAFORSEO_PASSWORD;
 // .trim() + sin comillas envolventes: un salto de línea o espacio pegado en Vercel corrompe la firma del token (error 190)
 const META_ACCESS_TOKEN = (process.env.META_ACCESS_TOKEN || '').trim().replace(/^["']+|["']+$/g, '') || null;
 const META_API_VERSION = 'v23.0';
+const META_APP_ID = '4235542040028554';
+const META_APP_SECRET = (process.env.META_APP_SECRET || '').trim();
 // Solo países UE exponen TODOS los anuncios (comerciales incluidos) en la Ad Library API (reglamento DSA).
 // null = sin cobertura comercial → fallback manual honesto.
 const META_ISO2 = { France:'FR', Germany:'DE', Italy:'IT', Spain:'ES', Portugal:'PT', Netherlands:'NL', Belgium:'BE', Sweden:'SE', Austria:'AT', Poland:'PL', 'United Kingdom':null, Switzerland:null, USA:null, Canada:null, Japan:null, 'South Korea':null, India:null, China:null, Singapore:null, Thailand:null, 'South Africa':null, Nigeria:null, Kenya:null, UAE:null, Australia:null, 'New Zealand':null, Mexico:null, Colombia:null, Argentina:null, Chile:null, Peru:null, Uruguay:null, Ecuador:null, Brazil:null, LatAm:null };
@@ -1414,6 +1416,24 @@ app.get('/api/meta-diag', async function(req, res) {
     out.adsArchive = ads.error ? { ok: false, error: ads.error } : { ok: true };
   } catch (e) { out.adsArchive = { ok: false, error: { message: e.message } }; }
   res.json(out);
+});
+
+// Canjea el token corto de Graph API Explorer (1-2h) por uno de larga duración (60 días) — el App Secret nunca sale del servidor
+app.post('/api/meta-exchange-token', async function(req, res) {
+  try {
+    var shortToken = (req.body.shortToken || '').trim();
+    if (!shortToken) return res.json({ success: false, error: 'Pega el token corto que generaste en Graph API Explorer.' });
+    if (!META_APP_SECRET) return res.json({ success: false, error: 'Falta configurar META_APP_SECRET en Vercel (Configuración → Básica de tu app de Meta → Secreto de la aplicación).' });
+    var url = 'https://graph.facebook.com/' + META_API_VERSION + '/oauth/access_token' +
+      '?grant_type=fb_exchange_token&client_id=' + META_APP_ID +
+      '&client_secret=' + encodeURIComponent(META_APP_SECRET) +
+      '&fb_exchange_token=' + encodeURIComponent(shortToken);
+    var data = await (await fetch(url)).json();
+    if (data.error) return res.json({ success: false, error: data.error.message || 'Meta rechazó el canje.' });
+    if (!data.access_token) return res.json({ success: false, error: 'Meta no devolvió un token nuevo.' });
+    var days = data.expires_in ? Math.round(data.expires_in / 86400) : null;
+    res.json({ success: true, longToken: data.access_token, expiresInDays: days });
+  } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
 // ── ESPÍA DE COMPETENCIA — busca anuncios reales activos de una keyword/competidor (tab propia) ──
